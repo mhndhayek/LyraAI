@@ -30,10 +30,13 @@ test('the gate covers every job in the pipeline', () => {
   assert.deepEqual(missing, [], `these jobs could fail without blocking a merge: ${missing.join(', ')}`);
 });
 
-test('the gate fails when a job failed, was cancelled or was skipped', () => {
+test('the gate fails unless every job succeeded outright', () => {
   assert.match(CI, /if: always\(\)/, 'the gate must run even after a job fails');
-  assert.match(CI, /failure\|cancelled\|skipped/, 'a skipped job must not count as a pass');
+  // Anything other than "success" — failed, cancelled, or skipped because a
+  // dependency failed — has to block the merge.
+  assert.match(CI, /\.value\.result != "success"/, 'the gate must treat anything but success as a failure');
   assert.match(CI, /exit 1/);
+  assert.ok(!/grep/.test(CI.slice(CI.indexOf('name: QA Gate'))), 'the verdict must not depend on the shape of the printed JSON');
 });
 
 test('the gate is named so branch protection can require it', () => {
