@@ -57,8 +57,10 @@ class Settings extends EventEmitter {
     const d = this.data;
     // 0.9: the app and its default persona were renamed from Nova to Lyra.
     const themeMap = { 'nova-dark': 'lyra-dark', 'nova-light': 'lyra-light' };
-    if (d.appearance && themeMap[d.appearance.theme]) d.appearance.theme = themeMap[d.appearance.theme];
-    if (d.persona && d.persona.name === 'Nova') d.persona.name = 'Lyra';
+    let renamed = false;
+    if (d.appearance && themeMap[d.appearance.theme]) { d.appearance.theme = themeMap[d.appearance.theme]; renamed = true; }
+    if (d.persona && d.persona.name === 'Nova') { d.persona.name = 'Lyra'; renamed = true; }
+    if (renamed && fs.existsSync(this.file)) this.save();
     if (!Array.isArray(d.providers.list) || !d.providers.list.length) d.providers.list = merge(DEFAULTS.providers, {}).list;
     if (d.provider) {
       const p = d.provider; const first = d.providers.list[0];
