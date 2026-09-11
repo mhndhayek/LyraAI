@@ -1,0 +1,11 @@
+# dependencies and build output
+node_modules/
+dist/
+# the voice engine's Python environment (npm run voice:setup)
+voice/.venv/
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

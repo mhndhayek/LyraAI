@@ -1,0 +1,28 @@
+{
+ "pack": {
+  "frames": {
+   "base": "assets/character/base/agent.png",
+   "talk_a": "mouth-1.png",
+   "talk_b": "mouthwide-1.png",
+   "talk_c": "mouth-2.png",
+   "chin1": "chin-1.png",
+   "chin2": "chin-2.png",
+   "g1": "gesture-2.png",
+   "brow": "brow-2.png",
+   "type": "type-1.png"
+  },
+  "think": [
+   "chin1",
+   "chin2"
+  ],
+  "gesture": [
+   "g1",
+   "base"
+  ],
+  "gesture2": [
+   "brow",
+   "base"
+  ],
+  "basePath": "assets/character/base/agent.png"
+ }
+}

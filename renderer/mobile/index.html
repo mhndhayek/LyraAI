@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lyra">
+<meta name="theme-color" content="#141517">
+<title>Lyra</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<section id="pair" class="pair" hidden>
+  <img class="pair-avatar" src="/avatar.png" alt="">
+  <h1>Pair this phone</h1>
+  <p class="muted">Open <b>Settings › Mobile</b> in Lyra on your computer and type the six characters shown there.</p>
+  <input id="pair-code" inputmode="text" autocapitalize="characters" autocomplete="one-time-code" spellcheck="false" maxlength="6" placeholder="ABC123">
+  <button id="pair-go" class="primary">Pair</button>
+  <p class="pair-msg" id="pair-msg"></p>
+</section>
+
+<section id="app" class="app" hidden>
+  <header class="top">
+    <button id="btn-chats" class="icon" aria-label="Chats">☰</button>
+    <div class="who"><img class="avatar" src="/avatar.png" alt=""><div><div class="name" id="persona">Lyra</div><div class="status" id="status">Connected</div></div></div>
+    <button id="btn-new" class="icon" aria-label="New chat">＋</button>
+  </header>
+
+  <div class="drawer" id="drawer" hidden>
+    <div class="drawer-head">Chats</div>
+    <div id="chat-list"></div>
+  </div>
+
+  <main id="thread" class="thread"></main>
+
+  <div class="a2hs" id="a2hs" hidden>
+    <span>Add Lyra to your home screen: tap <b>Share</b> then <b>Add to Home Screen</b>.</span>
+    <button id="a2hs-close" class="icon small">✕</button>
+  </div>
+
+  <footer class="composer-wrap">
+    <div class="atts" id="atts" hidden></div>
+    <div class="composer">
+      <button id="btn-img" class="icon" aria-label="Add a picture">＋</button>
+      <textarea id="input" rows="1" placeholder="Message Lyra" enterkeyhint="send"></textarea>
+      <button id="btn-mic" class="icon" aria-label="Record">🎙</button>
+      <button id="btn-send" class="send" aria-label="Send">↑</button>
+    </div>
+    <div class="ctx" id="ctx"></div>
+  </footer>
+  <input type="file" id="file" accept="image/*" hidden multiple>
+</section>
+
+<script src="/app.js"></script>
+</body>
+</html>

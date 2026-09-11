@@ -1,0 +1,4 @@
+kittentts
+faster-whisper
+soundfile
+numpy

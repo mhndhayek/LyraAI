@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file: data: blob:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: blob:; media-src 'self' file: blob:; font-src 'self' file: data:; connect-src 'self' file: blob: data:">
+  <title>Lyra AI Agent</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" id="theme-css" href="themes/lyra-dark/theme.css">
+</head>
+<body>
+<div id="app" class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head drag">
+      <div class="sidebar-title">Chats</div>
+      <button class="icon-btn no-drag" id="btn-new-chat" title="New chat" data-icon="pen"></button>
+    </div>
+    <div class="search"><span class="ico" data-icon="search"></span><input id="chat-search" placeholder="Search" spellcheck="false"></div>
+    <div class="chat-list" id="chat-list"></div>
+    <div class="user-bar">
+      <div class="avatar user" data-icon="user"></div>
+      <div class="user-name">You</div>
+      <button class="icon-btn" id="btn-settings-side" title="Settings" data-icon="gear"></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="chat-header drag">
+      <div class="persona">
+        <div class="avatar persona-avatar" id="persona-avatar">N</div>
+        <div class="persona-meta">
+          <div class="persona-name" id="persona-name">Lyra</div>
+          <div class="persona-status"><span class="dot" id="status-dot"></span><span id="status-text">Starting…</span></div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <div class="header-actions no-drag">
+        <button class="icon-btn" id="btn-browser" title="Lyra’s browser" data-icon="globe"><span class="badge-dot" id="browser-dot" hidden></span></button>
+        <button class="icon-btn" id="btn-live" title="Live character" data-icon="character"></button>
+        <button class="icon-btn" id="btn-notify" title="Notifications" data-icon="bell"></button>
+        <button class="icon-btn" id="btn-settings" title="Settings" data-icon="gear"></button>
+      </div>
+    </header>
+    <div class="thread" id="thread"></div>
+    <div class="float-char" id="float-char" hidden><div class="float-stage" id="float-stage"></div><div class="float-state" id="float-state"></div></div>
+    <div class="composer-wrap">
+      <div class="attachments" id="attachments" hidden></div>
+      <div class="composer" id="composer">
+        <button class="icon-btn round" id="btn-attach" title="Attach a picture" data-icon="plus"></button>
+        <textarea id="input" rows="1" placeholder="Message Lyra"></textarea>
+        <div class="rec-indicator" id="rec" hidden><span class="rec-dot"></span><span id="rec-time">0:00</span></div>
+        <button class="icon-btn stop-btn" id="btn-stop" title="Stop Lyra" data-icon="stop" hidden></button>
+        <button class="icon-btn" id="btn-mic" title="Record a voice message" data-icon="mic"></button>
+        <button class="icon-btn send" id="btn-send" title="Send" data-icon="send"></button>
+      </div>
+      <div class="composer-hint" id="composer-hint"></div>
+      <div class="ctx-meter" id="ctx-meter" hidden title="Context in use. Click for memory and compression settings."><div class="ctx-bar"><i id="ctx-fill"></i><span id="ctx-mark"></span></div><span class="ctx-text" id="ctx-text"></span></div>
+    </div>
+  </main>
+
+  <aside class="live-panel" id="live-panel">
+    <div class="panel-head drag">
+      <div class="panel-title">Live</div>
+      <div class="state-chip no-drag" id="state-chip"><span class="eq" id="eq"><i></i><i></i><i></i><i></i></span><span id="state-label">Idle</span></div>
+    </div>
+    <div class="panel-tabs" id="panel-tabs" hidden></div>
+    <div class="stage" id="stage"></div>
+    <iframe id="ext-frame" class="ext-frame" sandbox="allow-scripts allow-forms" hidden title="Extension panel"></iframe>
+    <div class="state-pills" id="state-pills"></div>
+    <div class="stage-caption" id="stage-caption"></div>
+    <div class="divider"></div>
+    <div class="section-label">Now</div>
+    <div class="now-rows" id="now-rows"></div>
+  </aside>
+
+  <aside class="browser-panel" id="browser-panel" hidden>
+    <div class="bp-head drag">
+      <span class="ico" data-icon="globe"></span>
+      <span class="bp-title">Lyra’s browser</span>
+      <div class="badge no-drag" id="bp-badge"><span data-icon="cursor"></span><span id="bp-badge-text">Idle</span></div>
+      <span class="spacer"></span>
+      <button class="btn small no-drag" id="bp-takeover">Take over</button>
+      <button class="btn small no-drag" id="bp-stop" data-icon="stop">Stop</button>
+      <button class="icon-btn no-drag" id="bp-close" title="Hide" data-icon="x"></button>
+    </div>
+    <div class="bp-urlbar">
+      <button class="icon-btn" id="bp-back" data-icon="chevronL"></button>
+      <button class="icon-btn" id="bp-reload" data-icon="refresh"></button>
+      <div class="url-field"><span data-icon="lock"></span><input id="bp-url" spellcheck="false" placeholder="about:blank"></div>
+    </div>
+    <div class="bp-view" id="bp-view"><div class="bp-placeholder">The browser appears here when Lyra opens a page.</div></div>
+    <div class="bp-status"><span class="eq small" id="bp-eq"><i></i><i></i><i></i><i></i></span><span id="bp-step">Idle</span><span class="spacer"></span><span id="bp-mode">Visible</span></div>
+  </aside>
+
+  <section class="settings-page" id="settings" hidden>
+    <nav class="settings-nav" id="settings-nav"><div class="settings-nav-head drag"><div class="settings-nav-title">Settings</div><div class="settings-nav-sub" id="settings-persona-name">Lyra</div></div><div id="settings-nav-items"></div></nav>
+    <div class="settings-content" id="settings-content"></div>
+    <div class="close-wrap"><button class="close-btn" id="settings-close" title="Close" data-icon="x"></button><span>ESC</span></div>
+  </section>
+
+  <div class="toasts" id="toasts"></div>
+</div>
+<script src="vendor/marked.umd.js"></script>
+<script src="icons.js"></script>
+<script src="character.js"></script>
+<script src="settings.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

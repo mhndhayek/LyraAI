@@ -1,0 +1,2 @@
+/* Lyra Dark is the base look; the defaults live in styles.css. Override anything here. */
+:root { --scheme: dark; }

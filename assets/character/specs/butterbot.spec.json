@@ -1,0 +1,34 @@
+{
+ "pack": {
+  "frames": {
+   "base": "assets/character/base/butterbot.png",
+   "blink": "blink-2.png",
+   "look": "look-2.png",
+   "g1": "gesture-2.png",
+   "paper": "chest-2.png",
+   "type": "type-1.png"
+  },
+  "think": [
+   "look"
+  ],
+  "gesture": [
+   "g1",
+   "base"
+  ],
+  "gesture2": [
+   "paper",
+   "base"
+  ],
+  "avatarBox": [
+   60,
+   120,
+   620,
+   680
+  ],
+  "handsY": [
+   0.5,
+   0.62
+  ],
+  "basePath": "assets/character/base/butterbot.png"
+ }
+}

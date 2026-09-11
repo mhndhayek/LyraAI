@@ -1,0 +1,30 @@
+{
+ "pack": {
+  "frames": {
+   "base": "assets/character/base/succubus.png",
+   "blink": "blink-1.png",
+   "talk_a": "mouth-1.png",
+   "talk_b": "mouthwide-1.png",
+   "talk_c": "mouth-2.png",
+   "chin1": "chin-1.png",
+   "chin2": "chin-2.png",
+   "wings": "wings-2.png",
+   "tail": "tail-2.png",
+   "type": "type-1.png"
+  },
+  "think": [
+   "chin1",
+   "chin2"
+  ],
+  "gesture": [
+   "wings",
+   "base"
+  ],
+  "gesture2": [
+   "tail",
+   "base"
+  ],
+  "speakFx": "hearts",
+  "basePath": "assets/character/base/succubus.png"
+ }
+}
