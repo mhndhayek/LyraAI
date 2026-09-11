@@ -11,12 +11,30 @@ test.after(cleanup);
 
 const open = (kind, dir = tmpdir()) => ({ store: openStore(dir, kind), dir });
 
+// node:sqlite only exists from Node 22 on; older runtimes are expected to fall
+// back to the JSON store rather than fail to start.
+const SQLITE_AVAILABLE = (() => { try { require('node:sqlite'); return true; } catch { return false; } })();
+
+test('the SQLite backend is used where the runtime has it, and falls back where it does not', () => {
+  const { store } = open('sqlite');
+  assert.equal(store.kind, SQLITE_AVAILABLE ? 'sqlite' : 'json');
+  store.close();
+});
+
+test('asking for JSON always gets JSON', () => {
+  const { store } = open('json');
+  assert.equal(store.kind, 'json');
+  store.close();
+});
+
+test('an unknown backend name still returns a working store', () => {
+  const { store } = open('something-else');
+  assert.equal(store.kind, 'json');
+  assert.ok(store.createChat({ title: 'works' }).id);
+  store.close();
+});
+
 for (const kind of ['sqlite', 'json']) {
-  test(`${kind}: opens with the expected backend`, () => {
-    const { store } = open(kind);
-    assert.equal(store.kind, kind, 'node:sqlite must be available on supported Node versions');
-    store.close();
-  });
 
   test(`${kind}: chats are created, listed, updated and deleted`, () => {
     const { store } = open(kind);

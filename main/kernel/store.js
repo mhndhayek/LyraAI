@@ -1,5 +1,7 @@
 // Persistence: SQLite (node:sqlite) or a JSON file. Same API either way, so the
 // "Store" switch in Persona settings is real; switching migrates the data.
+// node:sqlite only exists from Node 22 on: on anything older, asking for SQLite
+// quietly gets the JSON store instead.
 const fs = require('fs');
 const path = require('path');
 const { id, now } = require('./util');
