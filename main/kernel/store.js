@@ -26,7 +26,7 @@ class SqliteStore {
   run(sql, ...args) { return this.db.prepare(sql).run(...args); }
 
   listChats() { return this.all(`SELECT id, title, kind, created_at, updated_at FROM chats ORDER BY updated_at DESC`); }
-  getChat(cid) { return this.one(`SELECT * FROM chats WHERE id = ?`, cid); }
+  getChat(cid) { return this.one(`SELECT * FROM chats WHERE id = ?`, cid) || null; }
   createChat({ title = 'New chat', kind = 'chat' } = {}) {
     const c = { id: id(), title, kind, created_at: now(), updated_at: now(), summary: null, summarized_count: 0, reflected: 0 };
     this.run(`INSERT INTO chats(id,title,kind,created_at,updated_at,summary,summarized_count,reflected) VALUES(?,?,?,?,?,?,?,?)`, c.id, c.title, c.kind, c.created_at, c.updated_at, c.summary, c.summarized_count, c.reflected);

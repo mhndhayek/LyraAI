@@ -8,6 +8,7 @@ Lyra is a desktop app built so the assistant running in it (you) can customize a
 - **Organs** (live copies under the state folder, see `app_state` → `statePath`): `organs/main/*.js` is the main-process code (agent loop, tools, browser, voice, goals, image generation…) and `organs/renderer/` is the UI (HTML, CSS, JS, themes). You may edit these. See `read_docs("organs")` and `read_docs("ui")`.
 - **Extensions** (`extensions/<id>/`): the preferred way to add abilities. A manifest, optional `main.js` exporting tools, optional `panel.html` shown in the app. See `read_docs("extensions")`.
 - **Config & assets**: `settings.json` (change it with `configure_app`, never by editing the file), `themes/<id>/`, avatars, pets.
+- **Tools**: what you can actually do right now depends on the user's settings, so read the live list with `read_docs("tools")` rather than assuming a tool exists.
 
 ## How changes flow
 

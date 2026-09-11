@@ -11,8 +11,9 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: PolyForm Noncommercial" src="https://img.shields.io/badge/license-free%20for%20personal%20use-8a63d2"></a>
+  <a href="https://github.com/mhndhayek/LyraAI/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/mhndhayek/LyraAI/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Runs locally" src="https://img.shields.io/badge/runs-100%25%20on%20your%20machine-4fc8b4">
-  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20(Apple%20Silicon)-lightgrey">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey">
   <img alt="Electron" src="https://img.shields.io/badge/built%20with-Electron%2044-2b2e3b">
   <a href="https://github.com/sponsors/mhndhayek"><img alt="Sponsor" src="https://img.shields.io/badge/%E2%99%A5-support%20Lyra-ff69b4"></a>
 </p>
@@ -58,7 +59,7 @@ Every character has idle variations and a thinking, writing and speaking animati
 
 ## Quick start
 
-You need **macOS on Apple Silicon**, **Node.js 20 or newer**, and a model runtime. [LM Studio](https://lmstudio.ai/) is the easiest: install it, download a model, start its server. llama.cpp and Ollama work just as well.
+You need **macOS, Windows or Linux**, **Node.js 20 or newer**, and a model runtime. [LM Studio](https://lmstudio.ai/) is the easiest: install it, download a model, start its server. llama.cpp and Ollama work just as well.
 
 ```bash
 git clone https://github.com/mhndhayek/LyraAI.git
@@ -73,9 +74,20 @@ Optional pieces:
 
 ```bash
 npm run voice:setup    # KittenTTS + Whisper sidecar (needs uv, and `brew install espeak-ng`)
-npm run dist           # builds dist/mac-arm64/Lyra AI Agent.app
+npm run qa             # the full quality gate: lint, tests, self-test, smoke test
 npm run selftest       # breaks the app on purpose and proves the safety nets catch it
 ```
+
+### Building an installer
+
+```bash
+npm run dist:mac       # .dmg and .zip, Apple Silicon and Intel
+npm run dist:win       # NSIS installer and a portable .exe
+npm run dist:linux     # .AppImage, .deb and .tar.gz
+```
+
+Builds land in `dist/`. Each platform builds on its own kind of machine; CI builds
+all three on every pull request and attaches them to tagged releases.
 
 The app is not signed. The first time you open the built `.app`, right-click it and choose **Open**.
 
@@ -135,3 +147,9 @@ Lyra AI Agent is released under the [PolyForm Noncommercial License 1.0.0](LICEN
 - ❌ Not for commercial use without permission. If you want to use Lyra in a business or a product, [open an issue](https://github.com/mhndhayek/LyraAI/issues) and let's talk.
 
 Copyright © 2026 mhndhayek.
+
+## Contributing
+
+Run `npm run qa` before opening a pull request: it runs the same gate CI does — lint, the test suite, the kernel self-test and a smoke test of the real app. See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/QA.md](docs/QA.md).
+
+Installers for macOS, Windows and Linux are built by CI on every pull request and attached to each tagged release.

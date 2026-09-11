@@ -8,8 +8,8 @@ const LEVELS = { error: 3, warn: 2, info: 1, debug: 0 };
 const KEEP_DAYS = 7;
 const RING = 2000;
 const REDACT = [
-  [/\b(sk-[A-Za-z0-9_\-]{6,})/g, 'sk-[redacted]'],
-  [/\b(Bearer\s+)[A-Za-z0-9._\-]{8,}/gi, '$1[redacted]'],
+  [/\b(sk-[A-Za-z0-9_-]{6,})/g, 'sk-[redacted]'],
+  [/\b(Bearer\s+)[A-Za-z0-9._-]{8,}/gi, '$1[redacted]'],
   [/("?(?:api[_-]?key|apikey|token|password)"?\s*[:=]\s*"?)([^"\s,}]{6,})/gi, '$1[redacted]'],
 ];
 

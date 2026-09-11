@@ -8,7 +8,6 @@
     ['Around it', [['workspace', 'Workspace', 'folder'], ['browser', 'Browser', 'globe'], ['safety', 'Safety', 'shield'], ['notifications', 'Notifications', 'bell'], ['mobile', 'Mobile', 'phone']]],
     ['App', [['extensions', 'Extensions', 'plus'], ['recovery', 'Recovery', 'git'], ['about', 'About', 'info']]],
   ];
-  const SECTIONS = NAV.flatMap(([, items]) => items);
   let current = 'model', open = false, previewChar = null, errorCount = 0;
   const logFilter = { level: 'warn', source: '', search: '' };
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -27,7 +26,6 @@
   const field = (val, cb, { w = 260, mono = false, type = 'text', ph = '', ro = false } = {}) => { const f = el(`<input class="field ${mono ? 'mono' : ''}" type="${type}" style="width:${w}px" placeholder="${esc(ph)}" ${ro ? 'readonly' : ''}>`); f.value = val ?? ''; if (cb) { f.addEventListener('change', () => cb(type === 'number' ? Number(f.value) : f.value)); f.addEventListener('keydown', (e) => e.key === 'Enter' && f.blur()); } return f; };
   const slider = (min, max, step, val, fmt, cb) => { const s = el(`<div class="slider"><span class="val">${fmt(val)}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}"></div>`); const i = s.querySelector('input'); i.addEventListener('input', () => { s.querySelector('.val').textContent = fmt(Number(i.value)); }); i.addEventListener('change', () => cb(Number(i.value))); return s; };
   const btn = (label, cb, { primary = false, ic = '', danger = false, small = true } = {}) => { const b = el(`<button class="btn ${small ? 'small' : ''} ${primary ? 'primary' : ''} ${danger ? 'danger' : ''}">${ic ? icon(ic, 14) : ''}${esc(label)}</button>`); b.addEventListener('click', cb); return b; };
-  const status = (ok, text) => el(`<div class="status-line"><span class="dot ${ok ? '' : 'off'}"></span>${esc(text)}</div>`);
   const title = (t, sub) => el(`<div><div class="s-title">${t}</div><div class="s-sub">${sub}</div></div>`);
 
   /* ---- sections ---- */
@@ -96,11 +94,10 @@
     },
     async imagegen() {
       const s = S(); const g = s.imagegen; const ep = g.backend === 'comfyui' ? g.comfyEndpoint : g.swarmEndpoint; const epKey = g.backend === 'comfyui' ? 'comfyEndpoint' : 'swarmEndpoint';
-      let models = window.__igModels && window.__igModels.key === ep ? window.__igModels.list : null;
+      const models = window.__igModels && window.__igModels.key === ep ? window.__igModels.list : null;
       const modelOpts = [{ v: '', l: 'Backend default' }, ...(models || []).map((m) => ({ v: m, l: m }))]; if (g.model && !(models || []).includes(g.model)) modelOpts.push({ v: g.model, l: g.model });
       const sizes = [['1024x1024', 'Square 1024'], ['832x1216', 'Portrait 832×1216'], ['1216x832', 'Landscape 1216×832'], ['1344x768', 'Wide 1344×768'], ['768x1344', 'Tall 768×1344'], ['512x512', 'Small 512'], ['custom', 'Custom']];
       const cur = `${g.width}x${g.height}`; const isPreset = sizes.some(([v]) => v === cur);
-      const status = el('<div class="status-line"><span class="dot off"></span>Not tested</div>');
       const testBtn = btn('Test and list models', async (e) => { e.target.disabled = true; try { const r = await lyra.imagegen.test({}); if (r.ok) { window.__igModels = { key: ep, list: r.models }; toast(`${g.backend === 'comfyui' ? 'ComfyUI' : 'SwarmUI'}: ${r.count} models`); refresh(); } else toast(`Not reachable: ${r.error}`, 'error'); } finally { e.target.disabled = false; } }, { ic: 'refresh' });
       return [
         title('Image generation', 'Gives Lyra a generate_image tool backed by SwarmUI or ComfyUI on this machine (or your network). Images land in the workspace and show up in the chat.'),
@@ -425,7 +422,7 @@
       const box = el('<div style="display:flex;flex-direction:column;gap:10px"></div>');
       const color = { active: 'var(--accent)', disabled: 'var(--muted)', 'pending-approval': 'var(--warn)', quarantined: 'var(--danger)', broken: 'var(--danger)', inactive: 'var(--muted)' };
       list.forEach((x) => {
-        const c = el(`<div class="card" style="gap:8px"><div style="display:flex;align-items:center;gap:10px"><span style="display:flex;color:${color[x.status]}">${icon('tool', 16)}</span><div class="col" style="flex:1;min-width:0"><div class="n" style="font-size:14px;font-weight:500;color:var(--bright)">${esc(x.name)} <span class="d" style="font-size:12px;color:var(--muted)">${esc(x.version)}</span></div><div class="d" style="font-size:12px;color:var(--muted)">${esc(x.description)}</div></div><span class="tag" style="font-size:11px;font-weight:600;color:${color[x.status]}">${x.status.replace('-', ' ')}</span></div><div class="d" style="font-size:12px;color:var(--muted)">Capabilities: ${x.capabilities.length ? x.capabilities.map(esc).join(', ') : 'none'}${x.tools.length ? ' · Tools: ' + x.tools.map(esc).join(', ') : ''}${x.panel ? ' · has a panel' : ''}${x.error ? `<br><span style=\"color:var(--danger)\">${esc(x.error)}</span>` : ''}</div><div style="display:flex;gap:8px"></div></div>`);
+        const c = el(`<div class="card" style="gap:8px"><div style="display:flex;align-items:center;gap:10px"><span style="display:flex;color:${color[x.status]}">${icon('tool', 16)}</span><div class="col" style="flex:1;min-width:0"><div class="n" style="font-size:14px;font-weight:500;color:var(--bright)">${esc(x.name)} <span class="d" style="font-size:12px;color:var(--muted)">${esc(x.version)}</span></div><div class="d" style="font-size:12px;color:var(--muted)">${esc(x.description)}</div></div><span class="tag" style="font-size:11px;font-weight:600;color:${color[x.status]}">${x.status.replace('-', ' ')}</span></div><div class="d" style="font-size:12px;color:var(--muted)">Capabilities: ${x.capabilities.length ? x.capabilities.map(esc).join(', ') : 'none'}${x.tools.length ? ' · Tools: ' + x.tools.map(esc).join(', ') : ''}${x.panel ? ' · has a panel' : ''}${x.error ? `<br><span style="color:var(--danger)">${esc(x.error)}</span>` : ''}</div><div style="display:flex;gap:8px"></div></div>`);
         const acts = c.lastElementChild;
         if (x.status === 'pending-approval') acts.appendChild(btn(`Approve (${x.pending.join(', ') || 'no capabilities'})`, async () => { await lyra.extensions.approve({ id: x.id }); refresh(); }, { primary: true }));
         if (x.status === 'active' || x.status === 'inactive') acts.appendChild(btn('Disable', async () => { await lyra.extensions.set({ id: x.id, enabled: false }); refresh(); }));
@@ -450,7 +447,7 @@
       actions.appendChild(btn('Open state folder', () => lyra.kernel.openState(), { ic: 'folder' }));
       actions.appendChild(btn('Reset organs to shipped', async () => { if (!confirm('Replace the live organs with the shipped version? A checkpoint is taken first.')) return; await lyra.kernel.resetShipped(); toast('Organs reset to shipped'); refresh(); }, { danger: true }));
       const list = el('<div class="list"></div>');
-      cps.slice(0, 25).forEach((c) => { const it = el(`<div class="item"><span class="mono" style="font-family:var(--mono);font-size:12px;color:var(--muted)">${esc(c.hash)}</span><div class="col"><span class="n">${esc(c.label)}${c.lkg ? ' <span style=\"color:var(--accent);font-size:11px\">last known good</span>' : ''}</span><span class="d">${new Date(c.time).toLocaleString()}</span></div></div>`); it.appendChild(btn('Roll back', async () => { if (!confirm(`Roll everything back to ${c.hash}?`)) return; await lyra.kernel.rollback({ ref: c.hash }); toast('Rolled back'); refresh(); })); list.appendChild(it); });
+      cps.slice(0, 25).forEach((c) => { const it = el(`<div class="item"><span class="mono" style="font-family:var(--mono);font-size:12px;color:var(--muted)">${esc(c.hash)}</span><div class="col"><span class="n">${esc(c.label)}${c.lkg ? ' <span style="color:var(--accent);font-size:11px">last known good</span>' : ''}</span><span class="d">${new Date(c.time).toLocaleString()}</span></div></div>`); it.appendChild(btn('Roll back', async () => { if (!confirm(`Roll everything back to ${c.hash}?`)) return; await lyra.kernel.rollback({ ref: c.hash }); toast('Rolled back'); refresh(); })); list.appendChild(it); });
       if (!cps.length) list.appendChild(el('<div class="item"><span class="d">No checkpoints (git not available?)</span></div>'));
       return [
         title('Recovery', `Checkpoints of everything ${esc(s.persona.name)} may change: organs, extensions, themes and settings. Chats and memory live outside and are never touched.`), info, actions,

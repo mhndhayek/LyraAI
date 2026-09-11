@@ -22,9 +22,20 @@
   "scripts": {
     "start": "electron .",
     "start:safe": "electron . --safe",
-    "selftest": "electron . --user-data-dir=/tmp/lyra-selftest --kernel-test",
-    "dist": "electron-builder --mac --dir -c.extraMetadata.sourceDir=$(pwd)",
-    "voice:setup": "sh voice/setup.sh"
+    "test": "node --test --test-reporter=spec \"test/**/*.test.js\"",
+    "test:unit": "node --test --test-reporter=spec \"test/{kernel,organs,features}/*.test.js\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "check:syntax": "node scripts/check-syntax.js",
+    "selftest": "node scripts/selftest.js",
+    "smoke": "node scripts/smoke.js",
+    "qa": "sh scripts/qa.sh",
+    "dist": "electron-builder --dir -c.extraMetadata.sourceDir=$(pwd)",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux",
+    "voice:setup": "sh voice/setup.sh",
+    "test:coverage": "node --test --experimental-test-coverage \"test/**/*.test.js\""
   },
   "dependencies": {
     "marked": "^18.0.12",
@@ -34,15 +45,37 @@
   },
   "devDependencies": {
     "electron": "^44.3.0",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "eslint": "^9.39.5"
   },
   "build": {
     "appId": "app.lyra.agent",
     "productName": "Lyra AI Agent",
     "icon": "assets/icon.icns",
     "mac": {
-      "target": "dir",
-      "category": "public.app-category.productivity"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity",
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Lyra uses the microphone so you can talk to it.",
+        "NSCameraUsageDescription": "Lyra can look at images you share with it."
+      }
     },
     "files": [
       "main/**",
@@ -53,10 +86,80 @@
       "voice/*.txt",
       "voice/*.sh",
       "package.json",
-      "scripts/**"
+      "scripts/**",
+      "!scripts/{qa.sh,smoke.js,selftest.js,check-syntax.js,setup-branch-protection.sh}",
+      "!**/*.test.js"
     ],
     "asarUnpack": [
       "voice/**"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lyra AI Agent"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility",
+      "maintainer": "mhndhayek <mhndhayek@users.noreply.github.com>",
+      "synopsis": "Local-first AI agent that lives on your computer",
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "Lyra"
+        }
+      },
+      "syncDesktopName": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "releaseType": "release"
+      }
     ]
-  }
+  },
+  "desktopName": "Lyra.desktop"
 }
