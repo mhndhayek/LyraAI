@@ -3,12 +3,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { DEFAULTS, merge } = require('../../main/kernel/settings');
+const path = require('path');
 const ws = require('../../main/organs/workspace');
 const { TOOLS, byName, enabledTools, schemaFor } = require('../../main/organs/tools');
 
 const settings = (patch = {}) => merge(DEFAULTS, patch);
 // The same context the agent loop hands to a tool, minus the live services.
-const context = (root = '/tmp/lyra-workspace') => ({
+const OUTSIDE = path.join(path.sep, 'etc', 'hosts');
+const context = (root = path.join(path.sep, 'tmp', 'lyra-workspace')) => ({
   root, abs: (p) => ws.resolvePath(root, p), settings: settings(), tools: byName, kernel: null,
   chatId: 'test', emit: () => {}, notify: () => {}, browserMode: () => 'visible',
 });
@@ -90,7 +92,7 @@ test('the schema handed to the model is valid OpenAI tool JSON', () => {
 test('destructive tools are not quietly low risk', () => {
   const ctx = context();
   for (const name of ['shell', 'write_file', 'edit_file', 'run_code']) {
-    const risk = byName[name].risk({ path: '/etc/hosts', command: 'rm -rf /' }, ctx);
+    const risk = byName[name].risk({ path: OUTSIDE, command: 'rm -rf /' }, ctx);
     assert.ok(['medium', 'high'].includes(risk), `${name} outside the workspace should not be low risk, got ${risk}`);
   }
 });
@@ -98,7 +100,7 @@ test('destructive tools are not quietly low risk', () => {
 test('reading inside the workspace is low risk', () => {
   const ctx = context();
   assert.equal(byName.read_file.risk({ path: 'notes.txt' }, ctx), 'low');
-  assert.equal(byName.read_file.risk({ path: '/etc/hosts' }, ctx), 'medium', 'and outside it is not');
+  assert.equal(byName.read_file.risk({ path: OUTSIDE }, ctx), 'medium', 'and outside it is not');
   assert.equal(byName.list_dir.risk({ path: '.' }, ctx), 'low');
 });
 

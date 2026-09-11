@@ -180,8 +180,8 @@ jobs:
         run: ${{ matrix.command }}
         env:
           # Unsigned builds: signing is done at release time with real secrets.
+          # Publishing is the release workflow's job, never the build's.
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          GH_TOKEN: ""
       - name: Check the installers were produced and the packaged app starts
         shell: bash
         run: node scripts/check-artifacts.js --launch

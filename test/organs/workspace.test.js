@@ -22,22 +22,26 @@ test('ensure expands a home-relative folder', () => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+// Absolute paths differ per platform, so they are built rather than written out.
+const ROOT_DIR = path.join(path.sep, 'tmp', 'lyra-root');
+const OUTSIDE = path.join(path.sep, 'etc', 'hosts');
+
 test('relative paths resolve inside the workspace, absolute ones do not move', () => {
-  const root = '/tmp/lyra-root';
+  const root = ROOT_DIR;
   assert.equal(ws.resolvePath(root, 'notes/a.md'), path.join(root, 'notes', 'a.md'));
   assert.equal(ws.resolvePath(root, './a.md'), path.join(root, 'a.md'));
-  assert.equal(ws.resolvePath(root, '/etc/hosts'), '/etc/hosts');
+  assert.equal(ws.resolvePath(root, OUTSIDE), OUTSIDE, 'an absolute path is left where it is');
   assert.equal(ws.resolvePath(root, ''), root, 'no path means the workspace itself');
   assert.equal(ws.resolvePath(root, '~'), os.homedir());
 });
 
 test('inside() is not fooled by traversal or by prefix collisions', () => {
-  const root = '/tmp/lyra-root';
+  const root = ROOT_DIR;
   assert.equal(ws.inside(root, root), true);
   assert.equal(ws.inside(root, path.join(root, 'deep', 'file.txt')), true);
-  assert.equal(ws.inside(root, '/tmp/lyra-root-other/file.txt'), false, 'a shared prefix is not containment');
+  assert.equal(ws.inside(root, path.join(path.sep, 'tmp', 'lyra-root-other', 'file.txt')), false, 'a shared prefix is not containment');
   assert.equal(ws.inside(root, ws.resolvePath(root, '../secrets.txt')), false, 'traversal escapes are caught');
-  assert.equal(ws.inside(root, '/etc/hosts'), false);
+  assert.equal(ws.inside(root, OUTSIDE), false);
 });
 
 test('tree lists directories first with counts, and hides dotfiles', () => {
