@@ -4,8 +4,10 @@
 name: CI
 
 on:
+  # Any pushed branch is checked, so a failure shows up before a pull request is
+  # even opened. The concurrency group below keeps this from doubling up with
+  # the pull_request run on the same branch.
   push:
-    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -13,7 +15,7 @@ on:
   workflow_call:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
