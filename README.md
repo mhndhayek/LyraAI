@@ -59,7 +59,7 @@ Every character has idle variations and a thinking, writing and speaking animati
 
 ## Quick start
 
-You need **macOS, Windows or Linux**, **Node.js 20 or newer**, and a model runtime. [LM Studio](https://lmstudio.ai/) is the easiest: install it, download a model, start its server. llama.cpp and Ollama work just as well.
+You need **macOS, Windows or Linux**, **Node.js 20 or newer** (22+ to store chats in SQLite rather than JSON), and a model runtime. [LM Studio](https://lmstudio.ai/) is the easiest: install it, download a model, start its server. llama.cpp and Ollama work just as well.
 
 ```bash
 git clone https://github.com/mhndhayek/LyraAI.git

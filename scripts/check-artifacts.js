@@ -72,6 +72,10 @@ if (process.argv.includes('--launch')) {
   const useXvfb = process.platform === 'linux' && !process.env.DISPLAY;
   const r = spawnSync(useXvfb ? 'xvfb-run' : bin, useXvfb ? ['-a', bin, ...args] : args, { encoding: 'utf8', timeout: 180000 });
 
+  if (r.error) {
+    console.error(`✗ the packaged app could not be started: ${r.error.message}`);
+    process.exit(1);
+  }
   if (r.status !== 0) {
     console.error(`✗ the packaged app exited with ${r.status}`);
     console.error((r.stderr || '').split('\n').slice(-15).join('\n'));
