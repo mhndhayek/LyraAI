@@ -53,10 +53,16 @@ console.log(`\n✓ all installers for ${process.platform} were produced`);
 if (process.argv.includes('--launch')) {
   const { spawnSync } = require('child_process');
   const os = require('os');
+  // macOS builds one folder per architecture and which one is named plain "mac"
+  // depends on the builder host, so prefer whichever matches this machine.
+  const macApps = fs.readdirSync(dist)
+    .filter((d) => /^mac(-|$)/.test(d) && fs.statSync(path.join(dist, d)).isDirectory())
+    .sort((a, b) => Number(b.includes(process.arch)) - Number(a.includes(process.arch)))
+    .map((d) => path.join(dist, d, 'Lyra AI Agent.app', 'Contents', 'MacOS', 'Lyra AI Agent'));
+
   const candidates = {
     linux: [path.join(dist, 'linux-unpacked', 'lyra-ai-agent')],
-    darwin: [path.join(dist, 'mac-arm64', 'Lyra AI Agent.app', 'Contents', 'MacOS', 'Lyra AI Agent'),
-      path.join(dist, 'mac', 'Lyra AI Agent.app', 'Contents', 'MacOS', 'Lyra AI Agent')],
+    darwin: macApps,
     win32: [path.join(dist, 'win-unpacked', 'Lyra AI Agent.exe')],
   }[process.platform] || [];
 

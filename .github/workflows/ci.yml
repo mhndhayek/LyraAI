@@ -219,11 +219,16 @@ jobs:
     if: always()
     steps:
       - name: Every check must have passed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
         run: |
-          results='${{ toJSON(needs) }}'
-          echo "$results"
-          if echo "$results" | grep -qE '"result": *"(failure|cancelled|skipped)"'; then
-            echo "::error::One or more QA jobs did not pass; this branch cannot be merged."
+          # Anything that is not an outright success — failed, cancelled or
+          # skipped because something it needed failed — blocks the merge.
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.value.result)\t\(.key)"'
+          failed=$(echo "$RESULTS" | jq -r 'to_entries[] | select(.value.result != "success") | .key')
+          if [ -n "$failed" ]; then
+            echo "::error::These QA jobs did not pass, so this branch cannot be merged: $(echo "$failed" | tr '\n' ' ')"
             exit 1
           fi
-          echo "All QA jobs passed."
+          count=$(echo "$RESULTS" | jq 'length')
+          echo "All $count QA jobs passed."
