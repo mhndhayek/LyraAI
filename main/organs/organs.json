@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "note": "Main-process organs load as one set through index.js (create/dispose). The renderer folder is the UI organ.",
+  "main": {
+    "index.js": "Wires every service together and registers the chat IPC handlers. Exports create(kernel) and the returned object's dispose().",
+    "agent.js": "The agent loop: context building, streaming, tool calls behind approvals, compression, voice, steering.",
+    "tools.js": "Tool registry: coding tools, app tools, browser, memory, images. Add a tool by pushing an object with name/description/parameters/risk/summary/run.",
+    "llm.js": "OpenAI-compatible client: model listing (LM Studio, Ollama, generic), streaming with reasoning-tag filtering.",
+    "browser.js": "The agent's browser (WebContentsView / hidden window) and its primitives.",
+    "voice.js": "KittenTTS + Whisper sidecar bridge, custom TTS, say fallback.",
+    "goals.js": "Reflection after sessions and autonomous goal work.",
+    "compression.js": "Context estimation and summarisation.",
+    "imagegen.js": "SwarmUI / ComfyUI image generation.",
+    "approvals.js": "Approval gate with modes, smart approvals and timeouts.",
+    "notify.js": "Desktop notifications with the AppleScript fallback.",
+    "shell.js": "Persistent zsh and one-shot runner.",
+    "workspace.js": "Workspace folder helpers and repo discovery.",
+    "util.js": "Small shared helpers."
+  }
+}

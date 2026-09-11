@@ -1,0 +1,27 @@
+/* Pixel: a whole-look theme. Pixel font, hard edges, chunky borders, offset
+   shadows, stepped animation, and the pixel-art character (theme.json → character). */
+@font-face { font-family: 'Pixelify Sans'; src: url('PixelifySans.ttf') format('truetype'); font-weight: 400 700; font-display: block; }
+:root {
+  --scheme: dark;
+  --font: 'Pixelify Sans', 'Courier New', monospace; --mono: 'Pixelify Sans', 'Courier New', monospace; --fs: 15px;
+  --radius: 0px; --radius-lg: 0px; --radius-bubble: 0px; --radius-pill: 0px; --border-w: 2px; --transition: 0ms;
+  --bg: #1a1423; --side: #241b30; --panel: #2d2340; --panel2: #3a2d52; --line: #4a3a66; --line2: #6b5590; --hover: #3a2d52;
+  --text: #f1e6ff; --bright: #ffffff; --muted: #a894c4; --accent: #7cf7a0; --accent-fg: #102015; --accent-dim: rgba(124, 247, 160, 0.16);
+  --user-bubble: #4d3a76; --user-bubble-text: #ffffff; --danger: #ff7a8a; --warn: #ffd166; --ok: #7cf7a0;
+  --shadow: 6px 6px 0 #0d0a12;
+  --char-skin: #f7e3c6; --char-ink: #1a1423; --char-cheek: #ff9aa8; --char-shirt: #7cf7a0;
+}
+* { image-rendering: pixelated; }
+.icon-btn, .icon-btn.send, .icon-btn.round, .avatar, .toggle, .toggle::after, .close-btn, .audio-pill .play, .att .rm, .att, .img-card, .persona-avatar, .ai-avatar, .badge-dot, .dot, .rec-dot { border-radius: 0 !important; }
+.bubble, .approval, .composer, .card, .list, .goal, .stage, .btn, .toast, .field, .select, .seg, .theme-card, .radio-card, .img-card, .mini-stage, .search { box-shadow: 4px 4px 0 #0d0a12; }
+.icon-btn.send { box-shadow: 3px 3px 0 #0d0a12; }
+.toggle { border: 2px solid var(--line2); height: 22px; width: 40px; } .toggle::after { width: 12px; height: 12px; top: 3px; left: 3px; background: var(--bright); } .toggle.on::after { left: 21px; }
+.toggle.on { background: var(--accent); border-color: var(--accent); }
+svg.icon { shape-rendering: crispEdges; stroke-width: 2.2; }
+.md pre, .md code { font-family: var(--mono); font-size: 14px; }
+.c-body, .eq i, .rec-dot, .md .cursor::after { animation-timing-function: steps(2, end) !important; }
+.chat-item.active, .nav-item.on { box-shadow: inset 4px 0 0 var(--accent); }
+.state-chip, .badge, .pill, .goal .tag { border: 2px solid currentColor; }
+.thread .divider-line::before, .thread .divider-line::after { height: 2px; }
+.stage { background: repeating-linear-gradient(0deg, #16111f 0 2px, #1a1423 2px 4px); }
+body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 100; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 3px); }

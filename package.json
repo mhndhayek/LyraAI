@@ -1,0 +1,62 @@
+{
+  "name": "lyra-ai-agent",
+  "productName": "Lyra AI Agent",
+  "version": "0.9.0",
+  "description": "Lyra AI Agent: a local-first AI agent that lives on your computer as its own desktop app, with a persona, memory, tools, an in-app browser, a live pixel-art character, voice, phone access and the ability to grow itself.",
+  "author": "mhndhayek",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "homepage": "https://github.com/mhndhayek/LyraAI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mhndhayek/LyraAI.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mhndhayek/LyraAI/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/mhndhayek"
+  },
+  "main": "main/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "start:safe": "electron . --safe",
+    "selftest": "electron . --user-data-dir=/tmp/lyra-selftest --kernel-test",
+    "dist": "electron-builder --mac --dir -c.extraMetadata.sourceDir=$(pwd)",
+    "voice:setup": "sh voice/setup.sh"
+  },
+  "dependencies": {
+    "marked": "^18.0.12",
+    "pixi-live2d-display": "^0.4.0",
+    "pixi.js": "^7.4.3",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "electron": "^44.3.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "app.lyra.agent",
+    "productName": "Lyra AI Agent",
+    "icon": "assets/icon.icns",
+    "mac": {
+      "target": "dir",
+      "category": "public.app-category.productivity"
+    },
+    "files": [
+      "main/**",
+      "renderer/**",
+      "docs/**",
+      "preload.js",
+      "voice/*.py",
+      "voice/*.txt",
+      "voice/*.sh",
+      "package.json",
+      "scripts/**"
+    ],
+    "asarUnpack": [
+      "voice/**"
+    ]
+  }
+}

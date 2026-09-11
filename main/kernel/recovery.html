@@ -1,0 +1,40 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Lyra · Recovery</title>
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; background: #141517; color: #ececea; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 56px 24px; }
+  h1 { font-size: 22px; margin: 0 0 6px; } .why { color: #f2c26b; font-size: 14px; margin-bottom: 20px; white-space: pre-wrap; }
+  .card { background: #202227; border: 1px solid #33363d; border-radius: 10px; padding: 14px 16px; margin: 10px 0; }
+  button { font: inherit; background: #2a2c33; color: #ececea; border: 1px solid #33363d; border-radius: 8px; padding: 8px 12px; cursor: pointer; margin: 4px 6px 4px 0; }
+  button.primary { background: #4fc8b4; color: #0f1a18; border-color: #4fc8b4; }
+  .cp { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a2c33; font-size: 13px; } .cp:last-child { border: 0; } .cp .h { font-family: ui-monospace, monospace; color: #8e9097; } .cp .lkg { color: #4fc8b4; font-size: 11px; }
+  .log { font-family: ui-monospace, monospace; font-size: 11px; color: #8e9097; white-space: pre-wrap; max-height: 200px; overflow: auto; }
+  p { font-size: 14px; color: #b9bbc2; line-height: 1.5; }
+</style></head>
+<body><div class="wrap">
+  <h1>Lyra started in safe mode</h1>
+  <div class="why" id="why"></div>
+  <p>The agent is not loaded. Only the kernel is running, so nothing here can be broken by an earlier change. Pick a way back:</p>
+  <div class="card">
+    <button class="primary" id="lkg">Roll back to last known good and restart</button>
+    <button id="shipped">Reset organs to the shipped version</button>
+    <button id="ext">Disable all extensions</button>
+    <button id="retry">Try a normal start</button>
+  </div>
+  <div class="card"><b style="font-size:13px">Checkpoints</b><div id="cps"></div></div>
+  <div class="card"><b style="font-size:13px">Recent health log</b><div class="log" id="log"></div></div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search); document.getElementById('why').textContent = q.get('reason') || '';
+  const K = window.lyra.kernel;
+  const restart = () => K.relaunch();
+  document.getElementById('lkg').onclick = async () => { await K.rollback({ ref: 'lkg' }); restart(); };
+  document.getElementById('shipped').onclick = async () => { await K.resetShipped(); restart(); };
+  document.getElementById('ext').onclick = async () => { await K.disableAllExtensions(); restart(); };
+  document.getElementById('retry').onclick = restart;
+  (async () => {
+    const cps = await K.checkpoints(); const box = document.getElementById('cps');
+    cps.slice(0, 15).forEach((c) => { const d = document.createElement('div'); d.className = 'cp'; d.innerHTML = `<span class="h">${c.hash}</span><span>${c.label}</span>${c.lkg ? '<span class="lkg">last known good</span>' : ''}<span style="flex:1"></span><button data-h="${c.hash}">Roll back here</button>`; d.querySelector('button').onclick = async () => { await K.rollback({ ref: c.hash }); restart(); }; box.appendChild(d); });
+    document.getElementById('log').textContent = await K.health();
+  })();
+</script></body></html>

@@ -1,0 +1,28 @@
+const { contextBridge, ipcRenderer } = require('electron');
+const call = (ch) => (payload) => ipcRenderer.invoke(ch, payload);
+contextBridge.exposeInMainWorld('lyra', {
+  platform: process.platform,
+  settings: { get: call('settings:get'), set: call('settings:set'), reset: call('settings:reset') },
+  models: { detect: call('models:detect') },
+  chats: { list: call('chats:list'), create: call('chats:create'), get: call('chats:get'), delete: call('chats:delete'), rename: call('chats:rename') },
+  chat: { send: call('chat:send'), stop: call('chat:stop'), context: call('chat:context') },
+  approvals: { respond: call('approval:respond') },
+  browser: { bounds: call('browser:bounds'), show: call('browser:show'), takeOver: call('browser:takeover'), stop: call('browser:stop'), navigate: call('browser:navigate'), back: call('browser:back'), reload: call('browser:reload'), status: call('browser:status'), clear: call('browser:clear') },
+  voice: { transcribe: call('voice:transcribe'), speak: call('voice:speak'), voices: call('voice:voices'), available: call('voice:available'), status: call('voice:status'), setup: call('voice:setup'), warm: call('voice:warm') },
+  state: { set: call('state:set') },
+  memory: { list: call('memory:list'), delete: call('memory:delete'), clear: call('memory:clear') },
+  goals: { list: call('goals:list'), archive: call('goals:archive'), reflect: call('goals:reflect'), run: call('goals:run'), usage: call('goals:usage') },
+  workspace: { tree: call('workspace:tree'), repos: call('workspace:repos'), choose: call('workspace:choose'), open: call('workspace:open') },
+  files: { pickImages: call('files:pickImages'), pickFolder: call('files:pickFolder'), pickFile: call('files:pickFile') },
+  themes: { list: call('themes:list'), openFolder: call('themes:openFolder') },
+  pets: { list: call('pets:list') },
+  logs: { list: call('logs:list'), text: call('logs:text'), counts: call('logs:counts'), clear: call('logs:clear'), write: call('logs:write'), open: call('logs:open') },
+  packs: { list: call('packs:list') },
+  mobile: { state: call('mobile:state'), start: call('mobile:start'), stop: call('mobile:stop'), tailnet: call('mobile:tailnet'), newCode: call('mobile:newCode'), revoke: call('mobile:revoke'), renewCert: call('mobile:renewCert'), qr: call('mobile:qr') },
+  imagegen: { test: call('imagegen:test') },
+  app: { notifyTest: call('app:notifyTest'), notifyStatus: call('app:notifyStatus'), openNotificationSettings: call('app:openNotificationSettings'), openExternal: call('app:openExternal'), paths: call('app:paths'), testConnection: call('app:testConnection') },
+  kernel: { state: call('kernel:state'), checkpoints: call('kernel:checkpoints'), checkpoint: call('kernel:checkpoint'), rollback: call('kernel:rollback'), resetShipped: call('kernel:resetShipped'), reload: call('kernel:reload'), verify: call('kernel:verify'), health: call('kernel:health'), docs: call('kernel:docs'), relaunch: call('kernel:relaunch'), disableAllExtensions: call('kernel:disableAllExtensions'), ready: call('renderer:ready'), openState: call('kernel:openState') },
+  extensions: { list: call('ext:list'), set: call('ext:set'), approve: call('ext:approve'), call: call('ext:call'), panels: call('ext:panels'), openFolder: call('ext:openFolder') },
+  tools: { list: call('tools:list') },
+  onEvent: (cb) => { const h = (_, e) => cb(e); ipcRenderer.on('lyra:event', h); return () => ipcRenderer.removeListener('lyra:event', h); },
+});

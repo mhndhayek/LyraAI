@@ -1,0 +1,1 @@
+{ "id": "hello-panel", "name": "Hello panel", "version": "1.0.0", "description": "Example extension: one tool and one panel that share a counter.", "capabilities": ["ui"], "main": "main.js", "panel": "panel.html" }
