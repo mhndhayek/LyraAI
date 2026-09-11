@@ -8,13 +8,14 @@ const { layout, migrate, adoptOldUserData, copyDir } = require('../../main/kerne
 test.after(cleanup);
 
 test('the layout keeps editable state apart from the read-only bundle', () => {
-  const p = layout('/data', '/app');
-  assert.equal(p.state, path.join('/data', 'state'));
+  const data = path.join(path.sep, 'data'), app = path.join(path.sep, 'app');
+  const p = layout(data, app);
+  assert.equal(p.state, path.join(data, 'state'));
   for (const key of ['organsMain', 'organsRenderer', 'extensions', 'themes', 'settingsFile']) {
     assert.ok(p[key].startsWith(p.state), `${key} must live under the state folder`);
   }
   for (const key of ['docs', 'shippedOrgans', 'shippedRenderer', 'kernelDir', 'voiceDir']) {
-    assert.ok(p[key].startsWith('/app'), `${key} must live in the app bundle`);
+    assert.ok(p[key].startsWith(app), `${key} must live in the app bundle`);
   }
 });
 

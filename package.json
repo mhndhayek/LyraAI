@@ -22,20 +22,20 @@
   "scripts": {
     "start": "electron .",
     "start:safe": "electron . --safe",
-    "test": "node --test --test-reporter=spec \"test/**/*.test.js\"",
-    "test:unit": "node --test --test-reporter=spec \"test/{kernel,organs,features}/*.test.js\"",
+    "test": "node scripts/run-tests.js --test-reporter=spec",
+    "test:unit": "node scripts/run-tests.js --test-reporter=spec test/kernel test/organs test/features",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check:syntax": "node scripts/check-syntax.js",
     "selftest": "node scripts/selftest.js",
     "smoke": "node scripts/smoke.js",
     "qa": "sh scripts/qa.sh",
-    "dist": "electron-builder --dir -c.extraMetadata.sourceDir=$(pwd)",
-    "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win",
-    "dist:linux": "electron-builder --linux",
+    "dist": "electron-builder --dir --publish never -c.extraMetadata.sourceDir=$(pwd)",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:linux": "electron-builder --linux --publish never",
     "voice:setup": "sh voice/setup.sh",
-    "test:coverage": "node --test --experimental-test-coverage \"test/**/*.test.js\""
+    "test:coverage": "node scripts/run-tests.js --experimental-test-coverage"
   },
   "dependencies": {
     "marked": "^18.0.12",
@@ -161,5 +161,8 @@
       }
     ]
   },
-  "desktopName": "Lyra.desktop"
+  "desktopName": "Lyra.desktop",
+  "overrides": {
+    "gh-pages": "^6.3.0"
+  }
 }

@@ -6,13 +6,33 @@ const { run } = require('./electron-run');
 
 run(['--kernel-test'], { timeoutMs: 240000 })
   .then(({ code, stdout }) => {
-    const start = stdout.indexOf('[selftest] ');
-    if (start === -1) {
+    const marker = stdout.indexOf('[selftest] ');
+    if (marker === -1) {
       console.error('✗ the kernel self-test never reported; the app failed to start');
       process.exit(1);
     }
+    // The app keeps logging after the report is printed (a healthy boot marks
+    // itself good), so take the report object only, not the rest of the output.
+    const from = stdout.indexOf('{', marker);
+    let depth = 0, end = -1, inString = false, escaped = false;
+    for (let i = from; i < stdout.length; i++) {
+      const c = stdout[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (c === '\\') escaped = true;
+        else if (c === '"') inString = false;
+        continue;
+      }
+      if (c === '"') inString = true;
+      else if (c === '{') depth++;
+      else if (c === '}' && --depth === 0) { end = i + 1; break; }
+    }
+    if (from === -1 || end === -1) {
+      console.error('✗ the self-test report was cut short; the app exited mid-run');
+      process.exit(1);
+    }
     let report;
-    try { report = JSON.parse(stdout.slice(start + '[selftest] '.length)); }
+    try { report = JSON.parse(stdout.slice(from, end)); }
     catch (e) { console.error('✗ the self-test report could not be read:', e.message); process.exit(1); }
 
     const failed = report.results.filter((r) => !r.pass);
