@@ -24,8 +24,8 @@ function filterPatch(patch) {
 
 const SHELL_BLOCK = [
   [/\b(killall|pkill|kill)\b.*\b(Electron|Lyra)\b/i, 'stopping the app process'],
-  [/\brm\b.*(state[\/\\]\.git|Lyra( AI Agent)?\.app|app\.asar|\/organs\b)/i, 'deleting the app, its organs or the checkpoint repository'],
-  [/\bgit\b.*(state[\/\\]|--git-dir)/i, 'driving the checkpoint repository directly (use the checkpoint tools)'],
+  [/\brm\b.*(state[/\\]\.git|Lyra( AI Agent)?\.app|app\.asar|\/organs\b)/i, 'deleting the app, its organs or the checkpoint repository'],
+  [/\bgit\b.*(state[/\\]|--git-dir)/i, 'driving the checkpoint repository directly (use the checkpoint tools)'],
   [/\bosascript\b.*\bquit\b/i, 'quitting the app'],
   [/\b(launchctl|shutdown|reboot)\b/i, 'system power or service control'],
 ];

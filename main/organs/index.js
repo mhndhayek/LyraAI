@@ -2,7 +2,7 @@
 // returned object holds every service and a dispose() that tears them down again.
 const path = require('path');
 const fs = require('fs');
-const { dialog, shell: eshell, nativeTheme } = require('electron');
+const { dialog, shell: eshell } = require('electron');
 const ws = require('./workspace');
 const { PersistentShell, runOnce } = require('./shell');
 const { Approvals } = require('./approvals');

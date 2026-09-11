@@ -1,0 +1,224 @@
+# The QA gate. Every job here must pass before a pull request can be merged: the
+# branch protection rule requires the single "QA Gate" check at the bottom, which
+# only goes green when every job above it did.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  # Release runs the identical gate before it publishes anything.
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+  ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+
+jobs:
+  static:
+    name: Lint and syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+      - name: Every JavaScript file parses
+        run: npm run check:syntax
+      - name: Lint
+        run: npm run lint
+      - name: The lockfile matches package.json
+        run: |
+          npm ci --dry-run >/dev/null
+          git diff --exit-code package-lock.json
+
+  unit:
+    name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [22]
+        include:
+          # The app ships on Electron's Node, but the kernel modules are plain
+          # Node: check the oldest release that still has node:sqlite too.
+          - os: ubuntu-latest
+            node: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+      - name: Configure git for the checkpoint tests
+        run: |
+          git config --global user.email "ci@lyra.local"
+          git config --global user.name "Lyra CI"
+          git config --global init.defaultBranch main
+      - name: Run the test suite
+        run: npm run test:unit
+
+  selftest:
+    name: Kernel self-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install a virtual display
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
+      - name: Configure git for the checkpoint tests
+        run: |
+          git config --global user.email "ci@lyra.local"
+          git config --global user.name "Lyra CI"
+      - name: Break the organs on purpose and check the kernel recovers
+        run: npm run selftest
+
+  smoke:
+    name: App smoke test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install a virtual display
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
+      - name: Configure git
+        run: |
+          git config --global user.email "ci@lyra.local"
+          git config --global user.name "Lyra CI"
+      - name: Start the app and check the window renders
+        run: npm run smoke
+        env:
+          SMOKE_OUT: ${{ github.workspace }}/smoke-output
+      - name: Keep the screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.os }}
+          path: smoke-output
+          if-no-files-found: warn
+          retention-days: 7
+
+  build:
+    name: Build installers (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS
+            command: npm run dist:mac
+            artifacts: "dist/*.dmg\ndist/*.zip"
+          - os: windows-latest
+            name: Windows
+            command: npm run dist:win
+            artifacts: "dist/*.exe"
+          - os: ubuntu-latest
+            name: Linux
+            command: npm run dist:linux
+            artifacts: |
+              dist/*.AppImage
+              dist/*.deb
+              dist/*.tar.gz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Cache the Electron download
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ELECTRON_CACHE }}
+            ${{ env.ELECTRON_BUILDER_CACHE }}
+          key: ${{ runner.os }}-electron-${{ hashFiles('package-lock.json') }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Compile the app into an installer
+        run: ${{ matrix.command }}
+        env:
+          # Unsigned builds: signing is done at release time with real secrets.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          GH_TOKEN: ""
+      - name: Check the installers were produced and the packaged app starts
+        shell: bash
+        run: node scripts/check-artifacts.js --launch
+      - name: Upload the installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.name }}
+          path: ${{ matrix.artifacts }}
+          if-no-files-found: error
+          retention-days: 14
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+      - name: No known high-severity vulnerabilities
+        run: npm audit --audit-level=high
+
+  gate:
+    name: QA Gate
+    runs-on: ubuntu-latest
+    needs: [static, unit, selftest, smoke, build, audit]
+    if: always()
+    steps:
+      - name: Every check must have passed
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "$results"
+          if echo "$results" | grep -qE '"result": *"(failure|cancelled|skipped)"'; then
+            echo "::error::One or more QA jobs did not pass; this branch cannot be merged."
+            exit 1
+          fi
+          echo "All QA jobs passed."

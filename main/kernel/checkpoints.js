@@ -41,13 +41,19 @@ class Checkpoints {
   markGood() { if (!this.available) return; this.commit('Healthy boot'); this.git(['tag', '-f', 'lkg']); }
   changedSince(ref = 'lkg') { try { return this.git(['diff', '--stat', ref, '--']).split('\n').filter(Boolean); } catch { return []; } }
   changedFiles(ref = 'HEAD') { try { const a = this.git(['diff', '--name-only', ref, '--']).split('\n'); const b = this.git(['ls-files', '--others', '--exclude-standard']).split('\n'); return [...new Set([...a, ...b])].filter(Boolean); } catch { return []; } }
+  // Files that exist now but did not exist at ref.
+  addedSince(ref, subdir = null) {
+    try { return this.git(['diff', '--name-only', '--diff-filter=A', ref, 'HEAD', '--', subdir || '.']).split('\n').filter(Boolean); } catch { return []; }
+  }
   rollback(ref, { subdir = null } = {}) {
     if (!this.available) throw new Error('Checkpoints unavailable (git not found)');
     this.commit(`Before rollback to ${ref}`);
-    const target = subdir ? [ref, '--', subdir] : [ref, '--', '.'];
-    this.git(['checkout', '-q', ...target]);
-    if (!subdir) this.git(['clean', '-fdq']);
-    else this.git(['clean', '-fdq', '--', subdir]);
+    const scope = subdir ? ['--', subdir] : ['--', '.'];
+    this.git(['checkout', '-q', ref, ...scope]);
+    // checkout only restores what the checkpoint knew about: files added since then
+    // are still tracked and would survive the rollback, so remove them as well.
+    for (const f of this.addedSince(ref, subdir)) { try { fs.rmSync(path.join(this.dir, f), { force: true }); } catch {} }
+    this.git(['clean', '-fdq', ...(subdir ? ['--', subdir] : [])]);
     return this.commit(`Rolled back ${subdir || 'everything'} to ${ref}`);
   }
 }
