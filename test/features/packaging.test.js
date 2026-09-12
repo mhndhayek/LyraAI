@@ -15,7 +15,11 @@ test('the package points at a real entry point and the app metadata is complete'
     assert.ok(pkg[field], `package.json is missing ${field}`);
   }
   assert.equal(pkg.build.appId, 'app.lyra.agent');
-  assert.equal(pkg.build.productName, pkg.productName);
+  // The compiled app is called Lyra, which is also the name the kernel gives the
+  // running process, so the window, the menu bar and the binary all agree.
+  assert.equal(pkg.build.productName, 'Lyra');
+  assert.equal(pkg.build.nsis.shortcutName, 'Lyra', 'the Windows shortcut must match the app name');
+  assert.equal(pkg.build.linux.executableName, 'Lyra'.toLowerCase(), 'the Linux binary must match the app name');
 });
 
 test('every script the QA gate runs is defined', () => {

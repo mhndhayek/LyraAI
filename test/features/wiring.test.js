@@ -121,6 +121,36 @@ test('the tools that let the agent change the app are all registered', () => {
   }
 });
 
+test('panel headers keep clear of the macOS window buttons', () => {
+  const css = read('renderer', 'styles.css');
+  const main = read('main', 'main.js');
+
+  // The system draws the traffic lights over the page, inset from the top left.
+  const inset = /trafficLightPosition: \{ x: (\d+), y: (\d+) \}/.exec(main);
+  assert.ok(inset, 'main.js must position the window buttons for the reserve to be meaningful');
+  const buttonsBottom = Number(inset[2]) + 16; // the buttons are about 14px tall
+  const reserve = Number(/--titlebar-h: (\d+)px/.exec(css)[1]);
+  assert.ok(reserve > buttonsBottom, `only ${reserve}px is reserved for buttons reaching ${buttonsBottom}px`);
+
+  // Both panel headers reserve that space, rather than each guessing its own.
+  for (const rule of ['.sidebar-head', '.settings-nav-head']) {
+    const decl = new RegExp(`\\${rule} \\{[^}]*\\}`).exec(css);
+    assert.ok(decl, `${rule} is missing`);
+    assert.match(decl[0], /padding: var\(--titlebar-h\)/, `${rule} must reserve the window-button space`);
+  }
+});
+
+test('the settings menu title cannot scroll under the window buttons', () => {
+  // The menu is long enough to scroll, and it scrolls as one piece, so without a
+  // pinned header the title slides up behind the macOS window buttons.
+  const css = read('renderer', 'styles.css');
+  assert.match(/\.settings-nav \{[^}]*\}/.exec(css)[0], /overflow-y: auto/, 'the menu scrolls, which is what makes this necessary');
+  const head = /\.settings-nav-head \{[^}]*\}/.exec(css)[0];
+  assert.match(head, /position: sticky/, 'the settings title must stay pinned while the menu scrolls');
+  assert.match(head, /top: 0/);
+  assert.match(head, /background: var\(--side\)/, 'a pinned header needs an opaque background to cover what scrolls under it');
+});
+
 test('the recovery screen exists and does not depend on the organs', () => {
   const recovery = read('main', 'kernel', 'recovery.html');
   assert.ok(recovery.length > 200);

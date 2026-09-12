@@ -20,7 +20,7 @@
 
 ---
 
-Lyra is a desktop app, not a website. She talks to whatever model runtime you already run (LM Studio, llama.cpp, Ollama, or any OpenAI-compatible server), keeps her memory in a database on your disk, and does things: reads and writes files, runs commands, drives a browser you can watch, generates images, speaks, listens, and reaches your phone over your own private network. Nothing leaves your machine unless you point her at a server somewhere else.
+Lyra is a desktop app. She talks to whatever model runtime you already run (LM Studio, llama.cpp, Ollama, or any OpenAI-compatible server), keeps her memory in a database on your disk, and does things: reads and writes files, runs commands, drives a browser you can watch, generates images, speaks, listens, and reaches your phone over your own private network. Nothing leaves your machine unless you point her at a server somewhere else.
 
 She is also built to change herself. Ask for an orange theme, a new tool, or a panel that shows your calendar, and she edits the app she is running in, with checkpoints and rollback in case it goes wrong.
 
@@ -73,7 +73,7 @@ Then open **Settings › Model**, pick your model, and say hello.
 Optional pieces:
 
 ```bash
-npm run voice:setup    # KittenTTS + Whisper sidecar (needs uv, and `brew install espeak-ng`)
+npm run voice:setup    # KittenTTS + Whisper sidecar (needs uv and espeak-ng: `brew install espeak-ng` on macOS, `apt install espeak-ng` on Linux)
 npm run qa             # the full quality gate: lint, tests, self-test, smoke test
 npm run selftest       # breaks the app on purpose and proves the safety nets catch it
 ```
@@ -89,7 +89,7 @@ npm run dist:linux     # .AppImage, .deb and .tar.gz
 Builds land in `dist/`. Each platform builds on its own kind of machine; CI builds
 all three on every pull request and attaches them to tagged releases.
 
-The app is not signed. The first time you open the built `.app`, right-click it and choose **Open**.
+The builds are not signed yet. On macOS, right-click `Lyra.app` the first time and choose **Open**; on Windows, SmartScreen shows "more info → run anyway" on the first launch of the installer.
 
 ## Talk to her from your phone
 
@@ -97,7 +97,7 @@ The app is not signed. The first time you open the built `.app`, right-click it 
 
 Lyra can serve the same chats to your phone without any cloud in between.
 
-1. Install [Tailscale](https://tailscale.com/download) on the Mac and on the phone, signed in to the same account, and enable HTTPS in the Tailscale admin console (DNS tab).
+1. Install [Tailscale](https://tailscale.com/download) on the computer running Lyra and on the phone, signed in to the same account, and enable HTTPS in the Tailscale admin console (DNS tab).
 2. Open **Settings › Mobile** and switch on **Phone access**. Lyra asks Tailscale for a real certificate, so the phone gets a proper `https://` page, which is what lets Safari use the microphone and install to the home screen.
 3. Point the phone camera at the QR code. Safari opens and pairs in one step. Then **Share › Add to Home Screen**.
 
@@ -120,7 +120,7 @@ Things people ask her for:
 
 ## Privacy
 
-Chats, memory, files and settings stay in `~/Library/Application Support/Lyra`. Lyra sends prompts only to the model endpoint you configure, and images only to the image server you configure. Phone access rides on your own Tailscale network. There is no telemetry, no account, and no server of ours anywhere.
+Chats, memory, files and settings stay on your machine — `~/Library/Application Support/Lyra` on macOS, `%APPDATA%\Lyra` on Windows, `~/.config/Lyra` on Linux. Lyra sends prompts only to the model endpoint you configure, and images only to the image server you configure. Phone access rides on your own Tailscale network. There is no telemetry, no account, and no server of ours anywhere.
 
 ## Docs
 

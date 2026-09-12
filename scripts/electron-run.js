@@ -22,11 +22,20 @@ function wrap(cmd, args) {
   return { cmd: 'xvfb-run', args: ['-a', '--server-args=-screen 0 1280x900x24', cmd, ...args] };
 }
 
+// A CI machine has no real GPU. Chromium still tries to use the hardware
+// compositor under a virtual display, and when it cannot get a frame out of it
+// capturePage() fails with UnknownVizError and the screenshot never lands.
+// Software rendering makes the headless checks produce the same frame every time.
+function headlessGpuArgs() {
+  if (process.platform !== 'linux' || process.env.DISPLAY) return [];
+  return ['--disable-gpu', '--disable-gpu-compositing', '--disable-dev-shm-usage', '--use-gl=swiftshader'];
+}
+
 function run(extraArgs, { timeoutMs = 180000, userDataDir, onLine } = {}) {
   const bin = electronBinary();
   if (!bin) return Promise.reject(new Error('Electron is not installed; run npm ci first'));
   const dataDir = userDataDir || fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-ci-'));
-  const args = [ROOT, `--user-data-dir=${dataDir}`, '--no-sandbox', ...extraArgs];
+  const args = [ROOT, `--user-data-dir=${dataDir}`, '--no-sandbox', ...headlessGpuArgs(), ...extraArgs];
   const { cmd, args: finalArgs } = wrap(bin, args);
 
   return new Promise((resolve, reject) => {
@@ -62,4 +71,4 @@ function run(extraArgs, { timeoutMs = 180000, userDataDir, onLine } = {}) {
   });
 }
 
-module.exports = { run, ROOT };
+module.exports = { run, ROOT, headlessGpuArgs };

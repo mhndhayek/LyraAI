@@ -7,6 +7,9 @@
   --font: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --fs: 14px; --radius: 8px; --radius-lg: 12px; --radius-bubble: 14px; --radius-pill: 999px; --border-w: 1px; --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   --sidebar-w: 240px; --live-w: 300px; --browser-w: 620px;
+  /* Room kept clear at the top of a panel for the macOS window buttons, which
+     the system draws over the page (see trafficLightPosition in main.js). */
+  --titlebar-h: 52px;
   --char-skin: #e9ebe8; --char-shirt: var(--accent); --char-ink: #1b1c20; --char-cheek: rgba(242, 165, 160, 0.55);
   --transition: 300ms;
 }
@@ -62,7 +65,7 @@ textarea.field { height: auto; min-height: 104px; padding: 10px 12px; line-heigh
 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; } .dot.off { background: var(--danger); } .dot.busy { background: var(--warn); }
 
 /* sidebar */
-.sidebar-head { display: flex; align-items: center; justify-content: space-between; padding: 44px 14px 8px; }
+.sidebar-head { display: flex; align-items: center; justify-content: space-between; padding: var(--titlebar-h) 14px 8px; }
 .sidebar-title { font-size: 15px; font-weight: 600; color: var(--bright); }
 .search { margin: 0 14px 4px; height: 34px; border-radius: var(--radius); background: var(--panel); display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--muted); font-size: 13px; }
 .search input { background: none; border: 0; outline: none; flex: 1; min-width: 0; color: var(--text); }
@@ -197,7 +200,7 @@ textarea.field { height: auto; min-height: 104px; padding: 10px 12px; line-heigh
 /* settings */
 .settings-page { position: absolute; inset: 0; display: flex; background: var(--bg); z-index: 20; }
 .settings-nav { width: 260px; flex-shrink: 0; background: var(--side); border-right: var(--border-w) solid var(--line); display: flex; flex-direction: column; padding: 0 12px 20px; gap: 2px; overflow-y: auto; }
-.settings-nav-head { padding: 44px 10px 14px; } .settings-nav-title { font-size: 15px; font-weight: 600; color: var(--bright); } .settings-nav-sub { font-size: 12px; color: var(--muted); }
+.settings-nav-head { position: sticky; top: 0; z-index: 1; background: var(--side); padding: var(--titlebar-h) 10px 14px; } .settings-nav-title { font-size: 15px; font-weight: 600; color: var(--bright); } .settings-nav-sub { font-size: 12px; color: var(--muted); }
 .nav-group { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 16px 10px 5px; } .nav-group:first-child { padding-top: 2px; }
 .nav-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: calc(var(--radius) - 2px); font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer; width: 100%; text-align: left; } .nav-item .icon { color: var(--muted); flex-shrink: 0; } .nav-item .nav-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .nav-item:hover { background: var(--hover); } .nav-item.on { background: var(--hover); color: var(--bright); } .nav-item.on .icon { color: var(--accent); }
 .settings-content { flex: 1; padding: 36px 56px; overflow-y: auto; min-width: 0; }

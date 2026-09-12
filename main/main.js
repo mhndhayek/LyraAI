@@ -46,7 +46,7 @@ function listThemes() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 1280, height: 820, minWidth: 980, minHeight: 640, show: false, backgroundColor: '#141517', title: 'Lyra AI Agent',
+    width: 1280, height: 820, minWidth: 980, minHeight: 640, show: false, backgroundColor: '#141517', title: 'Lyra',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default', trafficLightPosition: { x: 14, y: 18 },
     webPreferences: { preload: path.join(__dirname, '..', 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false, spellcheck: true },
   });
