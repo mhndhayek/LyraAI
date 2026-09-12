@@ -115,14 +115,28 @@ jobs:
       - name: Install a virtual display
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
+      # A defined-but-empty CSC_LINK is worse than no CSC_LINK: electron-builder
+      # reads it as the path to a certificate and fails on the empty path. So the
+      # signing variables are only set at all when there is a certificate.
+      - name: Set up signing, if a certificate is configured
+        shell: bash
+        env:
+          CERTIFICATE: ${{ secrets.CSC_LINK }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "${CERTIFICATE:-}" ]; then
+            {
+              echo "CSC_LINK=$CERTIFICATE"
+              echo "CSC_KEY_PASSWORD=${CERTIFICATE_PASSWORD:-}"
+              echo "CSC_IDENTITY_AUTO_DISCOVERY=true"
+            } >> "$GITHUB_ENV"
+            echo "Signing with the certificate in the repository secrets."
+          else
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+            echo "No certificate configured: building unsigned, which still installs."
+          fi
       - name: Compile the installers
         run: ${{ matrix.command }}
-        env:
-          # Add CSC_LINK / CSC_KEY_PASSWORD (macOS) and WIN_CSC_LINK secrets to
-          # sign; without them the build is unsigned but still installable.
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
       - name: Check the installers and that the packaged app starts
         shell: bash
         run: node scripts/check-artifacts.js --launch

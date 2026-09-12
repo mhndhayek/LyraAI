@@ -112,6 +112,16 @@ test('a push to main releases only when the version changed', () => {
   }
 });
 
+test('an unset signing certificate is never passed as an empty one', () => {
+  // electron-builder reads a defined-but-empty CSC_LINK as the path to a
+  // certificate and fails on it, so the macOS build broke only in the release,
+  // where the variable was set from a secret that did not exist.
+  const build = jobSection('build', RELEASE);
+  assert.ok(!/CSC_LINK: \$\{\{ secrets\./.test(build), 'CSC_LINK must not be set straight from a secret that may be empty');
+  assert.match(build, /if \[ -n "\$\{CERTIFICATE:-\}" \]/, 'the signing variables must only be set when there is a certificate');
+  assert.match(build, /CSC_IDENTITY_AUTO_DISCOVERY=false/, 'and signing must be switched off when there is not');
+});
+
 test('a release goes live complete, and only once every platform is built', () => {
   const publish = jobSection('publish', RELEASE);
   assert.match(publish, /needs: \[decide, build\]/, 'publishing must wait for every platform');
