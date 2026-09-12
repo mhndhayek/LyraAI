@@ -20,9 +20,19 @@ class Docs {
   }
   settingsDoc() {
     const { DEFAULTS } = require('./settings'); const cur = this.k.settings.get();
-    const lines = ['# Settings (live values, with defaults)', '', 'Change them with configure_app({patch}). Paths marked LOCKED are refused; paths under model.* are queued until you are idle.', ''];
+    const profiles = this.k.settings.profiles();
+    const lines = ['# Settings (live values, with defaults)', '',
+      'Change them with configure_app({patch}). Paths marked LOCKED are refused; paths under model.* are queued until you are idle.', '',
+      // The values below are this profile's. Saying so beats letting the agent
+      // think it is editing the app for everyone.
+      `You are the profile "${profiles.list.find((p) => p.id === profiles.active).name}", one of ${profiles.list.length}. Persona, appearance, voice, goals, model and providers belong to this profile; everything else is shared by all of them. Only the user adds, switches or removes profiles, and the other profiles' settings are not yours to read.`, ''];
     const curFlat = Object.fromEntries(flatten(cur));
     for (const [p, def] of flatten(DEFAULTS)) { const lock = LOCKED.find((l) => p === l || p.startsWith(l + '.')); lines.push(`- ${p} = ${JSON.stringify(curFlat[p])} (default ${JSON.stringify(def)})${lock ? ` LOCKED: ${REASONS[lock]}` : p.startsWith('model.') ? ' (queued until idle)' : ''}`); }
+    // Locked settings that have no default to list, so the agent still learns
+    // they exist and that they are refused. Their values are deliberately not
+    // shown: the profile list carries every profile's soul and API keys.
+    const listed = flatten(DEFAULTS).map(([p]) => p);
+    for (const l of LOCKED) if (!listed.some((p) => p === l || p.startsWith(l + '.'))) lines.push(`- ${l} LOCKED: ${REASONS[l]}`);
     return lines.join('\n');
   }
   toolsDoc() {

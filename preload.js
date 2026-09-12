@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('lyra', {
   app: { notifyTest: call('app:notifyTest'), notifyStatus: call('app:notifyStatus'), openNotificationSettings: call('app:openNotificationSettings'), openExternal: call('app:openExternal'), paths: call('app:paths'), testConnection: call('app:testConnection') },
   kernel: { state: call('kernel:state'), checkpoints: call('kernel:checkpoints'), checkpoint: call('kernel:checkpoint'), rollback: call('kernel:rollback'), resetShipped: call('kernel:resetShipped'), reload: call('kernel:reload'), verify: call('kernel:verify'), health: call('kernel:health'), docs: call('kernel:docs'), relaunch: call('kernel:relaunch'), disableAllExtensions: call('kernel:disableAllExtensions'), ready: call('renderer:ready'), openState: call('kernel:openState') },
   extensions: { list: call('ext:list'), set: call('ext:set'), approve: call('ext:approve'), call: call('ext:call'), panels: call('ext:panels'), openFolder: call('ext:openFolder') },
+  profiles: { list: call('profiles:list'), create: call('profiles:create'), use: call('profiles:use'), rename: call('profiles:rename'), delete: call('profiles:delete') },
   tools: { list: call('tools:list') },
   onEvent: (cb) => { const h = (_, e) => cb(e); ipcRenderer.on('lyra:event', h); return () => ipcRenderer.removeListener('lyra:event', h); },
 });

@@ -4,7 +4,7 @@
   // Menu groups: the assistant herself, her character, what surrounds her, and the app.
   const NAV = [
     // A label can be a function when it depends on what the user named the assistant.
-    [() => S().persona.name, [['model', 'Model', 'cpu'], ['provider', 'Provider', 'server'], ['memory', 'Memory & context', 'database'], ['tools', 'Tools', 'tool'], ['imagegen', 'Image generation', 'image']]],
+    [() => S().persona.name, [['profiles', 'Profiles', 'user'], ['model', 'Model', 'cpu'], ['provider', 'Provider', 'server'], ['memory', 'Memory & context', 'database'], ['tools', 'Tools', 'tool'], ['imagegen', 'Image generation', 'image']]],
     ['Character', [['persona', 'Persona & chat', 'persona'], ['appearance', 'Appearance', 'sun'], ['voice', 'Voice', 'volume'], ['goals', 'AI goals', 'target']]],
     ['Around it', [['workspace', 'Workspace', 'folder'], ['browser', 'Browser', 'globe'], ['safety', 'Safety', 'shield'], ['notifications', 'Notifications', 'bell'], ['mobile', 'Mobile', 'phone']]],
     ['App', [['extensions', 'Extensions', 'plus'], ['recovery', 'Recovery', 'git'], ['about', 'About', 'info']]],
@@ -126,6 +126,52 @@
           row('Negative prompt', 'Added to every request.', field(g.negativePrompt, (v) => set({ imagegen: { negativePrompt: v } }), { w: 320, ph: 'blurry, low quality' })),
           row('Save to', 'Folder inside the workspace.', field(g.folder, (v) => set({ imagegen: { folder: v.trim() || 'images' } }), { w: 160, mono: true })),
         ]),
+      ];
+    },
+    async profiles() {
+      const s = S(); const { active, list } = await lyra.profiles.list();
+      const cards = el('<div style="display:flex;flex-direction:column;gap:10px"></div>');
+      for (const p of list) {
+        const on = p.id === active;
+        const card = el(`<div class="card" style="flex-direction:row;align-items:center;gap:14px${on ? ';border-color:var(--accent)' : ''}">
+          <div class="avatar persona-avatar" style="width:40px;height:40px;font-size:16px;flex-shrink:0">${window.avatarUrl(p.avatar) ? `<img src="${esc(window.avatarUrl(p.avatar))}" alt="">` : esc((p.name[0] || '?').toUpperCase())}</div>
+          <div class="lbl" style="flex:1;min-width:0">
+            <div class="t">${esc(p.name)}${on ? ' <span class="d" style="color:var(--accent)">· in use</span>' : ''}</div>
+            <div class="d">${esc(p.theme || 'lyra-dark')}${p.dataDir ? ` · ${esc(p.dataDir)}` : ' · the original chats and memory'}</div>
+          </div>
+          <div class="ctl" style="display:flex;gap:8px"></div></div>`);
+        const ctl = card.querySelector('.ctl');
+        if (!on) ctl.appendChild(btn('Switch to', async (e) => {
+          e.target.disabled = true;
+          try { await lyra.profiles.use({ id: p.id }); toast(`${p.name} is here.`); }
+          catch (err) { toast(err.message || String(err), 'error'); e.target.disabled = false; }
+        }, { ic: 'refresh' }));
+        ctl.appendChild(btn('Rename', async () => {
+          const name = prompt('What should this profile be called?', p.name);
+          if (name && name.trim() && name.trim() !== p.name) { await lyra.profiles.rename({ id: p.id, name: name.trim() }); refresh(); }
+        }, { ic: 'pen' }));
+        if (list.length > 1) ctl.appendChild(btn('Delete', async () => {
+          if (!confirm(`Delete ${p.name}? Her chats, memory and goals go with her. This cannot be undone.`)) return;
+          try { await lyra.profiles.delete({ id: p.id }); toast(`${p.name} removed.`); refresh(); }
+          catch (err) { toast(err.message || String(err), 'error'); }
+        }, { ic: 'trash', danger: true }));
+        cards.appendChild(card);
+      }
+
+      const addRow = el('<div style="display:flex;gap:8px;flex-wrap:wrap"></div>');
+      const add = async (copyFrom) => {
+        const name = prompt(copyFrom ? `Name for the copy of ${esc(s.persona.name)}?` : 'What is she called?');
+        if (!name || !name.trim()) return;
+        try { await lyra.profiles.create({ name: name.trim(), copyFrom }); toast(`${name.trim()} is here.`); }
+        catch (err) { toast(err.message || String(err), 'error'); }
+      };
+      addRow.appendChild(btn('Add a profile', () => add(null), { ic: 'plus' }));
+      addRow.appendChild(btn('Copy this one', () => add(active), { ic: 'archive' }));
+
+      return [
+        title('Profiles', `Each profile is a different assistant: her own soul, look, voice, animation, goals and model, and her own chats and memory. Safety, the workspace, the browser and phone access are yours and are shared by all of them. ${esc(s.persona.name)} cannot switch between them herself.`),
+        cards,
+        group('Add another', [addRow]),
       ];
     },
     async persona() {

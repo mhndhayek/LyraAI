@@ -3,9 +3,9 @@
 // self-modification budget.
 const path = require('path');
 
-const LOCKED = ['persona.name', 'safety', 'providers', 'tools.enabled', 'tools.app', 'kernel', 'chat.followUp', 'mobile'];
+const LOCKED = ['persona.name', 'safety', 'providers', 'tools.enabled', 'tools.app', 'kernel', 'chat.followUp', 'mobile', 'profiles'];
 const QUEUED = ['model'];
-const REASONS = { 'persona.name': 'only the user renames the assistant', safety: 'safety rules are the user’s', providers: 'model runtimes and API keys are the user’s', 'tools.enabled': 'the master tool switch is the user’s', 'tools.app': 'self-customization cannot switch itself off', kernel: 'kernel settings (checkpoints, budget) are the user’s', 'chat.followUp': 'the user decides how follow-ups behave', mobile: 'only the user opens or closes phone access' };
+const REASONS = { 'persona.name': 'only the user renames the assistant', safety: 'safety rules are the user’s', providers: 'model runtimes and API keys are the user’s', 'tools.enabled': 'the master tool switch is the user’s', 'tools.app': 'self-customization cannot switch itself off', kernel: 'kernel settings (checkpoints, budget) are the user’s', 'chat.followUp': 'the user decides how follow-ups behave', mobile: 'only the user opens or closes phone access', profiles: 'only the user adds, switches or removes profiles' };
 
 const matches = (p, prefix) => p === prefix || p.startsWith(prefix + '.');
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
