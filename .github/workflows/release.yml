@@ -1,0 +1,179 @@
+# Releases the app. A push to main that changes the version in package.json is
+# what cuts a release: the same QA gate every pull request runs has to pass, the
+# installers for macOS, Windows and Linux are compiled and started once to prove
+# they work, and only then is the release published with all three attached.
+#
+# Ordinary pushes to main do nothing here — bump the version to ship.
+# A pushed v* tag, or running this by hand, releases too.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.9.0). Leave empty for the version in package.json.'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  decide:
+    name: Is there anything to release?
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.check.outputs.release }}
+      tag: ${{ steps.check.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # the commit before, to see whether the version moved
+      - name: Fetch the existing tags
+        run: git fetch --tags --force --quiet
+      - name: Decide
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="v$(node -p "require('./package.json').version")"
+          skip() { echo "release=false" >> "$GITHUB_OUTPUT"; echo "$1"; exit 0; }
+          go()   { echo "release=true"  >> "$GITHUB_OUTPUT"; echo "tag=$1" >> "$GITHUB_OUTPUT"; echo "Releasing $1."; exit 0; }
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ github.event.inputs.tag }}"
+            [ -n "$tag" ] || tag="$version"
+            go "$tag"
+          fi
+
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            tag="${{ github.ref_name }}"
+            # A tag that disagrees with package.json would ship a build labelled
+            # as a version it is not.
+            if [ "$tag" != "$version" ]; then
+              echo "::error::tag $tag does not match package.json version $version"
+              exit 1
+            fi
+            go "$tag"
+          fi
+
+          # A push to main: release only when this commit changed the version.
+          if ! git rev-parse -q --verify HEAD^ >/dev/null; then skip "No earlier commit to compare against."; fi
+          git show HEAD^:package.json > /tmp/previous-package.json
+          previous="v$(node -p "require('/tmp/previous-package.json').version")"
+          if [ "$previous" = "$version" ]; then
+            skip "package.json is still at $version, so there is nothing new to release."
+          fi
+          if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+            echo "::warning::$version is already tagged, so it will not be released again."
+            skip "Already released."
+          fi
+          echo "The version moved from $previous to $version."
+          go "$version"
+
+  qa:
+    name: QA gate
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Installers (${{ matrix.name }})
+    needs: [decide, qa]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS
+            command: npm run dist:mac
+          - os: windows-latest
+            name: Windows
+            command: npm run dist:win
+          - os: ubuntu-latest
+            name: Linux
+            command: npm run dist:linux
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Make sure the Electron binary is downloaded
+        run: node scripts/ensure-electron.js
+      - name: Install a virtual display
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
+      - name: Compile the installers
+        run: ${{ matrix.command }}
+        env:
+          # Add CSC_LINK / CSC_KEY_PASSWORD (macOS) and WIN_CSC_LINK secrets to
+          # sign; without them the build is unsigned but still installable.
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+      - name: Check the installers and that the packaged app starts
+        shell: bash
+        run: node scripts/check-artifacts.js --launch
+      - name: Keep the installers for the release
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.name }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.tar.gz
+            dist/latest*.yml
+
+  publish:
+    name: Publish the release
+    needs: [decide, build]
+    runs-on: ubuntu-latest
+    steps:
+      # Every platform is collected first, so the release goes live complete
+      # rather than filling up one installer at a time in front of people.
+      - name: Collect every platform's installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+      - name: Check nothing is missing before it goes public
+        shell: bash
+        run: |
+          set -eu
+          missing=""
+          for ext in dmg exe AppImage deb tar.gz; do
+            ls dist/*."$ext" >/dev/null 2>&1 || missing="$missing $ext"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::these installers never arrived:$missing"
+            exit 1
+          fi
+          ls -lh dist
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.decide.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          draft: false
+          make_latest: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: dist/*

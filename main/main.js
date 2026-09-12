@@ -5,7 +5,7 @@ const { app, BrowserWindow, ipcMain, shell: eshell, nativeTheme } = require('ele
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
-const { layout, migrate, adoptOldUserData, copyDir } = require('./kernel/paths');
+const { layout, migrate, adoptOldUserData } = require('./kernel/paths');
 const pkg = require('../package.json');
 const { Settings } = require('./kernel/settings');
 const { openStore } = require('./kernel/store');
@@ -46,7 +46,7 @@ function listThemes() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 1280, height: 820, minWidth: 980, minHeight: 640, show: false, backgroundColor: '#141517', title: 'Lyra AI Agent',
+    width: 1280, height: 820, minWidth: 980, minHeight: 640, show: false, backgroundColor: '#141517', title: 'Lyra',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default', trafficLightPosition: { x: 14, y: 18 },
     webPreferences: { preload: path.join(__dirname, '..', 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false, spellcheck: true },
   });
@@ -87,7 +87,8 @@ app.whenReady().then(async () => {
   if (adopted) k.logs.info('kernel', `Adopted the app data from ${adopted.from}`, adopted);
   migrate(k.paths);
   k.settings = new Settings(k.paths.settingsFile);
-  k.store = openStore(k.paths.userData, k.settings.get().persona.store);
+  k.profileDir = (id) => path.join(k.paths.userData, k.settings.profileDataDir(id));
+  k.store = openStore(k.profileDir(), k.settings.get().persona.store);
   k.checkpoints = new Checkpoints(k.paths.state, log); if (k.settings.get().kernel.checkpoints) k.checkpoints.init();
   k.guard = new Guard(k); k.docs = new Docs(k); k.extensions = new Extensions(k); k.loader = new Loader(k);
   k.root = () => require(path.join(k.paths.organsMain, 'workspace.js')).ensure(k.settings.get().workspace.folder);
@@ -132,6 +133,40 @@ app.whenReady().then(async () => {
   h('kernel:health', () => { try { return fs.readFileSync(k.paths.healthLog, 'utf8').split('\n').slice(-80).join('\n'); } catch { return ''; } });
   h('kernel:docs', (p) => k.docs.read(p.topic));
   h('kernel:relaunch', () => { fs.writeFileSync(k.paths.bootFile, JSON.stringify({ attempts: 0 })); app.relaunch(); app.exit(0); });
+  // Profiles: each one is a different assistant, with her own persona, look,
+  // voice, goals, model and her own chats and memory. The kernel owns them, so
+  // they still work in safe mode and the agent cannot switch or delete itself.
+  k.useProfile = async (id) => {
+    if (id === k.settings.profiles().active) return k.settings.profiles();
+    if (k.organs && k.organs.agent.isBusy()) throw new Error('She is in the middle of something; stop her first.');
+    if (k.organs) k.organs.approvals.cancelAll(null);
+    k.store.close();
+    k.settings.switchProfile(id);
+    // Each profile chooses its own store, so open the one she uses.
+    k.store = openStore(k.profileDir(id), k.settings.get().persona.store);
+    k.checkpoints.commit(`Switched to profile ${id}`);
+    log(`profile switched to ${id}`);
+    k.emit(null, 'profiles', k.settings.profiles());
+    k.emit(null, 'settings', { settings: k.settings.get() });
+    k.emit(null, 'chats', {});
+    return k.settings.profiles();
+  };
+  h('profiles:list', () => k.settings.profiles());
+  h('profiles:create', async (p) => { const made = k.settings.createProfile(p); k.emit(null, 'profiles', k.settings.profiles()); if (p.switch !== false) await k.useProfile(made.id); return made; });
+  h('profiles:use', (p) => k.useProfile(p.id));
+  h('profiles:rename', (p) => { const out = k.settings.renameProfile(p.id, p.name); k.emit(null, 'profiles', out); k.emit(null, 'settings', { settings: k.settings.get() }); return out; });
+  h('profiles:delete', async (p) => {
+    const wasActive = k.settings.profiles().active === p.id;
+    const dir = k.profileDir(p.id);
+    const out = k.settings.deleteProfile(p.id);
+    // Her chats and memory go with her, unless they are the ones every profile
+    // shared before profiles existed.
+    if (dir !== k.paths.userData) { if (wasActive) k.store.close(); try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) { k.logError('kernel', `could not remove the profile folder: ${e.message}`); } }
+    if (wasActive) { k.store = openStore(k.profileDir(), k.settings.get().persona.store); k.emit(null, 'settings', { settings: k.settings.get() }); k.emit(null, 'chats', {}); }
+    k.emit(null, 'profiles', out.profiles);
+    return out.profiles;
+  });
+
   h('kernel:disableAllExtensions', () => { for (const e of k.extensions.list()) k.extensions.setEnabled(e.id, false); return true; });
   h('kernel:openState', () => eshell.openPath(k.paths.state));
   h('ext:list', () => k.extensions.list());
@@ -153,7 +188,7 @@ app.whenReady().then(async () => {
   h('app:paths', () => ({ userData: k.paths.userData, workspace: k.root(), themes: k.paths.themes, state: k.paths.state, voiceReady: !!(k.organs && k.organs.voice.available()), version: k.version, safeMode: k.safeMode }));
 
   k.settings.on('change', (data, before, patch) => {
-    if (patch.persona && patch.persona.store && before && patch.persona.store !== before.persona.store) { const dump = k.store.dump(); k.store.close(); k.store = openStore(k.paths.userData, data.persona.store); k.store.loadDump(dump); }
+    if (patch.persona && patch.persona.store && before && patch.persona.store !== before.persona.store) { const dump = k.store.dump(); k.store.close(); k.store = openStore(k.profileDir(), data.persona.store); k.store.loadDump(dump); }
     if (patch.appearance && patch.appearance.theme) { const t = listThemes().find((x) => x.id === data.appearance.theme); nativeTheme.themeSource = t && t.scheme === 'light' ? 'light' : 'dark'; }
     k.emit(null, 'settings', { settings: data });
   });

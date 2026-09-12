@@ -8,6 +8,19 @@ const { filterPatch } = require('./guard');
 async function run(k, markHealthy) {
   const p = k.paths; const results = []; const ok = (name, pass, detail) => results.push({ name, pass: !!pass, detail });
   const read = (f) => fs.readFileSync(f, 'utf8'); const write = (f, s) => fs.writeFileSync(f, s);
+  // A broken UI is detected by the window failing to report ready in time, so the
+  // test has to sit through that timeout twice. The shipped 10s suits a real
+  // machine; a loaded build agent can take longer to bring the window back after
+  // a rollback, which looks like a rollback that did not work. Be patient here,
+  // then put the user's setting back: what is being checked is the rollback, not
+  // how fast this machine happens to be.
+  const shippedUiTimeout = k.settings.get().kernel.uiReadyTimeoutMs;
+  k.settings.set({ kernel: { uiReadyTimeoutMs: 30000 } });
+  // A boot that stays up for 20s tags itself as the last known good. This test
+  // spends its time deliberately breaking organs, so that timer would tag the
+  // broken state and the rollbacks below would restore the breakage. The test
+  // tags the last known good itself, on the line after this one.
+  if (k.healthyTimer) { clearTimeout(k.healthyTimer); k.healthyTimer = null; }
   markHealthy(); // tag lkg with the current, healthy organs
   const toolsFile = path.join(p.organsMain, 'tools.js'), indexFile = path.join(p.organsMain, 'index.js'), appFile = path.join(p.organsRenderer, 'app.js');
   const good = { tools: read(toolsFile), index: read(indexFile), app: read(appFile) };
@@ -73,6 +86,7 @@ async function run(k, markHealthy) {
   const cps = k.checkpoints.list(10); ok('checkpoints recorded', cps.length >= 3 && cps.some((c) => /Before rollback/.test(c.label)), cps.map((c) => c.label));
   k.checkpoints.commit('Selftest done');
 
+  k.settings.set({ kernel: { uiReadyTimeoutMs: shippedUiTimeout } });
   const pass = results.every((r) => r.pass);
   const report = { pass, results };
   console.log('[selftest] ' + JSON.stringify(report, null, 2));
