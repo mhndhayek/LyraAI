@@ -46,7 +46,7 @@ Only Lyra writes to memory (the `remember` tool). Long-term entries are shared a
 
 ## Your phone
 
-*Settings › Mobile* serves the same chat to your phone over your private Tailscale network. Switch it on, point the phone camera at the QR code, and Safari opens paired. The socket is bound to the tailnet address only, never to the wifi or the internet, and Tailscale issues a real HTTPS certificate for the machine's MagicDNS name, which is what lets the phone use the microphone and install to the home screen.
+*Settings › Mobile* (beta) serves the same chat to your phone over your private Tailscale network. Switch it on, point the phone camera at the QR code, and Safari opens paired. The socket is bound to the tailnet address only, never to the wifi or the internet, and Tailscale issues a real HTTPS certificate for the machine's MagicDNS name, which is what lets the phone use the microphone and install to the home screen.
 
 - On the phone, once: install Tailscale and sign in with the same account, scan the code, then **Share › Add to Home Screen** in Safari (three dots › Add to Home screen in Chrome).
 - Each phone gets its own token, listed under *Paired phones* with a Remove button. The pairing code rotates and expires after fifteen minutes.

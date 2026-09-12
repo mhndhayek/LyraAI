@@ -90,6 +90,27 @@ test('the settings pages call the assistant by name, not "the brain"', () => {
   assert.match(ui, /\[\(\) => S\(\)\.persona\.name,/, 'the first settings group should be named after her');
 });
 
+test('the unfinished features say so where the user meets them', () => {
+  const ui = read('renderer', 'settings.js');
+  // Phone access and drawing a new character both work but are not finished.
+  assert.match(ui, /BETA_SECTIONS = new Set\(\['mobile'\]\)/, 'the phone section must be marked in the menu');
+  assert.match(ui, /title\(`Mobile \$\{BETA\}`/, 'the phone page must be marked at the top');
+  assert.match(ui, /to draw a new character[^`]*\$\{BETA\}/, 'drawing a character must be marked where it is offered');
+  assert.match(read('renderer', 'styles.css'), /\.beta \{/, 'the badge needs a style or it renders as bare text');
+  // And the docs agree with the app.
+  assert.match(read('docs', 'AVATARS.md'), /\*\*Beta\.\*\*/, 'the avatar recipe should warn before someone follows it');
+  assert.match(read('README.md'), /On your phone\*\* \*\(beta\)\*/, 'the README feature table should say so too');
+});
+
+test('the app does not assume it is running on a Mac', () => {
+  // It ships for Windows and Linux as well, so the UI cannot call the machine a Mac.
+  for (const file of [['renderer', 'settings.js'], ['renderer', 'app.js'], ['renderer', 'index.html']]) {
+    const text = read(...file);
+    const claims = [...text.matchAll(/.{0,50}\bthis Mac\b.{0,50}/g)].map((m) => m[0].trim());
+    assert.deepEqual(claims, [], `${file.join('/')} tells the user about "this Mac": ${claims.join(' | ')}`);
+  }
+});
+
 test('every built-in theme is complete', () => {
   const dir = path.join(ROOT, 'renderer', 'themes');
   const themes = fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory());
