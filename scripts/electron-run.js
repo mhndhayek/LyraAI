@@ -9,8 +9,15 @@ const { spawn, execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 
 function electronBinary() {
-  try { return require(path.join(ROOT, 'node_modules', 'electron')); }
-  catch { return null; }
+  try {
+    const bin = require(path.join(ROOT, 'node_modules', 'electron'));
+    return typeof bin === 'string' && fs.existsSync(bin) ? bin : null;
+  } catch (e) {
+    // The electron package downloads its binary on first use, so this is a
+    // failed download as often as it is a missing install. Say which.
+    console.error(`could not resolve the Electron binary: ${e.message}`);
+    return null;
+  }
 }
 
 // Linux CI has no display; xvfb-run gives Electron one. macOS and Windows
@@ -33,7 +40,7 @@ function headlessGpuArgs() {
 
 function run(extraArgs, { timeoutMs = 180000, userDataDir, onLine } = {}) {
   const bin = electronBinary();
-  if (!bin) return Promise.reject(new Error('Electron is not installed; run npm ci first'));
+  if (!bin) return Promise.reject(new Error('the Electron binary is not available; run npm ci, then node scripts/ensure-electron.js'));
   const dataDir = userDataDir || fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-ci-'));
   const args = [ROOT, `--user-data-dir=${dataDir}`, '--no-sandbox', ...headlessGpuArgs(), ...extraArgs];
   const { cmd, args: finalArgs } = wrap(bin, args);

@@ -15,6 +15,13 @@ const pkg = JSON.parse(read('package.json'));
 // rather than by pulling in a YAML parser the project does not otherwise need.
 const JOBS = CI.slice(CI.indexOf('\njobs:'));
 const jobNames = [...JOBS.matchAll(/^ {2}([a-z][a-z0-9-]*):$/gm)].map((m) => m[1]);
+// The YAML of one job, from its name up to the next job at the same indent.
+function jobSection(name) {
+  const starts = [...JOBS.matchAll(/^ {2}([a-z][a-z0-9-]*):$/gm)];
+  const i = starts.findIndex((m) => m[1] === name);
+  assert.ok(i >= 0, `there is no ${name} job`);
+  return JOBS.slice(starts[i].index, i + 1 < starts.length ? starts[i + 1].index : JOBS.length);
+}
 const gateMatch = /needs: \[([^\]]+)\]/.exec(CI);
 const gateNeeds = (gateMatch ? gateMatch[1] : '').split(',').map((s) => s.trim()).filter(Boolean);
 
@@ -55,6 +62,16 @@ test('every command the workflows run is a real script', () => {
   const commands = [...(CI + RELEASE).matchAll(/npm run ([a-z:]+)/g)].map((m) => m[1]);
   assert.ok(commands.length > 5);
   for (const c of new Set(commands)) assert.ok(pkg.scripts[c], `CI runs "npm run ${c}", which is not defined in package.json`);
+});
+
+test('the app is fetched before any job tries to start it', () => {
+  // The electron package downloads its binary lazily on first use, so a job that
+  // starts the app without fetching it first fails on a network blip instead of
+  // on anything about the change under test.
+  for (const job of ['selftest', 'smoke', 'build']) {
+    assert.match(jobSection(job), /ensure-electron\.js/, `the ${job} job starts the app without making sure it is downloaded`);
+  }
+  assert.equal((CI.match(/Cache the Electron download/g) || []).length, 3, 'each job that downloads Electron should cache it');
 });
 
 test('every script the workflows call exists on disk', () => {
