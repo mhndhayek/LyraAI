@@ -215,7 +215,7 @@ class Agent {
       const maxSteps = clamp(s.model.maxSteps, STEP_RANGE, 30);
       const runMinutes = clamp(s.model.runMinutes, MINUTE_RANGE, 30);
       run.cap = setTimeout(() => { if (this.runs.get(chatId) === run) { emit(chatId, 'notice', { text: `This turn hit the ${runMinutes} minute limit and was stopped. Raise it under Settings › Model.` }); this.stop(chatId); } }, runMinutes * 60000);
-      let finalText = '', steps = 0, firstToken = true;
+      let steps = 0, firstToken = true;
       const drainQueue = () => { let n = 0; while (run.queue.length) { const q = run.queue.shift(); const imgs = (q.images || []).filter((im) => fs.existsSync(im.path)); messages.push({ role: 'user', content: imgs.length ? [{ type: 'text', text: `[Follow-up from the user while you work] ${q.text}` }, ...imgs.map((im) => this.imagePart(im.path))] : `[Follow-up from the user while you work] ${q.text}` }); n++; } return n; };
       while (steps++ < maxSteps) {
         if (run.stopped) break;
@@ -230,7 +230,7 @@ class Agent {
         if (!res.toolCalls.length) {
           // A steering message arrived while the model was answering: keep going in the same turn.
           if (run.queue.length && !run.stopped) { messages.push({ role: 'assistant', content: res.text || '' }); content.text += '\n\n'; emit(chatId, 'delta', { id: asst.id, text: '\n\n' }); continue; }
-          finalText = res.text; break;
+          break;
         }
         // Text the model wrote before calling tools was already streamed; separate it from what follows.
         if (res.text) { content.text += '\n\n'; emit(chatId, 'delta', { id: asst.id, text: '\n\n' }); }
@@ -244,7 +244,7 @@ class Agent {
           let result;
           if (!tool) result = `Tool ${tc.function.name} is not available. Available tools: ${liveDefs.map((t) => t.name).join(', ')}.`;
           else {
-            let risk = safe(() => tool.risk(args, toolCtx), 'high');
+            const risk = safe(() => tool.risk(args, toolCtx), 'high');
             if (tool.name === 'browser_open') { const h = new URL(/^https?:/.test(args.url || '') ? args.url : 'https://' + args.url).host; if (!visited.has(h)) { visited.add(h); } }
             this.setState('thinking', { step: step.summary });
             const ap = await approvals.request({ chatId, tool: tool.name, summary: step.summary, detail: step.args, risk, reason: args.reason, origin: run.origin });
@@ -289,7 +289,7 @@ class Agent {
   }
 
   async title(chatId, userText, reply) {
-    const s = this.ctx.settings.get(); const m = await this.pickModel(false);
+    const m = await this.pickModel(false);
     const t = await llm.chatOnce({ endpoint: m.endpoint, apiKey: m.apiKey, model: m.id, temperature: 0.2, maxTokens: 20, messages: [{ role: 'system', content: 'Reply with a 2-5 word title for this chat. No quotes, no punctuation. /no_think' }, { role: 'user', content: `User: ${userText.slice(0, 500)}\nAssistant: ${(reply || '').slice(0, 500)}` }] });
     const title = t.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/["'.]/g, '').trim().slice(0, 48);
     if (title) { this.ctx.store.updateChat(chatId, { title }); this.ctx.emit(null, 'chats', {}); }

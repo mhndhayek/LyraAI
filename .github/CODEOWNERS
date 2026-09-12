@@ -1,0 +1,7 @@
+# Every change needs a review from the code owner before it can merge.
+*                       @mhndhayek
+
+# The parts where a mistake is hardest to undo.
+/main/kernel/           @mhndhayek
+/.github/workflows/     @mhndhayek
+/scripts/               @mhndhayek

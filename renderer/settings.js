@@ -1,16 +1,19 @@
 // Settings page: one section per menu entry. Controls write straight to settings.
 (() => {
   const $ = (s, r = document) => r.querySelector(s);
-  // Menu groups: the brain, the character, what surrounds it, and the app itself.
+  // Menu groups: the assistant herself, her character, what surrounds her, and the app.
   const NAV = [
-    ['Brain', [['model', 'Model', 'cpu'], ['provider', 'Provider', 'server'], ['memory', 'Memory & context', 'database'], ['tools', 'Tools', 'tool'], ['imagegen', 'Image generation', 'image']]],
+    // A label can be a function when it depends on what the user named the assistant.
+    [() => S().persona.name, [['profiles', 'Profiles', 'user'], ['model', 'Model', 'cpu'], ['provider', 'Provider', 'server'], ['memory', 'Memory & context', 'database'], ['tools', 'Tools', 'tool'], ['imagegen', 'Image generation', 'image']]],
     ['Character', [['persona', 'Persona & chat', 'persona'], ['appearance', 'Appearance', 'sun'], ['voice', 'Voice', 'volume'], ['goals', 'AI goals', 'target']]],
     ['Around it', [['workspace', 'Workspace', 'folder'], ['browser', 'Browser', 'globe'], ['safety', 'Safety', 'shield'], ['notifications', 'Notifications', 'bell'], ['mobile', 'Mobile', 'phone']]],
     ['App', [['extensions', 'Extensions', 'plus'], ['recovery', 'Recovery', 'git'], ['about', 'About', 'info']]],
   ];
-  const SECTIONS = NAV.flatMap(([, items]) => items);
   let current = 'model', open = false, previewChar = null, errorCount = 0;
   const logFilter = { level: 'warn', source: '', search: '' };
+  // Features that work but are not finished: the badge says so wherever they appear.
+  const BETA = '<span class="beta">beta</span>';
+  const BETA_SECTIONS = new Set(['mobile']);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const S = () => window.LyraApp.settings();
@@ -27,7 +30,6 @@
   const field = (val, cb, { w = 260, mono = false, type = 'text', ph = '', ro = false } = {}) => { const f = el(`<input class="field ${mono ? 'mono' : ''}" type="${type}" style="width:${w}px" placeholder="${esc(ph)}" ${ro ? 'readonly' : ''}>`); f.value = val ?? ''; if (cb) { f.addEventListener('change', () => cb(type === 'number' ? Number(f.value) : f.value)); f.addEventListener('keydown', (e) => e.key === 'Enter' && f.blur()); } return f; };
   const slider = (min, max, step, val, fmt, cb) => { const s = el(`<div class="slider"><span class="val">${fmt(val)}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}"></div>`); const i = s.querySelector('input'); i.addEventListener('input', () => { s.querySelector('.val').textContent = fmt(Number(i.value)); }); i.addEventListener('change', () => cb(Number(i.value))); return s; };
   const btn = (label, cb, { primary = false, ic = '', danger = false, small = true } = {}) => { const b = el(`<button class="btn ${small ? 'small' : ''} ${primary ? 'primary' : ''} ${danger ? 'danger' : ''}">${ic ? icon(ic, 14) : ''}${esc(label)}</button>`); b.addEventListener('click', cb); return b; };
-  const status = (ok, text) => el(`<div class="status-line"><span class="dot ${ok ? '' : 'off'}"></span>${esc(text)}</div>`);
   const title = (t, sub) => el(`<div><div class="s-title">${t}</div><div class="s-sub">${sub}</div></div>`);
 
   /* ---- sections ---- */
@@ -59,7 +61,7 @@
         const list = (info && info.list) || []; const usable = list.filter(filter);
         const opts = [{ v: '', l: role === 'vision' ? 'Auto (first vision model on this preset)' : 'Auto (first loaded model on this preset)' }, ...usable.map((x) => ({ v: x.id, l: `${x.label || x.id}${x.context ? ` · ${Math.round(x.context / 1024)}k context` : ''}${x.quant ? ' · ' + x.quant : ''}${x.loaded && !x.quant ? ' · loaded' : ''}` }))];
         if (sel.model && !usable.some((x) => x.id === sel.model)) opts.push({ v: sel.model, l: `${sel.model} (not detected)` });
-        const card = el(`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div class="t" style="font-size:14px;font-weight:500;color:var(--bright)">${label}</div><div class="d" style="font-size:12px;color:var(--muted)">${desc}</div></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div><div class="status-line"></div></div>`);
+        const card = el(`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div class="t" style="font-size:14px;font-weight:500;color:var(--bright)">${esc(label)}</div><div class="d" style="font-size:12px;color:var(--muted)">${desc}</div></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div><div class="status-line"></div></div>`);
         const ctl = card.children[1];
         ctl.appendChild(select(provOpts, prov.id, (v) => set({ model: { [role]: { provider: v, model: '' } } }).then(refresh), 180));
         ctl.appendChild(select(opts, sel.model, (v) => set({ model: { [role]: { model: v } } }), 360));
@@ -77,10 +79,10 @@
       toolsRow.appendChild(btn('Detect models on all presets', async (e) => { e.target.disabled = true; try { await lyra.models.detect(); } finally { refresh(); } }, { ic: 'refresh' }));
       toolsRow.appendChild(btn('Manage presets', () => { current = 'provider'; render(); }, { ic: 'server' }));
       return [
-        title('Model', 'The brain and the vision model can come from different provider presets (LM Studio, Ollama, llama.cpp, a remote API). Presets are set up under Provider.'),
+        title('Model', `${esc(s.persona.name)}’s model and the vision model can come from different provider presets (LM Studio, Ollama, llama.cpp, a remote API). Presets are set up under Provider.`),
         toolsRow,
-        roleBlock('chat', 'Brain', 'Used for conversation, tools, summaries and goals.', (x) => !x.id.includes('embed')),
-        roleBlock('vision', 'Vision model', 'Used when you send a picture or Lyra looks at one. Falls back to the brain if it can see.', (x) => x.vision),
+        roleBlock('chat', s.persona.name, 'Used for conversation, tools, summaries and goals.', (x) => !x.id.includes('embed')),
+        roleBlock('vision', 'Vision model', `Used when you send a picture or ${esc(s.persona.name)} looks at one. Falls back to ${esc(s.persona.name)}’s own model if it can see.`, (x) => x.vision),
         group('Context', [row('Context length', ctxHint, [ctxSel, ctxField])]),
         group('Behavior', [
           row('Reasoning', 'How long Lyra thinks before answering (sent as reasoning effort; “Off” adds /no_think for Qwen-style models).', seg([{ v: 'off', l: 'Off' }, { v: 'low', l: 'Low' }, { v: 'medium', l: 'Medium' }, { v: 'high', l: 'High' }], s.model.reasoning, (v) => set({ model: { reasoning: v } }))),
@@ -96,11 +98,10 @@
     },
     async imagegen() {
       const s = S(); const g = s.imagegen; const ep = g.backend === 'comfyui' ? g.comfyEndpoint : g.swarmEndpoint; const epKey = g.backend === 'comfyui' ? 'comfyEndpoint' : 'swarmEndpoint';
-      let models = window.__igModels && window.__igModels.key === ep ? window.__igModels.list : null;
+      const models = window.__igModels && window.__igModels.key === ep ? window.__igModels.list : null;
       const modelOpts = [{ v: '', l: 'Backend default' }, ...(models || []).map((m) => ({ v: m, l: m }))]; if (g.model && !(models || []).includes(g.model)) modelOpts.push({ v: g.model, l: g.model });
       const sizes = [['1024x1024', 'Square 1024'], ['832x1216', 'Portrait 832×1216'], ['1216x832', 'Landscape 1216×832'], ['1344x768', 'Wide 1344×768'], ['768x1344', 'Tall 768×1344'], ['512x512', 'Small 512'], ['custom', 'Custom']];
       const cur = `${g.width}x${g.height}`; const isPreset = sizes.some(([v]) => v === cur);
-      const status = el('<div class="status-line"><span class="dot off"></span>Not tested</div>');
       const testBtn = btn('Test and list models', async (e) => { e.target.disabled = true; try { const r = await lyra.imagegen.test({}); if (r.ok) { window.__igModels = { key: ep, list: r.models }; toast(`${g.backend === 'comfyui' ? 'ComfyUI' : 'SwarmUI'}: ${r.count} models`); refresh(); } else toast(`Not reachable: ${r.error}`, 'error'); } finally { e.target.disabled = false; } }, { ic: 'refresh' });
       return [
         title('Image generation', 'Gives Lyra a generate_image tool backed by SwarmUI or ComfyUI on this machine (or your network). Images land in the workspace and show up in the chat.'),
@@ -125,6 +126,52 @@
           row('Negative prompt', 'Added to every request.', field(g.negativePrompt, (v) => set({ imagegen: { negativePrompt: v } }), { w: 320, ph: 'blurry, low quality' })),
           row('Save to', 'Folder inside the workspace.', field(g.folder, (v) => set({ imagegen: { folder: v.trim() || 'images' } }), { w: 160, mono: true })),
         ]),
+      ];
+    },
+    async profiles() {
+      const s = S(); const { active, list } = await lyra.profiles.list();
+      const cards = el('<div style="display:flex;flex-direction:column;gap:10px"></div>');
+      for (const p of list) {
+        const on = p.id === active;
+        const card = el(`<div class="card" style="flex-direction:row;align-items:center;gap:14px${on ? ';border-color:var(--accent)' : ''}">
+          <div class="avatar persona-avatar" style="width:40px;height:40px;font-size:16px;flex-shrink:0">${window.avatarUrl(p.avatar) ? `<img src="${esc(window.avatarUrl(p.avatar))}" alt="">` : esc((p.name[0] || '?').toUpperCase())}</div>
+          <div class="lbl" style="flex:1;min-width:0">
+            <div class="t">${esc(p.name)}${on ? ' <span class="d" style="color:var(--accent)">· in use</span>' : ''}</div>
+            <div class="d">${esc(p.theme || 'lyra-dark')}${p.dataDir ? ` · ${esc(p.dataDir)}` : ' · the original chats and memory'}</div>
+          </div>
+          <div class="ctl" style="display:flex;gap:8px"></div></div>`);
+        const ctl = card.querySelector('.ctl');
+        if (!on) ctl.appendChild(btn('Switch to', async (e) => {
+          e.target.disabled = true;
+          try { await lyra.profiles.use({ id: p.id }); toast(`${p.name} is here.`); }
+          catch (err) { toast(err.message || String(err), 'error'); e.target.disabled = false; }
+        }, { ic: 'refresh' }));
+        ctl.appendChild(btn('Rename', async () => {
+          const name = prompt('What should this profile be called?', p.name);
+          if (name && name.trim() && name.trim() !== p.name) { await lyra.profiles.rename({ id: p.id, name: name.trim() }); refresh(); }
+        }, { ic: 'pen' }));
+        if (list.length > 1) ctl.appendChild(btn('Delete', async () => {
+          if (!confirm(`Delete ${p.name}? Her chats, memory and goals go with her. This cannot be undone.`)) return;
+          try { await lyra.profiles.delete({ id: p.id }); toast(`${p.name} removed.`); refresh(); }
+          catch (err) { toast(err.message || String(err), 'error'); }
+        }, { ic: 'trash', danger: true }));
+        cards.appendChild(card);
+      }
+
+      const addRow = el('<div style="display:flex;gap:8px;flex-wrap:wrap"></div>');
+      const add = async (copyFrom) => {
+        const name = prompt(copyFrom ? `Name for the copy of ${esc(s.persona.name)}?` : 'What is she called?');
+        if (!name || !name.trim()) return;
+        try { await lyra.profiles.create({ name: name.trim(), copyFrom }); toast(`${name.trim()} is here.`); }
+        catch (err) { toast(err.message || String(err), 'error'); }
+      };
+      addRow.appendChild(btn('Add a profile', () => add(null), { ic: 'plus' }));
+      addRow.appendChild(btn('Copy this one', () => add(active), { ic: 'archive' }));
+
+      return [
+        title('Profiles', `Each profile is a different assistant: her own soul, look, voice, animation, goals and model, and her own chats and memory. Safety, the workspace, the browser and phone access are yours and are shared by all of them. ${esc(s.persona.name)} cannot switch between them herself.`),
+        cards,
+        group('Add another', [addRow]),
       ];
     },
     async persona() {
@@ -170,7 +217,7 @@
         const grid = el('<div class="theme-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>');
         packs.forEach((p) => { const c = el(`<div class="theme-card ${p.id === cur ? 'on' : ''}" style="align-items:center;text-align:center"><img src="character/${esc(p.id)}/avatar.png" alt="" style="width:72px;height:72px;border-radius:50%;image-rendering:pixelated"><div class="n">${esc(p.name)}</div>${p.description ? `<div class="k">${esc(p.description)}</div>` : ''}</div>`); c.addEventListener('click', () => { const patch = { appearance: { gifFolder: `builtin:${p.id}` } }; if (!s.persona.avatar || s.persona.avatar.startsWith('builtin:')) patch.persona = { avatar: `builtin:${p.id}` }; set(patch).then(refresh); }); grid.appendChild(c); });
         srcRows.push(el('<div class="group-label">Built-in characters</div>'), grid);
-        srcRows.push(row('Your own GIF pack', 'A folder with idle.gif, thinking.gif, writing.gif and speaking.gif; idle-2.gif … idle-6.gif play as idle variations. Ask Lyra to draw a new character (it knows the recipe).', [field(cur ? `Built-in: ${cur}` : a.gifFolder, null, { w: 220, mono: true, ro: true }), btn('Choose folder', async () => { const f = await lyra.files.pickFolder(); if (f) set({ appearance: { gifFolder: f } }).then(refresh); })]));
+        srcRows.push(row('Your own GIF pack', `A folder with idle.gif, thinking.gif, writing.gif and speaking.gif; idle-2.gif … idle-6.gif play as idle variations. Ask ${esc(s.persona.name)} to draw a new character (it knows the recipe) ${BETA} — the frames come out clean, but the animation is not always smooth yet.`, [field(cur ? `Built-in: ${cur}` : a.gifFolder, null, { w: 220, mono: true, ro: true }), btn('Choose folder', async () => { const f = await lyra.files.pickFolder(); if (f) set({ appearance: { gifFolder: f } }).then(refresh); })]));
       }
       if (a.source === 'live2d') srcRows.push(row('Model file', 'A Cubism 4 model (.model3.json). Put live2dcubismcore.min.js from the Live2D site in the same folder.', [field(a.live2dModel, null, { w: 240, mono: true, ro: true }), btn('Choose', async () => { const f = await lyra.files.pickFile({ filters: [{ name: 'Live2D model', extensions: ['json'] }] }); if (f) set({ appearance: { live2dModel: f } }).then(refresh); })]));
       const preview = el(`<div style="display:flex;gap:16px;align-items:stretch"><div class="mini-stage" id="mini-stage"></div><div style="display:flex;flex-direction:column;gap:8px;justify-content:center"><div class="d" style="font-size:12px;color:var(--muted);font-weight:500">Preview a state</div></div></div>`);
@@ -316,11 +363,11 @@
       const save = (list) => set({ providers: { list } }).then(() => lyra.models.detect()).then(refresh);
       const cards = el('<div style="display:flex;flex-direction:column;gap:10px"></div>');
       provs.forEach((p, i) => {
-        const info = m.byProvider[p.id]; const inUse = [s.model.chat.provider === p.id ? 'brain' : null, s.model.vision.provider === p.id ? 'vision' : null].filter(Boolean);
+        const info = m.byProvider[p.id]; const inUse = [s.model.chat.provider === p.id ? s.persona.name : null, s.model.vision.provider === p.id ? 'vision' : null].filter(Boolean);
         const c = el(`<div class="card" style="gap:10px"><div style="display:flex;align-items:center;gap:8px"><span style="display:flex;color:var(--muted)">${icon('server', 16)}</span><span class="spacer"></span></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div class="status-line"></div></div>`);
         const head = c.children[0], l1 = c.children[1], l2 = c.children[2], st = c.children[3];
         head.insertBefore(field(p.name, (v) => { const list = provs.map((x) => x.id === p.id ? { ...x, name: v.trim() || x.name } : x); set({ providers: { list } }).then(refresh); }, { w: 200 }), head.lastElementChild);
-        if (inUse.length) head.insertBefore(el(`<span class="d" style="font-size:12px;color:var(--accent)">used for ${inUse.join(' + ')}</span>`), head.lastElementChild);
+        if (inUse.length) head.insertBefore(el(`<span class="d" style="font-size:12px;color:var(--accent)">used for ${inUse.map(esc).join(' + ')}</span>`), head.lastElementChild);
         const rm = el(`<button class="icon-btn" title="Remove preset">${icon('trash', 15)}</button>`); rm.disabled = provs.length === 1; rm.addEventListener('click', () => { if (provs.length === 1) return; if (!confirm(`Remove “${p.name}”?`)) return; const list = provs.filter((x) => x.id !== p.id); const patch = { providers: { list } }; const fb = list[0].id; const mp = {}; if (s.model.chat.provider === p.id) mp.chat = { provider: fb, model: '' }; if (s.model.vision.provider === p.id) mp.vision = { provider: fb, model: '' }; if (Object.keys(mp).length) patch.model = mp; set(patch).then(() => lyra.models.detect()).then(refresh); }); head.appendChild(rm);
         l1.appendChild(select(RUNTIMES, p.runtime, (v) => { const r = RUNTIMES.find((x) => x.v === v); save(provs.map((x) => x.id === p.id ? { ...x, runtime: v, endpoint: r.ep } : x)); }, 220));
         l1.appendChild(field(p.endpoint, (v) => save(provs.map((x) => x.id === p.id ? { ...x, endpoint: v.trim().replace(/\/$/, '') } : x)), { w: 300, mono: true, ph: 'http://localhost:1234/v1' }));
@@ -332,7 +379,7 @@
       const add = el('<div style="display:flex;gap:8px;flex-wrap:wrap"></div>');
       RUNTIMES.forEach((r) => add.appendChild(btn(`Add ${r.l}`, () => { const id = `${r.v}-${Date.now().toString(36)}`; save([...provs, { id, name: provs.some((x) => x.name === r.l) ? `${r.l} ${provs.length + 1}` : r.l, runtime: r.v, endpoint: r.ep, apiKey: '' }]); }, { ic: 'plus' })));
       return [
-        title('Provider', 'Presets for where models run. Add one per runtime or API, then pick a preset for the brain and for the vision model under Model. Local runtimes keep everything on this machine.'),
+        title('Provider', `Presets for where models run. Add one per runtime or API, then pick a preset for ${esc(s.persona.name)} and for the vision model under Model. Local runtimes keep everything on this machine.`),
         cards, group('Add a preset', [add]),
       ];
     },
@@ -341,21 +388,21 @@
       const st = await lyra.mobile.state();
       const net = await lyra.mobile.tailnet();
       const box = [];
-      box.push(title('Mobile', `Reach ${esc(s.persona.name)} from your phone over your private Tailscale network. The connection is encrypted twice: Tailscale's own tunnel, plus a real HTTPS certificate, which is what lets the phone use the microphone.`));
+      box.push(title(`Mobile ${BETA}`, `Reach ${esc(s.persona.name)} from your phone over your private Tailscale network. The connection is encrypted twice: Tailscale's own tunnel, plus a real HTTPS certificate, which is what lets the phone use the microphone. Phone access still has rough edges, so treat it as a preview.`));
 
       // status card
       const statusCard = el('<div class="card" style="gap:10px"></div>');
       if (!net.ok) {
         statusCard.appendChild(el(`<div class="status-line"><span class="dot off"></span>${esc(net.error || 'Tailscale not ready')}</div>`));
         const help = el('<div class="d" style="font-size:12px;color:var(--muted);line-height:1.5"></div>');
-        help.innerHTML = /not found/i.test(net.error || '') ? 'Install Tailscale on this Mac and on your phone, sign both into the same account, then come back here.' : /log|sign/i.test(net.error || '') ? 'Open the Tailscale app on this Mac and sign in.' : 'Open the Tailscale app and connect, then press Check again.';
+        help.innerHTML = /not found/i.test(net.error || '') ? 'Install Tailscale on this computer and on your phone, sign both into the same account, then come back here.' : /log|sign/i.test(net.error || '') ? 'Open the Tailscale app on this computer and sign in.' : 'Open the Tailscale app and connect, then press Check again.';
         statusCard.appendChild(help);
         const row1 = el('<div style="display:flex;gap:8px;flex-wrap:wrap"></div>');
         row1.appendChild(btn('Get Tailscale', () => lyra.app.openExternal({ url: 'https://tailscale.com/download' }), { ic: 'globe' }));
         row1.appendChild(btn('Check again', refresh, { ic: 'refresh' }));
         statusCard.appendChild(row1);
       } else {
-        statusCard.appendChild(el(`<div class="status-line"><span class="dot${st.running ? '' : ' off'}"></span>${st.running ? 'Phone access is on' : 'Phone access is off'} · this Mac is <b style="color:var(--text)">${esc(net.host)}</b> on your tailnet</div>`));
+        statusCard.appendChild(el(`<div class="status-line"><span class="dot${st.running ? '' : ' off'}"></span>${st.running ? 'Phone access is on' : 'Phone access is off'} · this computer is <b style="color:var(--text)">${esc(net.host)}</b> on your tailnet</div>`));
         if (!net.certOk) statusCard.appendChild(el('<div class="d" style="font-size:12px;color:var(--warn)">HTTPS certificates are not enabled for your tailnet yet. Open the Tailscale admin console, DNS tab, and turn on HTTPS Certificates. Then switch this on.</div>'));
         if (st.error) statusCard.appendChild(el(`<div class="d" style="font-size:12px;color:var(--danger)">${esc(st.error)}</div>`));
         const phones = (net.devices || []).filter((d) => /ios|android/i.test(d.os || ''));
@@ -399,7 +446,7 @@
 
         const steps = el(`<div class="card"><div class="d" style="font-size:13px;color:var(--text);line-height:1.7">
           <b>On the iPhone, once:</b><br>
-          1. Install Tailscale from the App Store and sign in with the same account as this Mac.<br>
+          1. Install Tailscale from the App Store and sign in with the same account as this computer.<br>
           2. Point the Camera app at the code above and tap the link. Safari opens and pairs the phone.<br>
           3. In Safari, tap the <b>Share</b> button at the bottom, then <b>Add to Home Screen</b>, then <b>Add</b>.<br>
           4. Open Lyra from the home screen. It runs full screen, and the first time you tap the microphone, allow access.<br>
@@ -425,7 +472,7 @@
       const box = el('<div style="display:flex;flex-direction:column;gap:10px"></div>');
       const color = { active: 'var(--accent)', disabled: 'var(--muted)', 'pending-approval': 'var(--warn)', quarantined: 'var(--danger)', broken: 'var(--danger)', inactive: 'var(--muted)' };
       list.forEach((x) => {
-        const c = el(`<div class="card" style="gap:8px"><div style="display:flex;align-items:center;gap:10px"><span style="display:flex;color:${color[x.status]}">${icon('tool', 16)}</span><div class="col" style="flex:1;min-width:0"><div class="n" style="font-size:14px;font-weight:500;color:var(--bright)">${esc(x.name)} <span class="d" style="font-size:12px;color:var(--muted)">${esc(x.version)}</span></div><div class="d" style="font-size:12px;color:var(--muted)">${esc(x.description)}</div></div><span class="tag" style="font-size:11px;font-weight:600;color:${color[x.status]}">${x.status.replace('-', ' ')}</span></div><div class="d" style="font-size:12px;color:var(--muted)">Capabilities: ${x.capabilities.length ? x.capabilities.map(esc).join(', ') : 'none'}${x.tools.length ? ' · Tools: ' + x.tools.map(esc).join(', ') : ''}${x.panel ? ' · has a panel' : ''}${x.error ? `<br><span style=\"color:var(--danger)\">${esc(x.error)}</span>` : ''}</div><div style="display:flex;gap:8px"></div></div>`);
+        const c = el(`<div class="card" style="gap:8px"><div style="display:flex;align-items:center;gap:10px"><span style="display:flex;color:${color[x.status]}">${icon('tool', 16)}</span><div class="col" style="flex:1;min-width:0"><div class="n" style="font-size:14px;font-weight:500;color:var(--bright)">${esc(x.name)} <span class="d" style="font-size:12px;color:var(--muted)">${esc(x.version)}</span></div><div class="d" style="font-size:12px;color:var(--muted)">${esc(x.description)}</div></div><span class="tag" style="font-size:11px;font-weight:600;color:${color[x.status]}">${x.status.replace('-', ' ')}</span></div><div class="d" style="font-size:12px;color:var(--muted)">Capabilities: ${x.capabilities.length ? x.capabilities.map(esc).join(', ') : 'none'}${x.tools.length ? ' · Tools: ' + x.tools.map(esc).join(', ') : ''}${x.panel ? ' · has a panel' : ''}${x.error ? `<br><span style="color:var(--danger)">${esc(x.error)}</span>` : ''}</div><div style="display:flex;gap:8px"></div></div>`);
         const acts = c.lastElementChild;
         if (x.status === 'pending-approval') acts.appendChild(btn(`Approve (${x.pending.join(', ') || 'no capabilities'})`, async () => { await lyra.extensions.approve({ id: x.id }); refresh(); }, { primary: true }));
         if (x.status === 'active' || x.status === 'inactive') acts.appendChild(btn('Disable', async () => { await lyra.extensions.set({ id: x.id, enabled: false }); refresh(); }));
@@ -450,7 +497,7 @@
       actions.appendChild(btn('Open state folder', () => lyra.kernel.openState(), { ic: 'folder' }));
       actions.appendChild(btn('Reset organs to shipped', async () => { if (!confirm('Replace the live organs with the shipped version? A checkpoint is taken first.')) return; await lyra.kernel.resetShipped(); toast('Organs reset to shipped'); refresh(); }, { danger: true }));
       const list = el('<div class="list"></div>');
-      cps.slice(0, 25).forEach((c) => { const it = el(`<div class="item"><span class="mono" style="font-family:var(--mono);font-size:12px;color:var(--muted)">${esc(c.hash)}</span><div class="col"><span class="n">${esc(c.label)}${c.lkg ? ' <span style=\"color:var(--accent);font-size:11px\">last known good</span>' : ''}</span><span class="d">${new Date(c.time).toLocaleString()}</span></div></div>`); it.appendChild(btn('Roll back', async () => { if (!confirm(`Roll everything back to ${c.hash}?`)) return; await lyra.kernel.rollback({ ref: c.hash }); toast('Rolled back'); refresh(); })); list.appendChild(it); });
+      cps.slice(0, 25).forEach((c) => { const it = el(`<div class="item"><span class="mono" style="font-family:var(--mono);font-size:12px;color:var(--muted)">${esc(c.hash)}</span><div class="col"><span class="n">${esc(c.label)}${c.lkg ? ' <span style="color:var(--accent);font-size:11px">last known good</span>' : ''}</span><span class="d">${new Date(c.time).toLocaleString()}</span></div></div>`); it.appendChild(btn('Roll back', async () => { if (!confirm(`Roll everything back to ${c.hash}?`)) return; await lyra.kernel.rollback({ ref: c.hash }); toast('Rolled back'); refresh(); })); list.appendChild(it); });
       if (!cps.length) list.appendChild(el('<div class="item"><span class="d">No checkpoints (git not available?)</span></div>'));
       return [
         title('Recovery', `Checkpoints of everything ${esc(s.persona.name)} may change: organs, extensions, themes and settings. Chats and memory live outside and are never touched.`), info, actions,
@@ -532,8 +579,9 @@
 
   /* ---- page ---- */
   function renderNav() {
-    const item = ([id, name, ic]) => `<button class="nav-item ${id === current ? 'on' : ''}" data-id="${id}">${icon(ic, 16)}<span class="nav-text">${name}</span>${id === 'recovery' && errorCount ? `<span class="spacer"></span><span class="err-dot" title="${errorCount} error${errorCount > 1 ? 's' : ''} in the last day">${errorCount}</span>` : ''}</button>`;
-    $('#settings-nav-items').innerHTML = NAV.map(([label, items]) => `<div class="nav-group">${label}</div>${items.map(item).join('')}`).join('');
+    const item = ([id, name, ic]) => `<button class="nav-item ${id === current ? 'on' : ''}" data-id="${id}">${icon(ic, 16)}<span class="nav-text">${name}</span>${BETA_SECTIONS.has(id) ? BETA : ''}${id === 'recovery' && errorCount ? `<span class="spacer"></span><span class="err-dot" title="${errorCount} error${errorCount > 1 ? 's' : ''} in the last day">${errorCount}</span>` : ''}</button>`;
+    const groupName = (label) => { try { return typeof label === 'function' ? label() : label; } catch { return 'Lyra'; } };
+    $('#settings-nav-items').innerHTML = NAV.map(([label, items]) => `<div class="nav-group">${esc(groupName(label))}</div>${items.map(item).join('')}`).join('');
     $('#settings-nav-items').querySelectorAll('.nav-item').forEach((b) => b.addEventListener('click', () => { current = b.dataset.id; render(); }));
   }
   let renderSeq = 0;

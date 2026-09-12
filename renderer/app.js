@@ -221,7 +221,7 @@
       case 'progress': if (mine) { state.progress = e; setStatus(); renderNow(); } break;
       case 'approval': if (mine) { const m = currentAssistantEl(); const card = approvalCard(e); (m ? m.querySelector('.steps') : $('#thread')).appendChild(card); scrollBottom(true); } break;
       case 'approval:resolved': resolveApproval(e); break;
-      case 'assistant:done': { refreshContext(300); state.progress = null; setStatus(); renderNow(); const s = streams.get(e.id); streams.delete(e.id); const m = msgEl(e.id); if (m) { const mdEl = m.querySelector('.md'); mdEl.classList.remove('cursor'); mdEl.innerHTML = md(e.message.content.text); const r = m.querySelector('.reasoning'); if (!r.hidden) r.querySelector('.rl').textContent = 'Thought'; } const i = state.messages.findIndex((x) => x.id === e.id); if (i >= 0) state.messages[i] = e.message; break; }
+      case 'assistant:done': { refreshContext(300); state.progress = null; setStatus(); renderNow(); streams.delete(e.id); const m = msgEl(e.id); if (m) { const mdEl = m.querySelector('.md'); mdEl.classList.remove('cursor'); mdEl.innerHTML = md(e.message.content.text); const r = m.querySelector('.reasoning'); if (!r.hidden) r.querySelector('.rl').textContent = 'Thought'; } const i = state.messages.findIndex((x) => x.id === e.id); if (i >= 0) state.messages[i] = e.message; break; }
       case 'tts': { const m = msgEl(e.id); if (m) { const slot = m.querySelector('.audio-slot'); slot.innerHTML = ''; const pill = audioPill(fileUrl(e.path)); slot.appendChild(pill); if (mine) { playFile(e.path, () => { lyra.state.set({ state: 'idle' }); pill.querySelector('.play').innerHTML = icon('play', 11); }); pill.querySelector('.play').innerHTML = icon('pause', 11); } } else if (mine) playFile(e.path, () => lyra.state.set({ state: 'idle' })); break; }
       case 'state': setCharState(e.state); if (e.step) setStatus(e.step); break;
       case 'error': { toast(e.message, 'error'); const m = e.id && msgEl(e.id); if (m) { const mdEl = m.querySelector('.md'); mdEl.classList.remove('cursor'); mdEl.classList.add('error'); if (!mdEl.textContent.trim() || mdEl.textContent.trim() === '…') mdEl.innerHTML = md(e.message); } streams.delete(e.id); break; }
@@ -231,6 +231,8 @@
       case 'browser': updateBrowser(e); break;
       case 'browser:show': showBrowserPanel(true); break;
       case 'chats': loadChats(); break;
+      // A different profile is in force: her chats, her look and her name all change at once.
+      case 'profiles': state.chatId = null; loadChats(); if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
       case 'settings': state.settings = e.settings; applyAll(); refreshContext(100); break;
       case 'models': state.models = e; setStatus(); if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
       case 'memory': toast(`Remembered (${e.scope}): ${e.text.slice(0, 80)}`); break;

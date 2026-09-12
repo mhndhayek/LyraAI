@@ -11,15 +11,16 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: PolyForm Noncommercial" src="https://img.shields.io/badge/license-free%20for%20personal%20use-8a63d2"></a>
+  <a href="https://github.com/mhndhayek/LyraAI/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/mhndhayek/LyraAI/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Runs locally" src="https://img.shields.io/badge/runs-100%25%20on%20your%20machine-4fc8b4">
-  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20(Apple%20Silicon)-lightgrey">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey">
   <img alt="Electron" src="https://img.shields.io/badge/built%20with-Electron%2044-2b2e3b">
   <a href="https://github.com/sponsors/mhndhayek"><img alt="Sponsor" src="https://img.shields.io/badge/%E2%99%A5-support%20Lyra-ff69b4"></a>
 </p>
 
 ---
 
-Lyra is a desktop app, not a website. She talks to whatever model runtime you already run (LM Studio, llama.cpp, Ollama, or any OpenAI-compatible server), keeps her memory in a database on your disk, and does things: reads and writes files, runs commands, drives a browser you can watch, generates images, speaks, listens, and reaches your phone over your own private network. Nothing leaves your machine unless you point her at a server somewhere else.
+Lyra is a desktop app. She talks to whatever model runtime you already run (LM Studio, llama.cpp, Ollama, or any OpenAI-compatible server), keeps her memory in a database on your disk, and does things: reads and writes files, runs commands, drives a browser you can watch, generates images, speaks, listens, and reaches your phone over your own private network. Nothing leaves your machine unless you point her at a server somewhere else.
 
 She is also built to change herself. Ask for an orange theme, a new tool, or a panel that shows your calendar, and she edits the app she is running in, with checkpoints and rollback in case it goes wrong.
 
@@ -37,9 +38,10 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
 | 🌐 **A browser you can watch** | She browses inside the app. Take over when you want, hand it back when you are done. |
 | 🎨 **Image generation** | SwarmUI or ComfyUI on your machine or your network. She picks the model and size when you let her. |
 | 🗣️ **Voice** | KittenTTS voices and Whisper transcription run in a local sidecar. Send voice notes, hear replies. |
+| 👥 **More than one of her** | Profiles: each with her own soul, look, voice, animation, goals and model, and her own chats and memory. Switch and the whole app becomes her. |
 | 🎭 **A face** | Eight built-in pixel-art characters that blink, think, type and talk, or bring your own GIF pack or Live2D model. |
 | 🎯 **Goals** | After a chat, she reflects and writes goals for herself. Let her work on them in her own time, or archive them. |
-| 📱 **On your phone** | Scan a QR code and Safari opens the same chats over HTTPS on your Tailscale network. No account, no cloud. |
+| 📱 **On your phone** *(beta)* | Scan a QR code and Safari opens the same chats over HTTPS on your Tailscale network. No account, no cloud. |
 | 🧬 **Self-extending** | Themes, UI changes, new tools and panels, applied live with git checkpoints and automatic rollback. |
 | 🧩 **Themes** | Not just colors: a theme can change fonts, shapes and the character. The Pixel theme turns the whole app into pixel art. |
 | 🪵 **Honest logs** | Every failure is logged. Lyra can read her own log, so you can ask her why something broke. |
@@ -54,11 +56,11 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
   Lyra &nbsp;·&nbsp; Fox girl &nbsp;·&nbsp; Cowboy &nbsp;·&nbsp; Agent &nbsp;·&nbsp; Butterbot &nbsp;·&nbsp; Succubus &nbsp;·&nbsp; Dapper &nbsp;·&nbsp; Silver
 </p>
 
-Every character has idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you.
+Every character has idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you — that part is **beta**: the frames come out clean, but the animation is not always smooth yet.
 
 ## Quick start
 
-You need **macOS on Apple Silicon**, **Node.js 20 or newer**, and a model runtime. [LM Studio](https://lmstudio.ai/) is the easiest: install it, download a model, start its server. llama.cpp and Ollama work just as well.
+You need **macOS, Windows or Linux**, **Node.js 20 or newer** (22+ to store chats in SQLite rather than JSON), and a model runtime. [LM Studio](https://lmstudio.ai/) is the easiest: install it, download a model, start its server. llama.cpp and Ollama work just as well.
 
 ```bash
 git clone https://github.com/mhndhayek/LyraAI.git
@@ -72,20 +74,32 @@ Then open **Settings › Model**, pick your model, and say hello.
 Optional pieces:
 
 ```bash
-npm run voice:setup    # KittenTTS + Whisper sidecar (needs uv, and `brew install espeak-ng`)
-npm run dist           # builds dist/mac-arm64/Lyra AI Agent.app
+npm run voice:setup    # KittenTTS + Whisper sidecar (needs uv and espeak-ng: `brew install espeak-ng` on macOS, `apt install espeak-ng` on Linux)
+npm run qa             # the full quality gate: lint, tests, self-test, smoke test
 npm run selftest       # breaks the app on purpose and proves the safety nets catch it
 ```
 
-The app is not signed. The first time you open the built `.app`, right-click it and choose **Open**.
+### Building an installer
 
-## Talk to her from your phone
+```bash
+npm run dist:mac       # .dmg and .zip, Apple Silicon and Intel
+npm run dist:win       # NSIS installer and a portable .exe
+npm run dist:linux     # .AppImage, .deb and .tar.gz
+```
+
+Builds land in `dist/`. Each platform builds on its own kind of machine; CI builds
+all three on every pull request, and publishes them as a GitHub release whenever the
+version in `package.json` changes on `main`.
+
+The builds are not signed yet. On macOS, right-click `Lyra.app` the first time and choose **Open**; on Windows, SmartScreen shows "more info → run anyway" on the first launch of the installer.
+
+## Talk to her from your phone *(beta)*
 
 <img src="docs/media/lyra-thinking.gif" width="120" align="right" alt="Lyra thinking">
 
 Lyra can serve the same chats to your phone without any cloud in between.
 
-1. Install [Tailscale](https://tailscale.com/download) on the Mac and on the phone, signed in to the same account, and enable HTTPS in the Tailscale admin console (DNS tab).
+1. Install [Tailscale](https://tailscale.com/download) on the computer running Lyra and on the phone, signed in to the same account, and enable HTTPS in the Tailscale admin console (DNS tab).
 2. Open **Settings › Mobile** and switch on **Phone access**. Lyra asks Tailscale for a real certificate, so the phone gets a proper `https://` page, which is what lets Safari use the microphone and install to the home screen.
 3. Point the phone camera at the QR code. Safari opens and pairs in one step. Then **Share › Add to Home Screen**.
 
@@ -108,7 +122,7 @@ Things people ask her for:
 
 ## Privacy
 
-Chats, memory, files and settings stay in `~/Library/Application Support/Lyra`. Lyra sends prompts only to the model endpoint you configure, and images only to the image server you configure. Phone access rides on your own Tailscale network. There is no telemetry, no account, and no server of ours anywhere.
+Chats, memory, files and settings stay on your machine — `~/Library/Application Support/Lyra` on macOS, `%APPDATA%\Lyra` on Windows, `~/.config/Lyra` on Linux. Lyra sends prompts only to the model endpoint you configure, and images only to the image server you configure. Phone access rides on your own Tailscale network. There is no telemetry, no account, and no server of ours anywhere.
 
 ## Docs
 
@@ -135,3 +149,9 @@ Lyra AI Agent is released under the [PolyForm Noncommercial License 1.0.0](LICEN
 - ❌ Not for commercial use without permission. If you want to use Lyra in a business or a product, [open an issue](https://github.com/mhndhayek/LyraAI/issues) and let's talk.
 
 Copyright © 2026 mhndhayek.
+
+## Contributing
+
+Run `npm run qa` before opening a pull request: it runs the same gate CI does — lint, the test suite, the kernel self-test and a smoke test of the real app. See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/QA.md](docs/QA.md).
+
+Installers for macOS, Windows and Linux are built by CI on every pull request. Bumping the version in `package.json` on `main` publishes them as a release — see [docs/QA.md](docs/QA.md).

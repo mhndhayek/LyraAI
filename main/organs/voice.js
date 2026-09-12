@@ -12,6 +12,7 @@ function speakable(text) {
     .replace(/\[(.*?)\]\(.*?\)/g, '$1')
     .replace(/[*_#>`~]/g, '')
     .replace(/:[a-z0-9_+-]+:/gi, ' ')
+    // eslint-disable-next-line no-misleading-character-class -- every part of an emoji sequence, joiners included, is meant to go
     .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200d\ufe0f\u20e3]/gu, ' ')
     .replace(/[\u2600-\u27bf\u2b00-\u2bff\u2190-\u21ff\u2300-\u23ff\u2500-\u25ff\u2700-\u27bf]/g, ' ')
     .replace(/\s+/g, ' ').trim();

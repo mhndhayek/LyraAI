@@ -9,6 +9,7 @@
     "browser.js": "The agent's browser (WebContentsView / hidden window) and its primitives.",
     "voice.js": "KittenTTS + Whisper sidecar bridge, custom TTS, say fallback.",
     "goals.js": "Reflection after sessions and autonomous goal work.",
+    "companion.js": "The phone companion: an HTTPS server bound to the tailnet that serves the mobile web app and its chat API, with paired device tokens.",
     "compression.js": "Context estimation and summarisation.",
     "imagegen.js": "SwarmUI / ComfyUI image generation.",
     "approvals.js": "Approval gate with modes, smart approvals and timeouts.",

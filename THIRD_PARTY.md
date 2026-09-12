@@ -5,6 +5,8 @@ Lyra AI Agent stands on these projects. Each keeps its own license.
 | Project | Used for | License |
 | --- | --- | --- |
 | [Electron](https://www.electronjs.org/) | the desktop window and runtime | MIT |
+| [electron-builder](https://www.electron.build/) | compiling the installers | MIT |
+| [ESLint](https://eslint.org/) | linting in the quality gate (development only) | MIT |
 | [marked](https://github.com/markedjs/marked) | rendering markdown in chat | MIT |
 | [PixiJS](https://pixijs.com/) and [pixi-live2d-display](https://github.com/guansss/pixi-live2d-display) | Live2D characters | MIT |
 | [qrcode](https://github.com/soldair/node-qrcode) | the phone pairing code | MIT |

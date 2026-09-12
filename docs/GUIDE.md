@@ -23,7 +23,8 @@ Lyra talks to any OpenAI-compatible local runtime. LM Studio on `http://localhos
 - **Chat** – text, pictures (attach, paste or drop), and voice messages (tap the mic, tap again to send; the transcript shows under the bubble). Replies stream, tool steps show as activity lines, and anything that needs approval shows a card with a countdown.
 - **Live panel** – the character (built-in vector or pixel version depending on the theme, a GIF pack, or a Live2D model), its state, and what Lyra is doing right now.
 - **Lyra's browser** – when Lyra browses in *visible* mode the panel opens inside the app with the page it is driving; *Take over* lets you use it yourself, *Stop* halts the agent's browsing for the turn. In *headless* mode you only see a status line in the chat.
-- **Settings** (gear, or ⌘,) – grouped into Brain (Model, Provider, Memory & context, Tools, Image generation), Character (Persona & chat, Appearance, Voice, AI goals), Around it (Workspace, Browser, Safety, Notifications, Mobile) and App (Extensions, Recovery, About).
+- **Profiles** (*Settings › Profiles*) – keep more than one assistant. Each profile has its own soul, appearance, voice, animation, goals and model, and its own chats and memory; switching swaps all of it at once. Safety, the workspace, the browser and phone access are yours and shared by every profile.
+- **Settings** (gear, or ⌘,) – grouped into Lyra (Model, Provider, Memory & context, Tools, Image generation), Character (Persona & chat, Appearance, Voice, AI goals), Around it (Workspace, Browser, Safety, Notifications, Mobile) and App (Extensions, Recovery, About).
 
 ## Kernel, organs, extensions
 
@@ -46,7 +47,7 @@ Only Lyra writes to memory (the `remember` tool). Long-term entries are shared a
 
 ## Your phone
 
-*Settings › Mobile* serves the same chat to your phone over your private Tailscale network. Switch it on, point the phone camera at the QR code, and Safari opens paired. The socket is bound to the tailnet address only, never to the wifi or the internet, and Tailscale issues a real HTTPS certificate for the machine's MagicDNS name, which is what lets the phone use the microphone and install to the home screen.
+*Settings › Mobile* (beta) serves the same chat to your phone over your private Tailscale network. Switch it on, point the phone camera at the QR code, and Safari opens paired. The socket is bound to the tailnet address only, never to the wifi or the internet, and Tailscale issues a real HTTPS certificate for the machine's MagicDNS name, which is what lets the phone use the microphone and install to the home screen.
 
 - On the phone, once: install Tailscale and sign in with the same account, scan the code, then **Share › Add to Home Screen** in Safari (three dots › Add to Home screen in Chrome).
 - Each phone gets its own token, listed under *Paired phones* with a Remove button. The pairing code rotates and expires after fifteen minutes.
