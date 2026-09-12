@@ -47,7 +47,7 @@ test('flatten walks nested objects and leaves arrays alone', () => {
 
 test('shell commands that would kill or lobotomise the app are blocked', () => {
   const k = fakeKernel();
-  const blocked = ['killall Electron', 'pkill -9 Lyra', 'rm -rf ~/x/state/.git', 'rm -rf "/Applications/Lyra AI Agent.app"',
+  const blocked = ['killall Electron', 'pkill -9 Lyra', 'rm -rf ~/x/state/.git', 'rm -rf "/Applications/Lyra.app"', 'rm -rf "/Applications/Lyra AI Agent.app"',
     'git --git-dir=/x/state/.git reset --hard', 'osascript -e \'quit app "Lyra"\'', 'sudo shutdown -h now', 'launchctl unload x'];
   for (const cmd of blocked) assert.ok(k.guard.shellBlocked(cmd), `${cmd} should be blocked`);
   const allowed = ['ls -la', 'npm test', 'git status', 'python3 script.py', 'rm -rf node_modules'];

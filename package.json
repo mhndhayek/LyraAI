@@ -1,5 +1,5 @@
 {
-  "name": "lyra-ai-agent",
+  "name": "lyra",
   "productName": "Lyra AI Agent",
   "version": "0.9.0",
   "description": "Lyra AI Agent: a local-first AI agent that lives on your computer as its own desktop app, with a persona, memory, tools, an in-app browser, a live pixel-art character, voice, phone access and the ability to grow itself.",
@@ -50,7 +50,7 @@
   },
   "build": {
     "appId": "app.lyra.agent",
-    "productName": "Lyra AI Agent",
+    "productName": "Lyra",
     "icon": "assets/icon.icns",
     "mac": {
       "target": [
@@ -120,7 +120,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Lyra AI Agent"
+      "shortcutName": "Lyra"
     },
     "linux": {
       "target": [
@@ -144,6 +144,7 @@
         }
       ],
       "icon": "assets/icon.png",
+      "executableName": "lyra",
       "category": "Utility",
       "maintainer": "mhndhayek <mhndhayek@users.noreply.github.com>",
       "synopsis": "Local-first AI agent that lives on your computer",

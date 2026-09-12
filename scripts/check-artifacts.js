@@ -6,6 +6,8 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const dist = path.join(ROOT, 'dist');
+// The name electron-builder gives the compiled app, so this check follows a rename.
+const APP = require(path.join(ROOT, 'package.json')).build.productName;
 const MIN_BYTES = 10 * 1024 * 1024; // an Electron app is never smaller than this
 
 const EXPECTED = {
@@ -58,12 +60,12 @@ if (process.argv.includes('--launch')) {
   const macApps = fs.readdirSync(dist)
     .filter((d) => /^mac(-|$)/.test(d) && fs.statSync(path.join(dist, d)).isDirectory())
     .sort((a, b) => Number(b.includes(process.arch)) - Number(a.includes(process.arch)))
-    .map((d) => path.join(dist, d, 'Lyra AI Agent.app', 'Contents', 'MacOS', 'Lyra AI Agent'));
+    .map((d) => path.join(dist, d, `${APP}.app`, 'Contents', 'MacOS', APP));
 
   const candidates = {
-    linux: [path.join(dist, 'linux-unpacked', 'lyra-ai-agent')],
+    linux: [path.join(dist, 'linux-unpacked', APP.toLowerCase())],
     darwin: macApps,
-    win32: [path.join(dist, 'win-unpacked', 'Lyra AI Agent.exe')],
+    win32: [path.join(dist, 'win-unpacked', `${APP}.exe`)],
   }[process.platform] || [];
 
   const bin = candidates.find((c) => fs.existsSync(c));
@@ -74,7 +76,8 @@ if (process.argv.includes('--launch')) {
 
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-packaged-'));
   const shot = path.join(dataDir, 'packaged.png');
-  const args = [`--user-data-dir=${dataDir}`, '--no-sandbox', `--screenshot=${shot}`, '--delay=6000'];
+  const { headlessGpuArgs } = require('./electron-run');
+  const args = [`--user-data-dir=${dataDir}`, '--no-sandbox', ...headlessGpuArgs(), `--screenshot=${shot}`, '--delay=6000'];
   const useXvfb = process.platform === 'linux' && !process.env.DISPLAY;
   const r = spawnSync(useXvfb ? 'xvfb-run' : bin, useXvfb ? ['-a', bin, ...args] : args, { encoding: 'utf8', timeout: 180000 });
 
