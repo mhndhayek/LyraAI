@@ -149,7 +149,7 @@ jobs:
       # Every platform is collected first, so the release goes live complete
       # rather than filling up one installer at a time in front of people.
       - name: Collect every platform's installers
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-*
           merge-multiple: true
