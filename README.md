@@ -40,7 +40,7 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
 | 🗣️ **Voice** | KittenTTS voices and Whisper transcription run in a local sidecar. Send voice notes, hear replies. |
 | 🎭 **A face** | Eight built-in pixel-art characters that blink, think, type and talk, or bring your own GIF pack or Live2D model. |
 | 🎯 **Goals** | After a chat, she reflects and writes goals for herself. Let her work on them in her own time, or archive them. |
-| 📱 **On your phone** | Scan a QR code and Safari opens the same chats over HTTPS on your Tailscale network. No account, no cloud. |
+| 📱 **On your phone** *(beta)* | Scan a QR code and Safari opens the same chats over HTTPS on your Tailscale network. No account, no cloud. |
 | 🧬 **Self-extending** | Themes, UI changes, new tools and panels, applied live with git checkpoints and automatic rollback. |
 | 🧩 **Themes** | Not just colors: a theme can change fonts, shapes and the character. The Pixel theme turns the whole app into pixel art. |
 | 🪵 **Honest logs** | Every failure is logged. Lyra can read her own log, so you can ask her why something broke. |
@@ -55,7 +55,7 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
   Lyra &nbsp;·&nbsp; Fox girl &nbsp;·&nbsp; Cowboy &nbsp;·&nbsp; Agent &nbsp;·&nbsp; Butterbot &nbsp;·&nbsp; Succubus &nbsp;·&nbsp; Dapper &nbsp;·&nbsp; Silver
 </p>
 
-Every character has idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you.
+Every character has idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you — that part is **beta**: the frames come out clean, but the animation is not always smooth yet.
 
 ## Quick start
 
@@ -92,7 +92,7 @@ version in `package.json` changes on `main`.
 
 The builds are not signed yet. On macOS, right-click `Lyra.app` the first time and choose **Open**; on Windows, SmartScreen shows "more info → run anyway" on the first launch of the installer.
 
-## Talk to her from your phone
+## Talk to her from your phone *(beta)*
 
 <img src="docs/media/lyra-thinking.gif" width="120" align="right" alt="Lyra thinking">
 

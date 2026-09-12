@@ -11,6 +11,9 @@
   ];
   let current = 'model', open = false, previewChar = null, errorCount = 0;
   const logFilter = { level: 'warn', source: '', search: '' };
+  // Features that work but are not finished: the badge says so wherever they appear.
+  const BETA = '<span class="beta">beta</span>';
+  const BETA_SECTIONS = new Set(['mobile']);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const S = () => window.LyraApp.settings();
@@ -168,7 +171,7 @@
         const grid = el('<div class="theme-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>');
         packs.forEach((p) => { const c = el(`<div class="theme-card ${p.id === cur ? 'on' : ''}" style="align-items:center;text-align:center"><img src="character/${esc(p.id)}/avatar.png" alt="" style="width:72px;height:72px;border-radius:50%;image-rendering:pixelated"><div class="n">${esc(p.name)}</div>${p.description ? `<div class="k">${esc(p.description)}</div>` : ''}</div>`); c.addEventListener('click', () => { const patch = { appearance: { gifFolder: `builtin:${p.id}` } }; if (!s.persona.avatar || s.persona.avatar.startsWith('builtin:')) patch.persona = { avatar: `builtin:${p.id}` }; set(patch).then(refresh); }); grid.appendChild(c); });
         srcRows.push(el('<div class="group-label">Built-in characters</div>'), grid);
-        srcRows.push(row('Your own GIF pack', 'A folder with idle.gif, thinking.gif, writing.gif and speaking.gif; idle-2.gif … idle-6.gif play as idle variations. Ask Lyra to draw a new character (it knows the recipe).', [field(cur ? `Built-in: ${cur}` : a.gifFolder, null, { w: 220, mono: true, ro: true }), btn('Choose folder', async () => { const f = await lyra.files.pickFolder(); if (f) set({ appearance: { gifFolder: f } }).then(refresh); })]));
+        srcRows.push(row('Your own GIF pack', `A folder with idle.gif, thinking.gif, writing.gif and speaking.gif; idle-2.gif … idle-6.gif play as idle variations. Ask ${esc(s.persona.name)} to draw a new character (it knows the recipe) ${BETA} — the frames come out clean, but the animation is not always smooth yet.`, [field(cur ? `Built-in: ${cur}` : a.gifFolder, null, { w: 220, mono: true, ro: true }), btn('Choose folder', async () => { const f = await lyra.files.pickFolder(); if (f) set({ appearance: { gifFolder: f } }).then(refresh); })]));
       }
       if (a.source === 'live2d') srcRows.push(row('Model file', 'A Cubism 4 model (.model3.json). Put live2dcubismcore.min.js from the Live2D site in the same folder.', [field(a.live2dModel, null, { w: 240, mono: true, ro: true }), btn('Choose', async () => { const f = await lyra.files.pickFile({ filters: [{ name: 'Live2D model', extensions: ['json'] }] }); if (f) set({ appearance: { live2dModel: f } }).then(refresh); })]));
       const preview = el(`<div style="display:flex;gap:16px;align-items:stretch"><div class="mini-stage" id="mini-stage"></div><div style="display:flex;flex-direction:column;gap:8px;justify-content:center"><div class="d" style="font-size:12px;color:var(--muted);font-weight:500">Preview a state</div></div></div>`);
@@ -339,21 +342,21 @@
       const st = await lyra.mobile.state();
       const net = await lyra.mobile.tailnet();
       const box = [];
-      box.push(title('Mobile', `Reach ${esc(s.persona.name)} from your phone over your private Tailscale network. The connection is encrypted twice: Tailscale's own tunnel, plus a real HTTPS certificate, which is what lets the phone use the microphone.`));
+      box.push(title(`Mobile ${BETA}`, `Reach ${esc(s.persona.name)} from your phone over your private Tailscale network. The connection is encrypted twice: Tailscale's own tunnel, plus a real HTTPS certificate, which is what lets the phone use the microphone. Phone access still has rough edges, so treat it as a preview.`));
 
       // status card
       const statusCard = el('<div class="card" style="gap:10px"></div>');
       if (!net.ok) {
         statusCard.appendChild(el(`<div class="status-line"><span class="dot off"></span>${esc(net.error || 'Tailscale not ready')}</div>`));
         const help = el('<div class="d" style="font-size:12px;color:var(--muted);line-height:1.5"></div>');
-        help.innerHTML = /not found/i.test(net.error || '') ? 'Install Tailscale on this Mac and on your phone, sign both into the same account, then come back here.' : /log|sign/i.test(net.error || '') ? 'Open the Tailscale app on this Mac and sign in.' : 'Open the Tailscale app and connect, then press Check again.';
+        help.innerHTML = /not found/i.test(net.error || '') ? 'Install Tailscale on this computer and on your phone, sign both into the same account, then come back here.' : /log|sign/i.test(net.error || '') ? 'Open the Tailscale app on this computer and sign in.' : 'Open the Tailscale app and connect, then press Check again.';
         statusCard.appendChild(help);
         const row1 = el('<div style="display:flex;gap:8px;flex-wrap:wrap"></div>');
         row1.appendChild(btn('Get Tailscale', () => lyra.app.openExternal({ url: 'https://tailscale.com/download' }), { ic: 'globe' }));
         row1.appendChild(btn('Check again', refresh, { ic: 'refresh' }));
         statusCard.appendChild(row1);
       } else {
-        statusCard.appendChild(el(`<div class="status-line"><span class="dot${st.running ? '' : ' off'}"></span>${st.running ? 'Phone access is on' : 'Phone access is off'} · this Mac is <b style="color:var(--text)">${esc(net.host)}</b> on your tailnet</div>`));
+        statusCard.appendChild(el(`<div class="status-line"><span class="dot${st.running ? '' : ' off'}"></span>${st.running ? 'Phone access is on' : 'Phone access is off'} · this computer is <b style="color:var(--text)">${esc(net.host)}</b> on your tailnet</div>`));
         if (!net.certOk) statusCard.appendChild(el('<div class="d" style="font-size:12px;color:var(--warn)">HTTPS certificates are not enabled for your tailnet yet. Open the Tailscale admin console, DNS tab, and turn on HTTPS Certificates. Then switch this on.</div>'));
         if (st.error) statusCard.appendChild(el(`<div class="d" style="font-size:12px;color:var(--danger)">${esc(st.error)}</div>`));
         const phones = (net.devices || []).filter((d) => /ios|android/i.test(d.os || ''));
@@ -397,7 +400,7 @@
 
         const steps = el(`<div class="card"><div class="d" style="font-size:13px;color:var(--text);line-height:1.7">
           <b>On the iPhone, once:</b><br>
-          1. Install Tailscale from the App Store and sign in with the same account as this Mac.<br>
+          1. Install Tailscale from the App Store and sign in with the same account as this computer.<br>
           2. Point the Camera app at the code above and tap the link. Safari opens and pairs the phone.<br>
           3. In Safari, tap the <b>Share</b> button at the bottom, then <b>Add to Home Screen</b>, then <b>Add</b>.<br>
           4. Open Lyra from the home screen. It runs full screen, and the first time you tap the microphone, allow access.<br>
@@ -530,7 +533,7 @@
 
   /* ---- page ---- */
   function renderNav() {
-    const item = ([id, name, ic]) => `<button class="nav-item ${id === current ? 'on' : ''}" data-id="${id}">${icon(ic, 16)}<span class="nav-text">${name}</span>${id === 'recovery' && errorCount ? `<span class="spacer"></span><span class="err-dot" title="${errorCount} error${errorCount > 1 ? 's' : ''} in the last day">${errorCount}</span>` : ''}</button>`;
+    const item = ([id, name, ic]) => `<button class="nav-item ${id === current ? 'on' : ''}" data-id="${id}">${icon(ic, 16)}<span class="nav-text">${name}</span>${BETA_SECTIONS.has(id) ? BETA : ''}${id === 'recovery' && errorCount ? `<span class="spacer"></span><span class="err-dot" title="${errorCount} error${errorCount > 1 ? 's' : ''} in the last day">${errorCount}</span>` : ''}</button>`;
     const groupName = (label) => { try { return typeof label === 'function' ? label() : label; } catch { return 'Lyra'; } };
     $('#settings-nav-items').innerHTML = NAV.map(([label, items]) => `<div class="nav-group">${esc(groupName(label))}</div>${items.map(item).join('')}`).join('');
     $('#settings-nav-items').querySelectorAll('.nav-item').forEach((b) => b.addEventListener('click', () => { current = b.dataset.id; render(); }));

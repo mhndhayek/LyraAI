@@ -1,5 +1,9 @@
 # Avatars and live characters: the recipe
 
+> **Beta.** Drawing a new character works end to end, but the animation is not always
+> smooth: the frames come out clean, the motion between them still needs a hand. Say so
+> before starting, and expect to redo a pack or two.
+
 This is how the built-in characters (cat girl, fox girl, cowboy, agent, butter robot, succubus, and the two businessmen) were made, so you can make more, or a new one for the user.
 
 ## What it needs (tell the user before starting)
