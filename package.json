@@ -40,7 +40,7 @@
   "dependencies": {
     "marked": "^18.0.12",
     "pixi-live2d-display": "^0.4.0",
-    "pixi.js": "^7.4.3",
+    "pixi.js": "^8.20.1",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
