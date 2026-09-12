@@ -85,3 +85,16 @@ test('topic lookup is forgiving about case and blanks', () => {
   assert.equal(docs.read('SETTINGS').slice(0, 10), docs.read('settings').slice(0, 10));
   assert.equal(docs.read().slice(0, 10), docs.read('agent').slice(0, 10), 'the agent guide is the default');
 });
+
+test('the settings doc tells her which profile she is, without showing the others', () => {
+  const { k, docs } = docsKernel();
+  k.settings.createProfile({ name: 'Iris' });
+  k.settings.set({ providers: { list: [{ id: 'x', name: 'Remote', runtime: 'openai', endpoint: 'https://api.example.com/v1', apiKey: 'sk-the-first-ones-key' }] } });
+  const iris = k.settings.profiles().list.find((p) => p.name === 'Iris');
+  k.settings.switchProfile(iris.id);
+
+  const out = docs.read('settings');
+  assert.match(out, /You are the profile "Iris", one of 2/);
+  assert.match(out, /profiles LOCKED: only the user/, 'she must be told she cannot switch profiles herself');
+  assert.ok(!out.includes('sk-the-first-ones-key'), 'another profile’s key must not be readable from here');
+});

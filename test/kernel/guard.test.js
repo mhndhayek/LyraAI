@@ -92,3 +92,13 @@ test('the budget resets on a new day', () => {
   assert.equal(k.guard.budget().used, 0);
   assert.equal(k.guard.consume(1).ok, true);
 });
+
+test('the agent cannot switch, add or remove profiles', () => {
+  const r = filterPatch({ profiles: { active: 'someone-else' } });
+  assert.equal(r.rejected.length, 1);
+  assert.equal(r.rejected[0].path, 'profiles.active');
+  assert.match(r.rejected[0].why, /only the user/);
+  assert.deepEqual(r.allowed, {});
+  // She may still change the profile she is in: her soul is hers to write.
+  assert.deepEqual(filterPatch({ persona: { soul: 'a new way to be' } }).allowed, { persona: { soul: 'a new way to be' } });
+});

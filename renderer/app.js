@@ -231,6 +231,8 @@
       case 'browser': updateBrowser(e); break;
       case 'browser:show': showBrowserPanel(true); break;
       case 'chats': loadChats(); break;
+      // A different profile is in force: her chats, her look and her name all change at once.
+      case 'profiles': state.chatId = null; loadChats(); if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
       case 'settings': state.settings = e.settings; applyAll(); refreshContext(100); break;
       case 'models': state.models = e; setStatus(); if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
       case 'memory': toast(`Remembered (${e.scope}): ${e.text.slice(0, 80)}`); break;
