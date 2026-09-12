@@ -1,7 +1,7 @@
 {
   "name": "lyra",
   "productName": "Lyra AI Agent",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Lyra AI Agent: a local-first AI agent that lives on your computer as its own desktop app, with a persona, memory, tools, an in-app browser, a live pixel-art character, voice, phone access and the ability to grow itself.",
   "author": "mhndhayek",
   "license": "PolyForm-Noncommercial-1.0.0",
