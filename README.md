@@ -87,7 +87,8 @@ npm run dist:linux     # .AppImage, .deb and .tar.gz
 ```
 
 Builds land in `dist/`. Each platform builds on its own kind of machine; CI builds
-all three on every pull request and attaches them to tagged releases.
+all three on every pull request, and publishes them as a GitHub release whenever the
+version in `package.json` changes on `main`.
 
 The builds are not signed yet. On macOS, right-click `Lyra.app` the first time and choose **Open**; on Windows, SmartScreen shows "more info → run anyway" on the first launch of the installer.
 
@@ -152,4 +153,4 @@ Copyright © 2026 mhndhayek.
 
 Run `npm run qa` before opening a pull request: it runs the same gate CI does — lint, the test suite, the kernel self-test and a smoke test of the real app. See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/QA.md](docs/QA.md).
 
-Installers for macOS, Windows and Linux are built by CI on every pull request and attached to each tagged release.
+Installers for macOS, Windows and Linux are built by CI on every pull request. Bumping the version in `package.json` on `main` publishes them as a release — see [docs/QA.md](docs/QA.md).

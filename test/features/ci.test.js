@@ -16,11 +16,12 @@ const pkg = JSON.parse(read('package.json'));
 const JOBS = CI.slice(CI.indexOf('\njobs:'));
 const jobNames = [...JOBS.matchAll(/^ {2}([a-z][a-z0-9-]*):$/gm)].map((m) => m[1]);
 // The YAML of one job, from its name up to the next job at the same indent.
-function jobSection(name) {
-  const starts = [...JOBS.matchAll(/^ {2}([a-z][a-z0-9-]*):$/gm)];
+function jobSection(name, workflow = JOBS) {
+  const body = workflow.slice(workflow.indexOf('\njobs:') >= 0 ? workflow.indexOf('\njobs:') : 0);
+  const starts = [...body.matchAll(/^ {2}([a-z][a-z0-9-]*):$/gm)];
   const i = starts.findIndex((m) => m[1] === name);
   assert.ok(i >= 0, `there is no ${name} job`);
-  return JOBS.slice(starts[i].index, i + 1 < starts.length ? starts[i + 1].index : JOBS.length);
+  return body.slice(starts[i].index, i + 1 < starts.length ? starts[i + 1].index : body.length);
 }
 const gateMatch = /needs: \[([^\]]+)\]/.exec(CI);
 const gateNeeds = (gateMatch ? gateMatch[1] : '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -95,8 +96,31 @@ test('the build job produces installers for every platform', () => {
 test('the release runs the same gate before publishing anything', () => {
   assert.match(RELEASE, /uses: \.\/\.github\/workflows\/ci\.yml/, 'the release must reuse the QA pipeline');
   assert.match(CI, /workflow_call:/, 'ci.yml must be callable for that to work');
-  assert.match(RELEASE, /needs: qa/, 'installers must not be built before the gate passes');
-  assert.match(RELEASE, /tag .* does not match package\.json version/, 'a mistyped tag must not ship');
+  assert.match(jobSection('build', RELEASE), /needs: \[decide, qa\]/, 'installers must not be built before the gate passes');
+  assert.match(RELEASE, /tag .* does not match package\.json version/, 'a tag that disagrees with package.json must not ship');
+});
+
+test('a push to main releases only when the version changed', () => {
+  assert.match(RELEASE, /branches: \[main\]/, 'a release has to be able to start from a push to main');
+  const decide = jobSection('decide', RELEASE);
+  assert.match(decide, /there is nothing new to release/, 'an ordinary push must not cut a release');
+  assert.match(decide, /is already tagged/, 're-running a release must not ship the same version twice');
+  for (const job of ['qa', 'build', 'publish']) {
+    const section = jobSection(job, RELEASE);
+    const gated = /needs\.decide\.outputs\.release == 'true'/.test(section) || /needs: \[decide/.test(section);
+    assert.ok(gated, `the ${job} job would run even when there is nothing to release`);
+  }
+});
+
+test('a release goes live complete, and only once every platform is built', () => {
+  const publish = jobSection('publish', RELEASE);
+  assert.match(publish, /needs: \[decide, build\]/, 'publishing must wait for every platform');
+  assert.match(publish, /download-artifact/, 'the installers must be collected before the release is created');
+  assert.match(publish, /these installers never arrived/, 'a missing installer must stop the release, not ship half of it');
+  assert.match(publish, /draft: false/, 'the release is published rather than left as a draft');
+  for (const ext of ['dmg', 'exe', 'AppImage', 'deb']) {
+    assert.ok(publish.includes(ext), `the release does not check for a ${ext}`);
+  }
 });
 
 test('CI installs from the lockfile rather than resolving fresh versions', () => {

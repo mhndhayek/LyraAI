@@ -66,8 +66,17 @@ GitHub CLI) to apply that rule.
 
 ## Releasing
 
-Tag a commit on `main` as `vX.Y.Z` and push the tag. The release workflow reruns the
-entire gate, then compiles and attaches:
+**Bumping the version is what ships a release.** Change `version` in `package.json`,
+merge it to `main`, and the release workflow does the rest:
+
+```sh
+npm version patch --no-git-tag-version   # or minor / major
+# commit, open a pull request, merge it
+```
+
+On that push it reruns the entire QA gate, compiles the installers on all three
+operating systems, starts each packaged app once to prove it runs, then tags the
+commit `vX.Y.Z` and publishes a GitHub release with everything attached:
 
 | Platform | Artifacts |
 | --- | --- |
@@ -75,9 +84,21 @@ entire gate, then compiles and attaches:
 | Windows | NSIS `.exe` installer and a portable `.exe` |
 | Linux | `.AppImage`, `.deb` and `.tar.gz` |
 
-The release is created as a draft so the notes can be edited before it goes out.
+Pushes to `main` that do not change the version build and test as usual and release
+nothing, so ordinary merges never ship. Re-running a release for a version that is
+already tagged does nothing either. Release notes are generated from the commits.
+
+Two other ways in, for when you need them: pushing a `vX.Y.Z` tag yourself, or
+running the workflow by hand from the Actions tab. A tag that disagrees with
+`package.json` is refused rather than shipped under the wrong version.
+
+Every platform is built and checked before anything is published, so a release is
+never live with only some of its installers. If one platform fails to build, nothing
+is released at all.
+
 Builds are unsigned unless the signing secrets (`CSC_LINK`, `CSC_KEY_PASSWORD`) are
-set on the repository.
+set on the repository. Unsigned is still installable: macOS needs right-click →
+Open the first time, Windows shows SmartScreen's "more info → run anyway".
 
 ## Adding a test
 

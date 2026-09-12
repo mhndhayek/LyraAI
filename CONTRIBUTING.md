@@ -21,6 +21,13 @@ That runs the same checks CI does: syntax, lint, the test suite, the kernel
 self-test and a smoke test of the real app. If it passes locally it will pass in
 CI. See [docs/QA.md](docs/QA.md) for what each step covers and how to add tests.
 
+## Releasing
+
+Change `version` in `package.json` and merge it to `main`. CI reruns the whole gate,
+builds the installers for macOS, Windows and Linux, checks each packaged app starts,
+then tags the commit and publishes the release. Merges that do not change the version
+release nothing. Details in [docs/QA.md](docs/QA.md).
+
 ## How changes are reviewed
 
 - Work on a branch and open a pull request against `main`; direct pushes are
