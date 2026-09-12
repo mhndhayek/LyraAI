@@ -74,12 +74,24 @@ if (process.argv.includes('--launch')) {
     process.exit(1);
   }
 
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-packaged-'));
-  const shot = path.join(dataDir, 'packaged.png');
   const { headlessGpuArgs } = require('./electron-run');
-  const args = [`--user-data-dir=${dataDir}`, '--no-sandbox', ...headlessGpuArgs(), `--screenshot=${shot}`, '--delay=6000'];
   const useXvfb = process.platform === 'linux' && !process.env.DISPLAY;
-  const r = spawnSync(useXvfb ? 'xvfb-run' : bin, useXvfb ? ['-a', bin, ...args] : args, { encoding: 'utf8', timeout: 180000 });
+  // The very first run of a freshly built binary is the slow one: the machine
+  // has never seen this executable, and on Windows it is scanned before it is
+  // allowed to start. Give it room, and give it one second go before calling a
+  // slow start a broken build.
+  const TIMEOUT_MS = 300000;
+  let dataDir, shot, r;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-packaged-'));
+    shot = path.join(dataDir, 'packaged.png');
+    const args = [`--user-data-dir=${dataDir}`, '--no-sandbox', ...headlessGpuArgs(), `--screenshot=${shot}`, '--delay=6000'];
+    const started = Date.now();
+    r = spawnSync(useXvfb ? 'xvfb-run' : bin, useXvfb ? ['-a', bin, ...args] : args, { encoding: 'utf8', timeout: TIMEOUT_MS });
+    const timedOut = r.error && /ETIMEDOUT/.test(r.error.message || '');
+    if (!timedOut) break;
+    console.error(`the packaged app did not finish within ${Math.round((Date.now() - started) / 1000)}s${attempt === 1 ? ', trying once more' : ''}`);
+  }
 
   if (r.error) {
     console.error(`✗ the packaged app could not be started: ${r.error.message}`);
