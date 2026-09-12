@@ -23,7 +23,7 @@ Lyra talks to any OpenAI-compatible local runtime. LM Studio on `http://localhos
 - **Chat** – text, pictures (attach, paste or drop), and voice messages (tap the mic, tap again to send; the transcript shows under the bubble). Replies stream, tool steps show as activity lines, and anything that needs approval shows a card with a countdown.
 - **Live panel** – the character (built-in vector or pixel version depending on the theme, a GIF pack, or a Live2D model), its state, and what Lyra is doing right now.
 - **Lyra's browser** – when Lyra browses in *visible* mode the panel opens inside the app with the page it is driving; *Take over* lets you use it yourself, *Stop* halts the agent's browsing for the turn. In *headless* mode you only see a status line in the chat.
-- **Settings** (gear, or ⌘,) – grouped into Brain (Model, Provider, Memory & context, Tools, Image generation), Character (Persona & chat, Appearance, Voice, AI goals), Around it (Workspace, Browser, Safety, Notifications, Mobile) and App (Extensions, Recovery, About).
+- **Settings** (gear, or ⌘,) – grouped into Lyra (Model, Provider, Memory & context, Tools, Image generation), Character (Persona & chat, Appearance, Voice, AI goals), Around it (Workspace, Browser, Safety, Notifications, Mobile) and App (Extensions, Recovery, About).
 
 ## Kernel, organs, extensions
 

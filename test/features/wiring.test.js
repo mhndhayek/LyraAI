@@ -80,6 +80,16 @@ test('every settings section the app defines has a page in the UI', () => {
   }
 });
 
+test('the settings pages call the assistant by name, not "the brain"', () => {
+  const ui = read('renderer', 'settings.js');
+  const jargon = [...ui.matchAll(/.{0,60}\bbrains?\b.{0,60}/gi)].map((m) => m[0].trim());
+  assert.deepEqual(jargon, [], `the settings UI still calls her the brain: ${jargon.join(' | ')}`);
+  // And it uses whatever the user named her, rather than hard-coding "Lyra".
+  assert.match(ui, /roleBlock\('chat', s\.persona\.name/, 'the chat model should be labelled with her name');
+  assert.match(ui, /s\.model\.chat\.provider === p\.id \? s\.persona\.name/, 'the provider badge should use her name');
+  assert.match(ui, /\[\(\) => S\(\)\.persona\.name,/, 'the first settings group should be named after her');
+});
+
 test('every built-in theme is complete', () => {
   const dir = path.join(ROOT, 'renderer', 'themes');
   const themes = fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory());

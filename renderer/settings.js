@@ -1,9 +1,10 @@
 // Settings page: one section per menu entry. Controls write straight to settings.
 (() => {
   const $ = (s, r = document) => r.querySelector(s);
-  // Menu groups: the brain, the character, what surrounds it, and the app itself.
+  // Menu groups: the assistant herself, her character, what surrounds her, and the app.
   const NAV = [
-    ['Brain', [['model', 'Model', 'cpu'], ['provider', 'Provider', 'server'], ['memory', 'Memory & context', 'database'], ['tools', 'Tools', 'tool'], ['imagegen', 'Image generation', 'image']]],
+    // A label can be a function when it depends on what the user named the assistant.
+    [() => S().persona.name, [['model', 'Model', 'cpu'], ['provider', 'Provider', 'server'], ['memory', 'Memory & context', 'database'], ['tools', 'Tools', 'tool'], ['imagegen', 'Image generation', 'image']]],
     ['Character', [['persona', 'Persona & chat', 'persona'], ['appearance', 'Appearance', 'sun'], ['voice', 'Voice', 'volume'], ['goals', 'AI goals', 'target']]],
     ['Around it', [['workspace', 'Workspace', 'folder'], ['browser', 'Browser', 'globe'], ['safety', 'Safety', 'shield'], ['notifications', 'Notifications', 'bell'], ['mobile', 'Mobile', 'phone']]],
     ['App', [['extensions', 'Extensions', 'plus'], ['recovery', 'Recovery', 'git'], ['about', 'About', 'info']]],
@@ -57,7 +58,7 @@
         const list = (info && info.list) || []; const usable = list.filter(filter);
         const opts = [{ v: '', l: role === 'vision' ? 'Auto (first vision model on this preset)' : 'Auto (first loaded model on this preset)' }, ...usable.map((x) => ({ v: x.id, l: `${x.label || x.id}${x.context ? ` · ${Math.round(x.context / 1024)}k context` : ''}${x.quant ? ' · ' + x.quant : ''}${x.loaded && !x.quant ? ' · loaded' : ''}` }))];
         if (sel.model && !usable.some((x) => x.id === sel.model)) opts.push({ v: sel.model, l: `${sel.model} (not detected)` });
-        const card = el(`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div class="t" style="font-size:14px;font-weight:500;color:var(--bright)">${label}</div><div class="d" style="font-size:12px;color:var(--muted)">${desc}</div></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div><div class="status-line"></div></div>`);
+        const card = el(`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div class="t" style="font-size:14px;font-weight:500;color:var(--bright)">${esc(label)}</div><div class="d" style="font-size:12px;color:var(--muted)">${desc}</div></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div><div class="status-line"></div></div>`);
         const ctl = card.children[1];
         ctl.appendChild(select(provOpts, prov.id, (v) => set({ model: { [role]: { provider: v, model: '' } } }).then(refresh), 180));
         ctl.appendChild(select(opts, sel.model, (v) => set({ model: { [role]: { model: v } } }), 360));
@@ -75,10 +76,10 @@
       toolsRow.appendChild(btn('Detect models on all presets', async (e) => { e.target.disabled = true; try { await lyra.models.detect(); } finally { refresh(); } }, { ic: 'refresh' }));
       toolsRow.appendChild(btn('Manage presets', () => { current = 'provider'; render(); }, { ic: 'server' }));
       return [
-        title('Model', 'The brain and the vision model can come from different provider presets (LM Studio, Ollama, llama.cpp, a remote API). Presets are set up under Provider.'),
+        title('Model', `${esc(s.persona.name)}’s model and the vision model can come from different provider presets (LM Studio, Ollama, llama.cpp, a remote API). Presets are set up under Provider.`),
         toolsRow,
-        roleBlock('chat', 'Brain', 'Used for conversation, tools, summaries and goals.', (x) => !x.id.includes('embed')),
-        roleBlock('vision', 'Vision model', 'Used when you send a picture or Lyra looks at one. Falls back to the brain if it can see.', (x) => x.vision),
+        roleBlock('chat', s.persona.name, 'Used for conversation, tools, summaries and goals.', (x) => !x.id.includes('embed')),
+        roleBlock('vision', 'Vision model', `Used when you send a picture or ${esc(s.persona.name)} looks at one. Falls back to ${esc(s.persona.name)}’s own model if it can see.`, (x) => x.vision),
         group('Context', [row('Context length', ctxHint, [ctxSel, ctxField])]),
         group('Behavior', [
           row('Reasoning', 'How long Lyra thinks before answering (sent as reasoning effort; “Off” adds /no_think for Qwen-style models).', seg([{ v: 'off', l: 'Off' }, { v: 'low', l: 'Low' }, { v: 'medium', l: 'Medium' }, { v: 'high', l: 'High' }], s.model.reasoning, (v) => set({ model: { reasoning: v } }))),
@@ -313,11 +314,11 @@
       const save = (list) => set({ providers: { list } }).then(() => lyra.models.detect()).then(refresh);
       const cards = el('<div style="display:flex;flex-direction:column;gap:10px"></div>');
       provs.forEach((p, i) => {
-        const info = m.byProvider[p.id]; const inUse = [s.model.chat.provider === p.id ? 'brain' : null, s.model.vision.provider === p.id ? 'vision' : null].filter(Boolean);
+        const info = m.byProvider[p.id]; const inUse = [s.model.chat.provider === p.id ? s.persona.name : null, s.model.vision.provider === p.id ? 'vision' : null].filter(Boolean);
         const c = el(`<div class="card" style="gap:10px"><div style="display:flex;align-items:center;gap:8px"><span style="display:flex;color:var(--muted)">${icon('server', 16)}</span><span class="spacer"></span></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div class="status-line"></div></div>`);
         const head = c.children[0], l1 = c.children[1], l2 = c.children[2], st = c.children[3];
         head.insertBefore(field(p.name, (v) => { const list = provs.map((x) => x.id === p.id ? { ...x, name: v.trim() || x.name } : x); set({ providers: { list } }).then(refresh); }, { w: 200 }), head.lastElementChild);
-        if (inUse.length) head.insertBefore(el(`<span class="d" style="font-size:12px;color:var(--accent)">used for ${inUse.join(' + ')}</span>`), head.lastElementChild);
+        if (inUse.length) head.insertBefore(el(`<span class="d" style="font-size:12px;color:var(--accent)">used for ${inUse.map(esc).join(' + ')}</span>`), head.lastElementChild);
         const rm = el(`<button class="icon-btn" title="Remove preset">${icon('trash', 15)}</button>`); rm.disabled = provs.length === 1; rm.addEventListener('click', () => { if (provs.length === 1) return; if (!confirm(`Remove “${p.name}”?`)) return; const list = provs.filter((x) => x.id !== p.id); const patch = { providers: { list } }; const fb = list[0].id; const mp = {}; if (s.model.chat.provider === p.id) mp.chat = { provider: fb, model: '' }; if (s.model.vision.provider === p.id) mp.vision = { provider: fb, model: '' }; if (Object.keys(mp).length) patch.model = mp; set(patch).then(() => lyra.models.detect()).then(refresh); }); head.appendChild(rm);
         l1.appendChild(select(RUNTIMES, p.runtime, (v) => { const r = RUNTIMES.find((x) => x.v === v); save(provs.map((x) => x.id === p.id ? { ...x, runtime: v, endpoint: r.ep } : x)); }, 220));
         l1.appendChild(field(p.endpoint, (v) => save(provs.map((x) => x.id === p.id ? { ...x, endpoint: v.trim().replace(/\/$/, '') } : x)), { w: 300, mono: true, ph: 'http://localhost:1234/v1' }));
@@ -329,7 +330,7 @@
       const add = el('<div style="display:flex;gap:8px;flex-wrap:wrap"></div>');
       RUNTIMES.forEach((r) => add.appendChild(btn(`Add ${r.l}`, () => { const id = `${r.v}-${Date.now().toString(36)}`; save([...provs, { id, name: provs.some((x) => x.name === r.l) ? `${r.l} ${provs.length + 1}` : r.l, runtime: r.v, endpoint: r.ep, apiKey: '' }]); }, { ic: 'plus' })));
       return [
-        title('Provider', 'Presets for where models run. Add one per runtime or API, then pick a preset for the brain and for the vision model under Model. Local runtimes keep everything on this machine.'),
+        title('Provider', `Presets for where models run. Add one per runtime or API, then pick a preset for ${esc(s.persona.name)} and for the vision model under Model. Local runtimes keep everything on this machine.`),
         cards, group('Add a preset', [add]),
       ];
     },
@@ -530,7 +531,8 @@
   /* ---- page ---- */
   function renderNav() {
     const item = ([id, name, ic]) => `<button class="nav-item ${id === current ? 'on' : ''}" data-id="${id}">${icon(ic, 16)}<span class="nav-text">${name}</span>${id === 'recovery' && errorCount ? `<span class="spacer"></span><span class="err-dot" title="${errorCount} error${errorCount > 1 ? 's' : ''} in the last day">${errorCount}</span>` : ''}</button>`;
-    $('#settings-nav-items').innerHTML = NAV.map(([label, items]) => `<div class="nav-group">${label}</div>${items.map(item).join('')}`).join('');
+    const groupName = (label) => { try { return typeof label === 'function' ? label() : label; } catch { return 'Lyra'; } };
+    $('#settings-nav-items').innerHTML = NAV.map(([label, items]) => `<div class="nav-group">${esc(groupName(label))}</div>${items.map(item).join('')}`).join('');
     $('#settings-nav-items').querySelectorAll('.nav-item').forEach((b) => b.addEventListener('click', () => { current = b.dataset.id; render(); }));
   }
   let renderSeq = 0;
