@@ -28,7 +28,14 @@ Together, someone downloading Lyra can check for themselves that the binary matc
 the source that was reviewed and scanned. The gap that remains is OS-level code
 signing (Apple notarization, Windows Authenticode). The release workflow already
 supports it through `CSC_LINK`; it needs a certificate, not CI work, and it is what
-makes the SmartScreen and Gatekeeper warnings go away.
+makes the SmartScreen and Gatekeeper warnings go away. Both certificates cost money,
+and funding them is what sponsorship is for.
+
+Until then, macOS builds are signed ad hoc (`npm run dist:mac:adhoc`). That is the
+floor: Apple silicon refuses an app with no signature at all as "damaged, move to
+Trash", while an ad-hoc signature installs after **Open Anyway** in System Settings.
+The artifact check verifies every built `.app` with `codesign` so a broken seal
+fails the build instead of reaching a download.
 
 ## The options
 
@@ -205,6 +212,7 @@ still passes it.
 
 Phase 1
 
+- [x] macOS builds signed ad hoc when there is no certificate, with a `codesign` check in `scripts/check-artifacts.js`
 - [ ] `codeql` job and `.github/codeql/codeql-config.yml`
 - [ ] `dependencies` job with the step-level `pull_request` condition
 - [ ] `scan-installers` job, with `--alert-exceeds-max`, and the EICAR proof run
