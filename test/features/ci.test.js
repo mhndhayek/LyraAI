@@ -98,6 +98,8 @@ test('macOS builds are signed even when there is no certificate', () => {
   // so a build without a certificate signs ad hoc rather than not at all.
   assert.match(pkg.scripts['dist:mac:adhoc'] || '', /identity=-/, 'dist:mac:adhoc must sign with the ad-hoc identity');
   assert.match(jobSection('build'), /npm run dist:mac:adhoc/, 'CI has no certificate, so its build must sign ad hoc');
+  // electron-builder refuses to sign at all, ad hoc included, on a pull request build unless told otherwise.
+  assert.match(jobSection('build'), /CSC_FOR_PULL_REQUEST: true/, 'pull request builds must still be signed ad hoc, or the signature check fails on every PR');
   const release = jobSection('build', RELEASE);
   assert.match(release, /MAC_DIST=dist:mac"/, 'a release with a certificate must sign with it');
   assert.match(release, /MAC_DIST=dist:mac:adhoc"/, 'a release without a certificate must fall back to the ad-hoc signature');
