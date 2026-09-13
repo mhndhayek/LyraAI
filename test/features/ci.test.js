@@ -93,6 +93,20 @@ test('the build job produces installers for every platform', () => {
   assert.match(CI, /if-no-files-found: error/, 'a build that produced nothing must fail, not warn');
 });
 
+test('macOS builds are signed even when there is no certificate', () => {
+  // Apple silicon refuses an unsigned app outright ("damaged, move to Trash"),
+  // so a build without a certificate signs ad hoc rather than not at all.
+  assert.match(pkg.scripts['dist:mac:adhoc'] || '', /identity=-/, 'dist:mac:adhoc must sign with the ad-hoc identity');
+  assert.match(jobSection('build'), /npm run dist:mac:adhoc/, 'CI has no certificate, so its build must sign ad hoc');
+  // electron-builder refuses to sign at all, ad hoc included, on a pull request build unless told otherwise.
+  assert.match(jobSection('build'), /CSC_FOR_PULL_REQUEST: true/, 'pull request builds must still be signed ad hoc, or the signature check fails on every PR');
+  const release = jobSection('build', RELEASE);
+  assert.match(release, /MAC_DIST=dist:mac"/, 'a release with a certificate must sign with it');
+  assert.match(release, /MAC_DIST=dist:mac:adhoc"/, 'a release without a certificate must fall back to the ad-hoc signature');
+  for (const m of RELEASE.matchAll(/MAC_DIST=([a-z:]+)/g)) assert.ok(pkg.scripts[m[1]], `MAC_DIST points at npm run ${m[1]}, which is not defined`);
+  assert.match(read('scripts', 'check-artifacts.js'), /codesign', \['--verify'/, 'the artifact check must prove every bundle\'s signature is intact');
+});
+
 test('the release runs the same gate before publishing anything', () => {
   assert.match(RELEASE, /uses: \.\/\.github\/workflows\/ci\.yml/, 'the release must reuse the QA pipeline');
   assert.match(CI, /workflow_call:/, 'ci.yml must be callable for that to work');

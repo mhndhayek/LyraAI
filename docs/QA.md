@@ -30,7 +30,7 @@ Individual steps, when you want a faster loop:
 | **Unit tests** | Linux, macOS, Windows, Node 20 and 22 | Behaviour changes in the kernel and the organs, on every platform the app ships to |
 | **Kernel self-test** | Linux, macOS, Windows | Verification, rollback, quarantine, guardrails and the write budget, exercised against deliberately broken organs inside the real app |
 | **App smoke test** | Linux, macOS, Windows | A window that does not render, a first boot that does not lay out its state folder, an app that falls into safe mode |
-| **Build installers** | Linux, macOS, Windows | A build that does not compile, ships an incomplete bundle, or produces an app that cannot start |
+| **Build installers** | Linux, macOS, Windows | A build that does not compile, ships an incomplete bundle, produces an app that cannot start, or a macOS app whose signature is missing or broken |
 | **Dependency audit** | Linux | Known high-severity vulnerabilities in dependencies |
 | **QA Gate** | Linux | The single check branch protection requires. It passes only when all of the above did |
 
@@ -96,9 +96,14 @@ Every platform is built and checked before anything is published, so a release i
 never live with only some of its installers. If one platform fails to build, nothing
 is released at all.
 
-Builds are unsigned unless the signing secrets (`CSC_LINK`, `CSC_KEY_PASSWORD`) are
-set on the repository. Unsigned is still installable: macOS needs right-click →
-Open the first time, Windows shows SmartScreen's "more info → run anyway".
+macOS builds are signed with the Developer ID certificate when the signing secrets
+(`CSC_LINK`, `CSC_KEY_PASSWORD`) are set on the repository, and ad hoc otherwise
+(`npm run dist:mac:adhoc`, which is also what CI uses). Ad hoc is the floor, not a
+nicety: Apple silicon refuses an app with no signature at all as "damaged", while an
+ad-hoc signature installs after **Open Anyway** in System Settings → Privacy &
+Security. `scripts/check-artifacts.js` verifies every built `.app` with `codesign`
+before the installers are kept. Windows shows SmartScreen's "more info → run anyway"
+until there is a Microsoft certificate.
 
 ## Adding a test
 

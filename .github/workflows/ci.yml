@@ -162,7 +162,9 @@ jobs:
         include:
           - os: macos-latest
             name: macOS
-            command: npm run dist:mac
+            # CI has no certificate, so the app is signed ad hoc rather than not
+            # at all: Apple silicon refuses an unsigned app as "damaged".
+            command: npm run dist:mac:adhoc
             artifacts: "dist/*.dmg\ndist/*.zip"
           - os: windows-latest
             name: Windows
@@ -198,9 +200,13 @@ jobs:
       - name: Compile the app into an installer
         run: ${{ matrix.command }}
         env:
-          # Unsigned builds: signing is done at release time with real secrets.
-          # Publishing is the release workflow's job, never the build's.
+          # No certificate here: signing with a real one, and publishing, are the
+          # release workflow's job, never the build's.
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          # electron-builder skips signing on pull request builds, ad hoc included,
+          # to keep certificates away from forks. This job has no certificate, and
+          # an ad-hoc signature needs none, so the macOS check would fail without it.
+          CSC_FOR_PULL_REQUEST: true
       - name: Check the installers were produced and the packaged app starts
         shell: bash
         run: node scripts/check-artifacts.js --launch
