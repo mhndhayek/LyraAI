@@ -80,6 +80,18 @@ test('every settings section the app defines has a page in the UI', () => {
   }
 });
 
+test('a fresh install is walked through the setup guide, and can skip it', () => {
+  const html = read('renderer', 'index.html'); const app = read('renderer', 'app.js'); const setup = read('renderer', 'setup.js'); const settingsUi = read('renderer', 'settings.js');
+  assert.equal(DEFAULTS.ui.setupDone, false, 'a fresh install has not been through the guide');
+  assert.match(app, /if \(!state\.settings\.ui\.setupDone\) Setup\.open\(\)/, 'the first start must open the guide');
+  assert.match(html, /id="setup"/, 'the guide needs its page');
+  assert.match(html, /id="setup-skip"/, 'the guide must have a skip button');
+  assert.match(setup, /ui: \{ setupDone: true \}/, 'finishing or skipping must mark the guide done, or it comes back on every start');
+  for (const step of ['model', 'look', 'voice', 'images', 'safety', 'tools']) assert.match(setup, new RegExp(`id: '${step}'`), `the guide has no ${step} page`);
+  assert.match(settingsUi, /Setup\.open\(\)/, 'the guide must be reachable again from Settings');
+  assert.match(settingsUi, /toolItems: \(\) => TOOL_ITEMS/, 'the guide and the tools page must describe the same tools');
+});
+
 test('the settings pages call the assistant by name, not "the brain"', () => {
   const ui = read('renderer', 'settings.js');
   const jargon = [...ui.matchAll(/.{0,60}\bbrains?\b.{0,60}/gi)].map((m) => m[0].trim());
@@ -104,7 +116,7 @@ test('the unfinished features say so where the user meets them', () => {
 
 test('the app does not assume it is running on a Mac', () => {
   // It ships for Windows and Linux as well, so the UI cannot call the machine a Mac.
-  for (const file of [['renderer', 'settings.js'], ['renderer', 'app.js'], ['renderer', 'index.html']]) {
+  for (const file of [['renderer', 'settings.js'], ['renderer', 'setup.js'], ['renderer', 'app.js'], ['renderer', 'index.html']]) {
     const text = read(...file);
     const claims = [...text.matchAll(/.{0,50}\bthis Mac\b.{0,50}/g)].map((m) => m[0].trim());
     assert.deepEqual(claims, [], `${file.join('/')} tells the user about "this Mac": ${claims.join(' | ')}`);
@@ -164,7 +176,7 @@ test('panel headers keep clear of the macOS window buttons', () => {
   assert.ok(reserve > buttonsBottom, `only ${reserve}px is reserved for buttons reaching ${buttonsBottom}px`);
 
   // Both panel headers reserve that space, rather than each guessing its own.
-  for (const rule of ['.sidebar-head', '.settings-nav-head']) {
+  for (const rule of ['.sidebar-head', '.settings-nav-head', '.setup-nav-head']) {
     const decl = new RegExp(`\\${rule} \\{[^}]*\\}`).exec(css);
     assert.ok(decl, `${rule} is missing`);
     assert.match(decl[0], /padding: var\(--titlebar-h\)/, `${rule} must reserve the window-button space`);

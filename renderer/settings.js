@@ -14,6 +14,8 @@
   // Features that work but are not finished: the badge says so wherever they appear.
   const BETA = '<span class="beta">beta</span>';
   const BETA_SECTIONS = new Set(['mobile']);
+  // The tools page and the setup guide list the same tools, described the same way.
+  const TOOL_ITEMS = [['read_file', 'file', 'Read files', 'Inside the workspace, up to the read limit; outside it asks.'], ['write_file', 'pen', 'Write files', 'Create and edit files; outside the workspace asks.'], ['shell', 'terminal', 'Shell commands', 'Persistent shell in the workspace. Always asks in Ask mode.'], ['run_code', 'cpu', 'Code execution', 'Run python, node or bash snippets.'], ['browser', 'globe', 'Browser', 'Open, read, click, type, scroll, screenshot.'], ['web_search', 'search', 'Web search', 'Search the web through the headless browser.'], ['vision', 'eye', 'Vision', 'Look at pictures you send or files in the workspace.'], ['memory_write', 'database', 'Memory write', 'Save short- and long-term notes.'], ['repos', 'git', 'Repositories', 'Discover and list repos in the workspace.'], ['image_gen', 'image', 'Image generation', 'generate_image via SwarmUI or ComfyUI (set up under Image generation).'], ['http', 'globe', 'HTTP fetch', 'Fetch a URL as text (APIs, docs).'], ['app', 'cpu', 'Self-customization', 'Read docs, change settings, write themes and extensions, edit organs, checkpoints and rollback. Locked settings stay locked.'], ['notify', 'bell', 'Notifications', 'Send you a desktop notification.']];
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const S = () => window.LyraApp.settings();
@@ -48,6 +50,7 @@
           row('Source code', 'Issues, ideas and pull requests are welcome.', [btn('GitHub', go(L.repo), { ic: 'git' }), btn('Report a problem', go(L.issues), { ic: 'bell' })]),
           row('Support the project', 'Lyra is free. If it has earned a place on your desk, a coffee keeps it growing.', btn('Donate', go(L.donate), { primary: true, ic: 'heart' })),
           row('App data', 'Chats, memory, settings, checkpoints and logs on this machine.', btn('Open folder', () => lyra.kernel.openState(), { ic: 'folder' })),
+          row('Setup guide', 'The walk-through from the first start: model, name and look, voice, image generation, safety and tools.', btn('Run it again', () => window.Setup.open(), { ic: 'sparkle' })),
         ]),
         credits,
       ];
@@ -514,9 +517,8 @@
     },
     async tools() {
       const s = S(); const t = s.tools;
-      const items = [['read_file', 'file', 'Read files', 'Inside the workspace, up to the read limit; outside it asks.'], ['write_file', 'pen', 'Write files', 'Create and edit files; outside the workspace asks.'], ['shell', 'terminal', 'Shell commands', 'Persistent shell in the workspace. Always asks in Ask mode.'], ['run_code', 'cpu', 'Code execution', 'Run python, node or bash snippets.'], ['browser', 'globe', 'Browser', 'Open, read, click, type, scroll, screenshot.'], ['web_search', 'search', 'Web search', 'Search the web through the headless browser.'], ['vision', 'eye', 'Vision', 'Look at pictures you send or files in the workspace.'], ['memory_write', 'database', 'Memory write', 'Save short- and long-term notes.'], ['repos', 'git', 'Repositories', 'Discover and list repos in the workspace.'], ['image_gen', 'image', 'Image generation', 'generate_image via SwarmUI or ComfyUI (set up under Image generation).'], ['http', 'globe', 'HTTP fetch', 'Fetch a URL as text (APIs, docs).'], ['app', 'cpu', 'Self-customization', 'Read docs, change settings, write themes and extensions, edit organs, checkpoints and rollback. Locked settings stay locked.'], ['notify', 'bell', 'Notifications', 'Send you a desktop notification.']];
       const list = el('<div class="list"></div>');
-      items.forEach(([k, ic, n, d]) => { const it = el(`<div class="item ${t[k] ? 'on' : 'off'}">${icon(ic, 16)}<div class="col"><span class="n">${n}</span><span class="d">${d}</span></div></div>`); it.appendChild(toggle(t[k], (v) => { set({ tools: { [k]: v } }); it.classList.toggle('on', v); it.classList.toggle('off', !v); })); list.appendChild(it); });
+      TOOL_ITEMS.forEach(([k, ic, n, d]) => { const it = el(`<div class="item ${t[k] ? 'on' : 'off'}">${icon(ic, 16)}<div class="col"><span class="n">${n}</span><span class="d">${d}</span></div></div>`); it.appendChild(toggle(t[k], (v) => { set({ tools: { [k]: v } }); it.classList.toggle('on', v); it.classList.toggle('off', !v); })); list.appendChild(it); });
       return [title('Tools', `What ${esc(s.persona.name)} can reach. Turn any off and it disappears from ${esc(s.persona.name)}’s side.`), row(`${esc(s.persona.name)} can use tools`, 'Master switch.', toggle(t.enabled, (v) => set({ tools: { enabled: v } }))), list];
     },
     async goals() {
@@ -599,5 +601,8 @@
     open(section) { if (section && sections[section]) current = section; open = true; $('#settings').hidden = false; window.LyraApp.browserVisible(false); render(); },
     close() { open = false; $('#settings').hidden = true; if (previewChar) { previewChar.clearTimers(); previewChar.destroyLive2d(); previewChar = null; } window.LyraApp.browserVisible(true); $('#input').focus(); },
     refresh, isOpen: () => open,
+    // Shared with the setup guide, so its pages are built from the same controls and describe the same tools.
+    ui: { row, group, toggle, seg, select, field, slider, btn, title },
+    toolItems: () => TOOL_ITEMS,
   };
 })();

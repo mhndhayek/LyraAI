@@ -273,3 +273,19 @@ test('switching profile reports a change with no patch, so nothing reads it as a
   s.switchProfile(b.id);
   assert.deepEqual(seen, [{}]);
 });
+
+test('a fresh install has not been through the setup guide, and finishing it sticks', () => {
+  const s = new Settings(file());
+  assert.equal(s.get().ui.setupDone, false, 'the guide opens on a fresh install');
+  s.set({ ui: { setupDone: true } });
+  assert.equal(new Settings(s.file).get().ui.setupDone, true, 'finishing or skipping must survive a restart, or the guide nags every start');
+});
+
+test('an install from before the setup guide is not walked through it', () => {
+  const f = file(); fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, JSON.stringify({ persona: { name: 'Lyra' }, ui: { livePanel: false } }));
+  const s = new Settings(f);
+  assert.equal(s.get().ui.setupDone, true, 'someone who set the app up by hand must not be walked through it again');
+  assert.equal(s.get().ui.livePanel, false, 'the rest of the section is kept');
+  assert.equal(JSON.parse(fs.readFileSync(f, 'utf8')).ui.setupDone, true, 'and that decision is written back');
+});

@@ -233,6 +233,19 @@ textarea.field { height: auto; min-height: 104px; padding: 10px 12px; line-heigh
 .theme-card { border: var(--border-w) solid var(--line2); border-radius: var(--radius-lg); padding: 10px; cursor: pointer; display: flex; flex-direction: column; gap: 8px; background: var(--panel); } .theme-card.on { border-color: var(--accent); }
 .theme-card .sw { display: flex; gap: 4px; } .theme-card .sw i { flex: 1; height: 28px; border-radius: 6px; } .theme-card .n { font-size: 13px; font-weight: 500; color: var(--bright); } .theme-card .k { font-size: 11px; color: var(--muted); }
 
+/* setup guide */
+.setup-page { position: absolute; inset: 0; display: flex; background: var(--bg); z-index: 30; }
+.setup-nav { width: 240px; flex-shrink: 0; background: var(--side); border-right: var(--border-w) solid var(--line); display: flex; flex-direction: column; padding: 0 12px 20px; gap: 2px; overflow-y: auto; }
+.setup-nav-head { position: sticky; top: 0; z-index: 1; background: var(--side); padding: var(--titlebar-h) 10px 14px; }
+.setup-step .num { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line2); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--muted); flex-shrink: 0; }
+.setup-step.on .num { border-color: var(--accent); color: var(--accent); } .setup-step.done .num { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.setup-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.setup-content { flex: 1; min-height: 0; padding: 36px 56px 24px; overflow-y: auto; }
+.setup-foot { display: flex; align-items: center; gap: 10px; padding: 14px 56px; border-top: var(--border-w) solid var(--line); flex-shrink: 0; } .setup-foot .btn { height: 34px; padding: 0 16px; }
+.setup-hero { display: flex; align-items: center; gap: 22px; } .setup-hero img { width: 120px; height: 120px; image-rendering: pixelated; border-radius: 28px; background: var(--hover); flex-shrink: 0; }
+.setup-pack { align-items: center; text-align: center; } .setup-pack img { width: 64px; height: 64px; border-radius: 50%; image-rendering: pixelated; }
+.tag-scripts { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; margin-left: 8px; border-radius: var(--radius-pill); background: var(--accent-dim); color: var(--accent); font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; vertical-align: middle; }
+
 /* toasts */
 .toasts { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 50; pointer-events: none; }
 .toast { background: var(--panel); border: var(--border-w) solid var(--line2); border-radius: var(--radius); padding: 8px 12px; font-size: 12px; color: var(--text); box-shadow: var(--shadow); max-width: 520px; } .toast.error { color: var(--danger); }

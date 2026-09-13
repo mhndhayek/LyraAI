@@ -27,7 +27,7 @@ const DEFAULTS = {
   mobile: { enabled: false, port: 8443, allowHighRiskTools: false, autoStart: true },
   kernel: { checkpoints: true, dailyWrites: 60, autoApply: true, uiReadyTimeoutMs: 10000 },
   imagegen: { enabled: false, backend: 'swarmui', swarmEndpoint: 'http://localhost:7801', comfyEndpoint: 'http://localhost:8188', model: '', letAiChooseModel: false, width: 1024, height: 1024, letAiChooseSize: true, steps: 20, cfg: 6, sampler: 'euler', scheduler: 'normal', negativePrompt: '', seed: -1, folder: 'images' },
-  ui: { livePanel: true, sidebarWidth: 240 },
+  ui: { livePanel: true, sidebarWidth: 240, setupDone: false },
 };
 
 function isObj(v) { return v && typeof v === 'object' && !Array.isArray(v); }
@@ -54,13 +54,18 @@ class Settings extends EventEmitter {
     this.load();
   }
   load() {
+    let raw = null;
     try {
-      if (fs.existsSync(this.file)) this.data = merge(DEFAULTS, JSON.parse(fs.readFileSync(this.file, 'utf8')));
+      if (fs.existsSync(this.file)) { raw = JSON.parse(fs.readFileSync(this.file, 'utf8')); this.data = merge(DEFAULTS, raw); }
     } catch (e) { console.error('settings load failed', e); }
     this.migrate();
     const adopted = this.migrateProfiles();
+    // The setup guide is for a fresh install. An install from before the guide
+    // existed was set up by hand already, so it is not walked through it.
+    const seasoned = !!raw && !(isObj(raw.ui) && 'setupDone' in raw.ui);
+    if (seasoned) this.data = merge(this.data, { ui: { setupDone: true } });
     this.refresh();
-    if ((this.renamed || adopted) && fs.existsSync(this.file)) this.save();
+    if ((this.renamed || adopted || seasoned) && fs.existsSync(this.file)) this.save();
   }
 
   /* ---- profiles ---- */
