@@ -241,7 +241,7 @@
       case 'log': if (e.entry && e.entry.level === 'error') { state.lastLogError = e.entry; if (window.Settings) Settings.noteError(); } break;
       case 'mobile': if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
       case 'extensions': renderPanels(); if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
-      case 'debug': if (e.open && e.open.startsWith('settings')) Settings.open(e.open.split(':')[1] || 'model'); if (e.scroll) setTimeout(() => { const c = $('#settings-content'); if (c) c.scrollTop = e.scroll === 'bottom' ? c.scrollHeight : Number(e.scroll) || 0; }, 900); if (e.send) { input.value = e.send; send(); } if (e.browser) showBrowserPanel(true); break;
+      case 'debug': if (e.open && e.open.startsWith('settings')) Settings.open(e.open.split(':')[1] || 'model'); if (e.open && e.open.startsWith('setup')) Setup.open(Number(e.open.split(':')[1]) || 0); if (e.scroll) setTimeout(() => { const c = $('#settings-content'); if (c) c.scrollTop = e.scroll === 'bottom' ? c.scrollHeight : Number(e.scroll) || 0; }, 900); if (e.send) { input.value = e.send; send(); } if (e.browser) showBrowserPanel(true); break;
     }
   });
 
@@ -366,9 +366,11 @@
     applyAll(); setCharState('idle');
     await loadChats(); await ensureChat();
     updateBrowser(await lyra.browser.status());
-    lyra.models.detect().then((m) => { state.models = m; setStatus(); const b = brainInfo(); if (b && !b.ok) toast(`${b.name} is not reachable at ${b.endpoint}. Start it, or fix the preset under Settings › Provider.`, 'error'); }).catch(() => {});
+    lyra.models.detect().then((m) => { state.models = m; setStatus(); const b = brainInfo(); if (b && !b.ok && !Setup.isOpen()) toast(`${b.name} is not reachable at ${b.endpoint}. Start it, or fix the preset under Settings › Provider.`, 'error'); }).catch(() => {});
     const paths = await lyra.app.paths(); if (!paths.voiceReady && (state.settings.voice.readAloud || state.settings.voice.stt)) $('#composer-hint').innerHTML = `Voice sidecar not installed: run <kbd>npm run voice:setup</kbd> for KittenTTS and Whisper. Replies will use the system voice.`;
     renderPanels();
+    // A fresh install is walked through the essentials once. Skipping counts as done.
+    if (!state.settings.ui.setupDone) Setup.open();
     lyra.kernel.ready();
     input.focus();
   })();

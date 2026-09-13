@@ -97,12 +97,21 @@
     <div class="close-wrap"><button class="close-btn" id="settings-close" title="Close" data-icon="x"></button><span>ESC</span></div>
   </section>
 
+  <section class="setup-page" id="setup" hidden>
+    <nav class="setup-nav"><div class="setup-nav-head drag"><div class="settings-nav-title">Welcome to Lyra</div><div class="settings-nav-sub">A couple of minutes, all of it optional</div></div><div id="setup-steps"></div></nav>
+    <div class="setup-main">
+      <div class="setup-content" id="setup-content"></div>
+      <div class="setup-foot"><button class="btn" id="setup-skip">Skip setup</button><span class="spacer"></span><button class="btn" id="setup-back">Back</button><button class="btn primary" id="setup-next">Next</button></div>
+    </div>
+  </section>
+
   <div class="toasts" id="toasts"></div>
 </div>
 <script src="vendor/marked.umd.js"></script>
 <script src="icons.js"></script>
 <script src="character.js"></script>
 <script src="settings.js"></script>
+<script src="setup.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
