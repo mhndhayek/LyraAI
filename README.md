@@ -91,7 +91,15 @@ Builds land in `dist/`. Each platform builds on its own kind of machine; CI buil
 all three on every pull request, and publishes them as a GitHub release whenever the
 version in `package.json` changes on `main`.
 
-The builds are not signed yet. On macOS, right-click `Lyra.app` the first time and choose **Open**; on Windows, SmartScreen shows "more info → run anyway" on the first launch of the installer.
+The builds are not signed with an Apple or Microsoft certificate yet. Those cost money, and paying for them is what [sponsoring Lyra](https://github.com/sponsors/mhndhayek) goes towards. Until then:
+
+- **macOS** builds carry an ad-hoc signature. The first time you open `Lyra.app`, macOS says it could not verify the app. Close that, open **System Settings → Privacy & Security**, scroll down to the notice about Lyra and click **Open Anyway**. On macOS 14 and earlier, right-click the app and choose **Open** instead. If you see *"Lyra is damaged and can't be opened"*, that is a download from before the builds were signed; clear the quarantine flag and it opens:
+
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/Lyra.app
+  ```
+
+- **Windows**: SmartScreen shows "More info → Run anyway" on the first launch of the installer.
 
 ## Talk to her from your phone *(beta)*
 

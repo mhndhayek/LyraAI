@@ -32,6 +32,7 @@
     "qa": "sh scripts/qa.sh",
     "dist": "electron-builder --dir --publish never -c.extraMetadata.sourceDir=$(pwd)",
     "dist:mac": "electron-builder --mac --publish never",
+    "dist:mac:adhoc": "electron-builder --mac --publish never -c.mac.identity=-",
     "dist:win": "electron-builder --win --publish never",
     "dist:linux": "electron-builder --linux --publish never",
     "voice:setup": "sh voice/setup.sh",

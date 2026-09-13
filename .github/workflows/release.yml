@@ -93,7 +93,9 @@ jobs:
         include:
           - os: macos-latest
             name: macOS
-            command: npm run dist:mac
+            # MAC_DIST is chosen by the signing step: dist:mac with a
+            # certificate, dist:mac:adhoc without one.
+            command: npm run $MAC_DIST
           - os: windows-latest
             name: Windows
             command: npm run dist:win
@@ -118,6 +120,10 @@ jobs:
       # A defined-but-empty CSC_LINK is worse than no CSC_LINK: electron-builder
       # reads it as the path to a certificate and fails on the empty path. So the
       # signing variables are only set at all when there is a certificate.
+      #
+      # Without one the macOS app is still signed, ad hoc: Apple silicon refuses an
+      # unsigned app outright ("damaged, move to Trash"), while an ad-hoc signature
+      # installs after "Open Anyway" in System Settings.
       - name: Set up signing, if a certificate is configured
         shell: bash
         env:
@@ -129,11 +135,15 @@ jobs:
               echo "CSC_LINK=$CERTIFICATE"
               echo "CSC_KEY_PASSWORD=${CERTIFICATE_PASSWORD:-}"
               echo "CSC_IDENTITY_AUTO_DISCOVERY=true"
+              echo "MAC_DIST=dist:mac"
             } >> "$GITHUB_ENV"
             echo "Signing with the certificate in the repository secrets."
           else
-            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
-            echo "No certificate configured: building unsigned, which still installs."
+            {
+              echo "CSC_IDENTITY_AUTO_DISCOVERY=false"
+              echo "MAC_DIST=dist:mac:adhoc"
+            } >> "$GITHUB_ENV"
+            echo "No certificate configured: signing ad hoc, which installs after Open Anyway."
           fi
       - name: Compile the installers
         run: ${{ matrix.command }}

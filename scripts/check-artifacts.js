@@ -50,6 +50,36 @@ for (const [ext, what] of wanted) {
 if (failed) process.exit(1);
 console.log(`\n✓ all installers for ${process.platform} were produced`);
 
+// Apple silicon refuses an app whose signature is missing or broken with "Lyra is
+// damaged and can't be opened", so every bundle's seal is checked before the
+// installers are kept. Without a certificate the build signs ad hoc, which still
+// opens after "Open Anyway"; with one, the signing authority is printed.
+if (process.platform === 'darwin') {
+  const { spawnSync } = require('child_process');
+  const apps = fs.readdirSync(dist)
+    .filter((d) => /^mac(-|$)/.test(d) && fs.statSync(path.join(dist, d)).isDirectory())
+    .map((d) => path.join(dist, d, `${APP}.app`))
+    .filter((app) => fs.existsSync(app));
+  if (!apps.length) {
+    console.error('✗ no .app bundle found under dist/ to check the signature of');
+    process.exit(1);
+  }
+  for (const app of apps) {
+    const rel = path.relative(dist, app);
+    const verify = spawnSync('codesign', ['--verify', '--deep', '--strict', '--verbose=2', app], { encoding: 'utf8' });
+    if (verify.error || verify.status !== 0) {
+      console.error(`✗ ${rel} is unsigned or its signature is broken; macOS would call it damaged`);
+      console.error((verify.error ? verify.error.message : verify.stderr || '').trim());
+      process.exit(1);
+    }
+    // codesign prints the signature details on stderr.
+    const details = spawnSync('codesign', ['-dv', app], { encoding: 'utf8' }).stderr || '';
+    const authority = (/^Authority=(.+)$/m.exec(details) || [])[1];
+    const how = authority ? `signed by ${authority}` : /Signature=adhoc/.test(details) ? 'signed ad hoc: opens after "Open Anyway"' : 'signed';
+    console.log(`✓ ${rel} — ${how}`);
+  }
+}
+
 // The installers exist: now prove the app inside them actually starts. A build
 // that packages cleanly but cannot boot is worse than a build that fails.
 if (process.argv.includes('--launch')) {
