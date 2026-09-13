@@ -11,8 +11,10 @@
 name: Security
 
 on:
+  # Any pushed branch, the same as the QA gate: a finding should be visible
+  # before a pull request is even opened. The concurrency group below keeps
+  # this from doubling up with the pull_request run on the same branch.
   push:
-    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
