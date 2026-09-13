@@ -9,3 +9,7 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+# scan reports, if you run the security scanners by hand — a gitleaks report can
+# quote the secret it found, so it must never be committed
+*.sarif
+gitleaks
