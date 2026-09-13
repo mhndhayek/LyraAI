@@ -19,11 +19,6 @@ on:
 
 permissions:
   contents: write
-  # The QA gate this workflow calls includes the secret scan, which files
-  # its report under the Security tab. A reusable workflow cannot ask for
-  # more than its caller was given, so the permission has to be granted here
-  # too or that upload is refused.
-  security-events: write
 
 concurrency:
   group: release-${{ github.ref }}

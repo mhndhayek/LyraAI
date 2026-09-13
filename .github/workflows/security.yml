@@ -1,0 +1,94 @@
+# Advisory scanning, kept out of ci.yml on purpose. Everything in the QA gate is
+# blocking and read-only by design; what runs here neither blocks a merge nor
+# could, so it lives on its own and reports to the Security tab instead.
+#
+# Electronegativity looks for Electron misconfigurations. It is advisory for
+# three reasons: it exits 0 whatever it finds, so it cannot fail a build by
+# itself; most of what it reports asks a human to review a call rather than
+# naming a defect; and its Electron release database stopped being updated in
+# 2023, so its "are there newer security fixes?" check cannot judge the version
+# this app ships. It is here to put findings in front of a reviewer.
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # The checks change even when the code does not, so look again weekly.
+    - cron: '31 5 * * 1'
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  electron:
+    name: Electron audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # to file the findings under the Security tab
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # No dependencies are installed: Electronegativity reads the source, so a
+      # node_modules tree would only give it thousands of files to wade through.
+      - name: Look for Electron misconfigurations
+        run: npx --yes @doyensec/electronegativity@1.10.3 --relative --input . --output electronegativity.sarif
+      - name: Make the report fit code scanning
+        run: |
+          node - electronegativity.sarif <<'EOF'
+          // The project-wide checks report their location as "file:///", which
+          // code scanning rejects: it only accepts repository-relative paths.
+          // Point those findings at package.json so the report is accepted.
+          const fs = require('fs');
+          const path = process.argv[2];
+          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+          let moved = 0;
+          for (const run of report.runs || []) {
+            for (const result of run.results || []) {
+              for (const location of result.locations || []) {
+                const artifact = location.physicalLocation?.artifactLocation;
+                if (!artifact || !/^([a-z][a-z0-9+.-]*:|\/)/i.test(artifact.uri)) continue;
+                artifact.uri = 'package.json';
+                delete location.physicalLocation.region;
+                moved++;
+              }
+            }
+          }
+          fs.writeFileSync(path, JSON.stringify(report));
+          console.log(`Repointed ${moved} project-wide finding(s) at package.json.`);
+          EOF
+      - name: Summarise what it found
+        run: |
+          node - electronegativity.sarif <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('fs');
+          const results = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')).runs[0].results || [];
+          console.log('## Electron audit\n');
+          if (!results.length) { console.log('Nothing found.'); process.exit(0); }
+          console.log(`${results.length} finding(s). Full detail in the Security tab.\n`);
+          console.log('| Level | Check | Where |');
+          console.log('| --- | --- | --- |');
+          for (const r of results) {
+            const at = r.locations?.[0]?.physicalLocation;
+            const line = at?.region?.startLine;
+            console.log(`| ${r.level || 'note'} | ${r.ruleId} | \`${at?.artifactLocation?.uri}${line ? ':' + line : ''}\` |`);
+          }
+          EOF
+      - name: File the findings
+        # A pull request from a fork only gets a read-only token, so the upload
+        # cannot work there. Nothing here blocks a merge either way.
+        if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: electronegativity.sarif
+          category: electronegativity

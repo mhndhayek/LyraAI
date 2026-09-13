@@ -231,9 +231,6 @@ jobs:
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write # to file the findings under the Security tab
     steps:
       - uses: actions/checkout@v7
         with:
@@ -254,93 +251,12 @@ jobs:
           echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check --strict
           tar xzf "$archive" gitleaks
       - name: No secret has ever been committed
-        # --redact keeps the secret itself out of both the log and the report.
-        # The report is uploaded below, and a leaked key must not leak twice.
+        # A failing check and the log are the whole point here: a committed key
+        # is rotated, not triaged, so this reports nowhere that would need write
+        # access and the pipeline stays read-only. --redact keeps the secret
+        # itself out of the log, which is world-readable on a public repository.
         run: |
-          ./gitleaks git . \
-            --report-format sarif --report-path gitleaks.sarif \
-            --redact --no-banner --verbose --platform github
-      - name: File the findings
-        # Runs even when the scan failed, because that is when there is
-        # something to file. A pull request from a fork only gets a read-only
-        # token, so the upload cannot work there: the scan above is what blocks
-        # the merge, this is only the Security tab's view of it.
-        if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: gitleaks.sarif
-          category: gitleaks
-
-  # Deliberately not part of the QA gate below. Electronegativity exits 0 no
-  # matter what it finds, most of what it reports is "a human should look at
-  # this" rather than a defect, and its Electron release database stopped being
-  # updated in 2023 so it cannot judge the version this app actually ships. It
-  # is here to put Electron misconfigurations in front of a reviewer, not to
-  # block a merge. To make it blocking, add `electron` to the gate's `needs`
-  # and have the summary step exit non-zero on the checks worth failing on.
-  electron:
-    name: Electron audit
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      # No `npm ci`: Electronegativity reads the source, so installed
-      # dependencies would only give it a node_modules tree to wade through.
-      - name: Look for Electron misconfigurations
-        run: npx --yes @doyensec/electronegativity@1.10.3 --relative --input . --output electronegativity.sarif
-      - name: Make the report fit code scanning
-        run: |
-          node - electronegativity.sarif <<'EOF'
-          // The project-wide checks report their location as "file:///", which
-          // code scanning rejects: it only accepts repository-relative paths.
-          // Point those findings at package.json so the report is accepted.
-          const fs = require('fs');
-          const path = process.argv[2];
-          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
-          let moved = 0;
-          for (const run of report.runs || []) {
-            for (const result of run.results || []) {
-              for (const location of result.locations || []) {
-                const artifact = location.physicalLocation?.artifactLocation;
-                if (!artifact || !/^([a-z][a-z0-9+.-]*:|\/)/i.test(artifact.uri)) continue;
-                artifact.uri = 'package.json';
-                delete location.physicalLocation.region;
-                moved++;
-              }
-            }
-          }
-          fs.writeFileSync(path, JSON.stringify(report));
-          console.log(`Repointed ${moved} project-wide finding(s) at package.json.`);
-          EOF
-      - name: Summarise what it found
-        run: |
-          node - electronegativity.sarif <<'EOF' >> "$GITHUB_STEP_SUMMARY"
-          const fs = require('fs');
-          const results = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')).runs[0].results || [];
-          console.log('## Electron audit\n');
-          if (!results.length) { console.log('Nothing found.'); process.exit(0); }
-          console.log(`${results.length} finding(s). Full detail in the Security tab.\n`);
-          console.log('| Level | Check | Where |');
-          console.log('| --- | --- | --- |');
-          for (const r of results) {
-            const at = r.locations?.[0]?.physicalLocation;
-            const line = at?.region?.startLine;
-            console.log(`| ${r.level || 'note'} | ${r.ruleId} | \`${at?.artifactLocation?.uri}${line ? ':' + line : ''}\` |`);
-          }
-          EOF
-      - name: File the findings
-        if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: electronegativity.sarif
-          category: electronegativity
+          ./gitleaks git . --redact --no-banner --verbose --platform github
 
   gate:
     name: QA Gate
