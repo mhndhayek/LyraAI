@@ -24,6 +24,7 @@ Lyra talks to any OpenAI-compatible local runtime. LM Studio on `http://localhos
 - **Live panel** – the character (built-in vector or pixel version depending on the theme, a GIF pack, or a Live2D model), its state, and what Lyra is doing right now.
 - **Lyra's browser** – when Lyra browses in *visible* mode the panel opens inside the app with the page it is driving; *Take over* lets you use it yourself, *Stop* halts the agent's browsing for the turn. In *headless* mode you only see a status line in the chat.
 - **Profiles** (*Settings › Profiles*) – keep more than one assistant. Each profile has its own soul, appearance, voice, animation, goals and model, and its own chats and memory; switching swaps all of it at once. Safety, the workspace, the browser and phone access are yours and shared by every profile.
+- **Setup guide** – the first start opens a short guide: the model, her name and look, voice, image generation, safety, and tools. Skip it whenever you like; everything in it is under Settings, and the guide itself is under *Settings › About*.
 - **Settings** (gear, or ⌘,) – grouped into Lyra (Model, Provider, Memory & context, Tools, Image generation), Character (Persona & chat, Appearance, Voice, AI goals), Around it (Workspace, Browser, Safety, Notifications, Mobile) and App (Extensions, Recovery, About).
 
 ## Kernel, organs, extensions

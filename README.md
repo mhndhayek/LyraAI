@@ -79,6 +79,8 @@ npm run qa             # the full quality gate: lint, tests, self-test, smoke te
 npm run selftest       # breaks the app on purpose and proves the safety nets catch it
 ```
 
+The first start opens a short setup guide: the model, her name and look, voice, image generation, safety and tools. Skip it if you like; it is all under Settings, and the guide is there too under About.
+
 ### Building an installer
 
 ```bash
