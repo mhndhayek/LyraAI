@@ -1,0 +1,13 @@
+# Which code CodeQL should read, and how hard it should look.
+name: Lyra
+
+# security-extended adds the queries that trade a little precision for recall on
+# top of the default suite. security-and-quality would add maintainability rules
+# as well, which eslint already covers for this project.
+queries:
+  - uses: security-extended
+
+paths-ignore:
+  # Vendored third-party libraries, shipped minified. Nothing here is ours to
+  # fix, and a minified bundle is mostly noise to a static analyser anyway.
+  - renderer/vendor

@@ -1,0 +1,63 @@
+# CodeQL, GitHub's own static analyser, over both languages in the repository.
+#
+# It lives outside ci.yml for one reason: publishing its results needs
+# security-events write access, and the QA pipeline is deliberately read-only
+# and entirely blocking. Findings land in the Security tab and are annotated on
+# pull requests instead of failing a check. To make them block a merge, add
+# "CodeQL / Analyse javascript-typescript" (and the python one) to the branch
+# protection rule next to "QA Gate".
+#
+# Free here because the repository is public: the CodeQL CLI is licensed for
+# open-source code, and analysing a closed-source project with it needs a paid
+# licence instead.
+name: CodeQL
+
+on:
+  # Any pushed branch, the same as the QA gate, so a finding shows up before a
+  # pull request is opened. The concurrency group keeps this from doubling up
+  # with the pull_request run on the same branch.
+  push:
+  pull_request:
+    branches: [main]
+  # The queries are updated independently of this code, so the same commit can
+  # start failing a check it passed last month. Look again weekly.
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyse ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # to file the findings under the Security tab
+      packages: read # the query packs are fetched from the registry
+    strategy:
+      # One language failing should not hide the other language's results.
+      fail-fast: false
+      matrix:
+        # The app and its tests are JavaScript; the voice engine and the
+        # character generator are Python. Neither needs a build step, so there
+        # is no autobuild here: CodeQL reads the source directly.
+        language: [javascript-typescript, python]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Initialise CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/codeql/codeql-config.yml
+      - name: Analyse
+        uses: github/codeql-action/analyze@v3
+        with:
+          # Keeps the two languages' results as separate sets, so one does not
+          # look like it resolved the other's findings.
+          category: /language:${{ matrix.language }}
