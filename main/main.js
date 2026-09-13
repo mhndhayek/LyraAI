@@ -1,7 +1,7 @@
 // Lyra kernel. Boots the app, owns settings, data, checkpoints, the organ loader,
 // extensions and the watchdog. Everything the user experiences lives in organs
 // under the state folder, which the agent may edit and the kernel can put back.
-const { app, BrowserWindow, ipcMain, shell: eshell, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, shell: eshell, nativeTheme, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -16,6 +16,7 @@ const { Guard } = require('./kernel/guard');
 const { Docs } = require('./kernel/docs');
 const { Logs } = require('./kernel/logs');
 const watchdog = require('./kernel/watchdog');
+const permissions = require('./kernel/permissions');
 
 app.setName('Lyra');
 process.on('unhandledRejection', (e) => console.error('unhandled', e));
@@ -111,6 +112,12 @@ app.whenReady().then(async () => {
   k.appState = () => ({ version: k.version, links: { repo: pkg.homepage, issues: pkg.bugs && pkg.bugs.url, donate: pkg.funding && pkg.funding.url, license: `${pkg.homepage}/blob/main/LICENSE` }, safeMode: k.safeMode, organsGeneration: k.loader.generation, organsVersion: fs.existsSync(k.paths.organsVersion) ? fs.readFileSync(k.paths.organsVersion, 'utf8').trim() : null, statePath: k.paths.state, workspace: k.settings.get().workspace.folder, extensions: k.extensions.list(), checkpoints: k.checkpoints.list(5), lastKnownGood: k.checkpoints.lastKnownGood(), changedSinceGood: k.checkpoints.changedSince('lkg').slice(0, 20), budget: k.guard.budget(), pendingChanges: !!(k.dirty.main || k.dirty.renderer || k.dirty.extensions) || !!k.deferReload, queuedSettings: k.queued, locked: require('./kernel/guard').LOCKED, autoApply: k.settings.get().kernel.autoApply });
 
   const attempts = bootCounter(); const safe = flag('safe') || attempts >= 3;
+  // Nothing is handed the microphone, a camera or a location unless the kernel
+  // says so — least of all a page the agent's browser was pointed at, or an
+  // extension panel, which is an iframe loading a URL the extension chose.
+  permissions.install({ app, session }, {
+    onDenied: ({ policy, permission, origin }) => k.logs.info('kernel', `Refused ${permission} to ${policy} content`, { origin }),
+  });
   nativeTheme.themeSource = 'dark';
   createWindow();
 
