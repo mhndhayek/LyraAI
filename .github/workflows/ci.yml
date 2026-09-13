@@ -203,6 +203,10 @@ jobs:
           # No certificate here: signing with a real one, and publishing, are the
           # release workflow's job, never the build's.
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          # electron-builder skips signing on pull request builds, ad hoc included,
+          # to keep certificates away from forks. This job has no certificate, and
+          # an ad-hoc signature needs none, so the macOS check would fail without it.
+          CSC_FOR_PULL_REQUEST: true
       - name: Check the installers were produced and the packaged app starts
         shell: bash
         run: node scripts/check-artifacts.js --launch
