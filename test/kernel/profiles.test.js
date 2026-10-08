@@ -101,7 +101,7 @@ test('everything that makes her herself changes together on a switch', () => {
   app.settings.set({ persona: { soul: 'the first soul' }, appearance: { theme: 'pixel', gifFolder: 'builtin:fox' }, voice: { voice: 'Rosie' }, goals: { autonomous: true }, model: { temperature: 0.2 } });
   const iris = app.settings.createProfile({ name: 'Iris' });
   app.use(iris.id);
-  app.settings.set({ persona: { soul: 'a different soul' }, appearance: { theme: 'lyra-light', gifFolder: 'builtin:cowboy' }, voice: { voice: 'Luna' }, goals: { autonomous: false }, model: { temperature: 0.9 } });
+  app.settings.set({ persona: { soul: 'a different soul' }, appearance: { theme: 'lyra-light', gifFolder: 'builtin:succubus' }, voice: { voice: 'Luna' }, goals: { autonomous: false }, model: { temperature: 0.9 } });
 
   const hers = app.settings.get();
   assert.equal(hers.persona.name, 'Iris');
@@ -135,4 +135,29 @@ test('deleting a profile leaves the others alone', () => {
   assert.deepEqual(app.store.listChats().map((c) => c.title), ['kept']);
   assert.equal(fs.existsSync(dir), false);
   app.close();
+});
+
+test('a profile on a retired built-in pack falls back to the cat girl', () => {
+  const userData = tmpdir();
+  const paths = layout(userData, path.join(__dirname, '..', '..'));
+  migrate(paths);
+  fs.mkdirSync(path.dirname(paths.settingsFile), { recursive: true });
+  fs.writeFileSync(paths.settingsFile, JSON.stringify({
+    ui: { setupDone: true },
+    profiles: { active: 'cow', list: [
+      { id: 'cow', name: 'Cow', dataDir: '', persona: { name: 'Cow', avatar: 'builtin:cowboy' }, appearance: { source: 'gif', gifFolder: 'builtin:cowboy' } },
+      { id: 'sue', name: 'Sue', dataDir: 'profiles/sue', persona: { name: 'Sue', avatar: 'builtin:succubus' }, appearance: { source: 'gif', gifFolder: 'builtin:succubus' } },
+      { id: 'own', name: 'Own', dataDir: 'profiles/own', persona: { name: 'Own', avatar: '/Users/me/fox.png' }, appearance: { source: 'gif', gifFolder: '/Users/me/packs/foxgirl' } },
+    ] },
+  }));
+  const settings = new Settings(paths.settingsFile);
+  assert.equal(settings.get().appearance.gifFolder, 'builtin:catgirl', 'a retired pack is swapped for the original');
+  assert.equal(settings.get().persona.avatar, 'builtin:catgirl');
+  settings.switchProfile('sue');
+  assert.equal(settings.get().appearance.gifFolder, 'builtin:succubus', 'a pack that still ships is left alone');
+  settings.switchProfile('own');
+  assert.equal(settings.get().appearance.gifFolder, '/Users/me/packs/foxgirl', 'a pack outside the app is left alone');
+  assert.equal(settings.get().persona.avatar, '/Users/me/fox.png');
+  const saved = JSON.parse(fs.readFileSync(paths.settingsFile, 'utf8'));
+  assert.equal(saved.profiles.list[0].appearance.gifFolder, 'builtin:catgirl', 'the fix is written back to disk');
 });

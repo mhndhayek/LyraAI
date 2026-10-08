@@ -39,7 +39,7 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
 | 🎨 **Image generation** | SwarmUI or ComfyUI on your machine or your network. She picks the model and size when you let her. |
 | 🗣️ **Voice** | KittenTTS voices and Whisper transcription run in a local sidecar. Send voice notes, hear replies. |
 | 👥 **More than one of her** | Profiles: each with her own soul, look, voice, animation, goals and model, and her own chats and memory. Switch and the whole app becomes her. |
-| 🎭 **A face** | Eight built-in pixel-art characters that blink, think, type and talk, or bring your own GIF pack or Live2D model. |
+| 🎭 **A face** | Two built-in pixel-art characters that blink, think, type and talk, or bring your own GIF pack or Live2D model. A 3D VRM Lyra is on the way. |
 | 🎯 **Goals** | After a chat, she reflects and writes goals for herself. Let her work on them in her own time, or archive them. |
 | 📱 **On your phone** *(beta)* | Scan a QR code and Safari opens the same chats over HTTPS on your Tailscale network. No account, no cloud. |
 | 🧬 **Self-extending** | Themes, UI changes, new tools and panels, applied live with git checkpoints and automatic rollback. |
@@ -49,14 +49,18 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
 ## Meet the cast
 
 <p align="center">
-  <img src="docs/media/cast.png" width="900" alt="The eight built-in characters">
+  <img src="docs/media/cast.png" width="420" alt="The two built-in characters: Lyra the cat girl and the succubus">
 </p>
 
 <p align="center">
-  Lyra &nbsp;·&nbsp; Fox girl &nbsp;·&nbsp; Cowboy &nbsp;·&nbsp; Agent &nbsp;·&nbsp; Butterbot &nbsp;·&nbsp; Succubus &nbsp;·&nbsp; Dapper &nbsp;·&nbsp; Silver
+  Lyra, the original &nbsp;·&nbsp; Succubus
 </p>
 
-Every character has idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you — that part is **beta**: the frames come out clean, but the animation is not always smooth yet.
+The cast is down to two: Lyra, the original pixel-art cat girl, and the succubus. The other six packs (fox girl, cowboy, agent, butterbot, dapper, silver) were retired; a profile that used one of them switches back to Lyra on its own when it updates. Your own GIF packs and Live2D models are not touched.
+
+**Coming next: a 3D Lyra.** Lyra's mascot is moving from 2D to a VRM model. The VRM files in the maintainer's library are licensed for personal use only and cannot be shipped, so the 3D Lyra will be built from a base whose licence allows redistribution (such as the VRoid Project sample avatars, which allow redistribution and modification) or modelled from scratch. Until then the pixel art stays.
+
+Both characters have idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you — that part is **beta**: the frames come out clean, but the animation is not always smooth yet.
 
 ## Quick start
 

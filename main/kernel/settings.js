@@ -43,6 +43,8 @@ function merge(base, patch) {
 // looks and sounds, what she is working towards, and which model she thinks
 // with. Everything else — safety, the workspace, the browser, phone access,
 // kernel limits — is the user's and is shared by every profile.
+// Built-in GIF packs that used to ship and were retired.
+const RETIRED_PACKS = ['agent', 'butterbot', 'cowboy', 'dapper', 'foxgirl', 'silver'];
 const PROFILE_SECTIONS = ['persona', 'appearance', 'voice', 'goals', 'model', 'providers'];
 const slug = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32);
 
@@ -60,6 +62,7 @@ class Settings extends EventEmitter {
     } catch (e) { console.error('settings load failed', e); }
     this.migrate();
     const adopted = this.migrateProfiles();
+    if (this.migrateRetiredPacks()) this.renamed = true;
     // The setup guide is for a fresh install. An install from before the guide
     // existed was set up by hand already, so it is not walked through it.
     const seasoned = !!raw && !(isObj(raw.ui) && 'setupDone' in raw.ui);
@@ -155,6 +158,19 @@ class Settings extends EventEmitter {
     this.refresh();
     this.save();
     return { removed: p, profiles: this.profiles() };
+  }
+  // The built-in cast was cut to the original cat girl and the succubus.
+  // A profile that used one of the retired packs would otherwise show
+  // "No idle.gif", because organ sync replaces the renderer folder.
+  migrateRetiredPacks() {
+    let changed = false;
+    const fix = (v) => { if (typeof v === 'string' && RETIRED_PACKS.includes(v.replace(/^builtin:/, '').replace(/\/$/, '')) && v.startsWith('builtin:')) { changed = true; return 'builtin:catgirl'; } return v; };
+    const holders = [this.data, ...(this.data.profiles && Array.isArray(this.data.profiles.list) ? this.data.profiles.list : [])];
+    for (const h of holders) {
+      if (isObj(h.appearance)) h.appearance.gifFolder = fix(h.appearance.gifFolder);
+      if (isObj(h.persona)) h.persona.avatar = fix(h.persona.avatar);
+    }
+    return changed;
   }
   // Older settings had one provider and plain model ids; lift them into presets.
   migrate() {

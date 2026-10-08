@@ -16,4 +16,4 @@ Lyra AI Agent stands on these projects. Each keeps its own license.
 | [Tailscale](https://tailscale.com/) | private network and HTTPS certificate for phone access (installed separately) | BSD-3-Clause client |
 
 Live2D Cubism Core is not included; the Live2D character option needs your own copy under Live2D's terms.
-The built-in characters were generated with [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI) and the Z-Image-Turbo model, then cut and animated by `scripts/make_character.py`.
+The two built-in characters were generated with [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI) and the Z-Image-Turbo model, then cut and animated by `scripts/make_character.py`.
