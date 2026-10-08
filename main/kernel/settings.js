@@ -14,7 +14,7 @@ const DEFAULTS = {
   providers: { list: [{ id: 'lmstudio', name: 'LM Studio', runtime: 'lmstudio', endpoint: 'http://localhost:1234/v1', apiKey: '' }] },
   model: { chat: { provider: 'lmstudio', model: '' }, vision: { provider: 'lmstudio', model: '' }, contextMode: 'auto', contextOverride: 32768, reasoning: 'medium', smartApprovals: true, compression: true, temperature: 0.7, maxSteps: 30, runMinutes: 30 },
   persona: { name: 'Lyra', avatar: 'builtin:catgirl', soul: DEFAULT_SOUL, memoryEnabled: true, store: 'sqlite', shortTerm: true, longTerm: true },
-  appearance: { theme: 'lyra-dark', liveCharacter: true, source: 'gif', live2dModel: '', gifFolder: 'builtin:catgirl', petFolder: '', floatPos: null, placement: 'panel', transitionMs: 300 },
+  appearance: { theme: 'lyra-dark', liveCharacter: true, source: 'gif', live2dModel: '', vrmModel: 'builtin:lyra', last2d: 'gif', gifFolder: 'builtin:catgirl', petFolder: '', floatPos: null, placement: 'panel', transitionMs: 300 },
   workspace: { folder: path.join(os.homedir(), 'Lyra', 'workspace'), repoDiscovery: true, codeExecution: true, persistentShell: true, fileReadLimit: 100000 },
   safety: { approvalMode: 'ask', timeoutSec: 300, onTimeout: 'deny' },
   browser: { enabled: true, mode: 'visible', autoOpen: true, startPage: 'about:blank', askBeforeDownloads: true },

@@ -39,7 +39,7 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
 | 🎨 **Image generation** | SwarmUI or ComfyUI on your machine or your network. She picks the model and size when you let her. |
 | 🗣️ **Voice** | KittenTTS voices and Whisper transcription run in a local sidecar. Send voice notes, hear replies. |
 | 👥 **More than one of her** | Profiles: each with her own soul, look, voice, animation, goals and model, and her own chats and memory. Switch and the whole app becomes her. |
-| 🎭 **A face** | Two built-in pixel-art characters that blink, think, type and talk, or bring your own GIF pack or Live2D model. Lyra also has a 3D VRM model, ready for the coming VRM view. |
+| 🎭 **A face** | Two built-in pixel-art characters that blink, think, type and talk, and a 3D Lyra (VRM) one click away on the 2D / 3D switch. Or bring your own GIF pack, Live2D model or `.vrm` avatar. |
 | 🎯 **Goals** | After a chat, she reflects and writes goals for herself. Let her work on them in her own time, or archive them. |
 | 📱 **On your phone** *(beta)* | Scan a QR code and Safari opens the same chats over HTTPS on your Tailscale network. No account, no cloud. |
 | 🧬 **Self-extending** | Themes, UI changes, new tools and panels, applied live with git checkpoints and automatic rollback. |
@@ -64,7 +64,7 @@ The cast is down to two: Lyra, the original pixel-art cat girl, and the succubus
   <img src="docs/media/lyra-vrm.png" width="300" alt="Lyra's 3D model: pink hair fading to blue, gold eyes, star ribbon bows">
 </p>
 
-Lyra has a 3D body now: [`assets/vrm/lyra.vrm`](assets/vrm/), a VRM avatar with pink-to-blue hair, gold eyes, a full rig, hair physics and lip-sync expressions. She is a recolour of the VRoid Project's AvatarSample_B, whose licence allows modification and redistribution, so she can live in this repo and anyone may use her. The app does not render VRM yet; that is the next step, and until then the pixel art stays in the live panel. Details, credit and the scripts that made her are in [assets/vrm/README.md](assets/vrm/README.md).
+Lyra has a 3D body: [`lyra.vrm`](renderer/character/vrm/), a VRM avatar with pink-to-blue hair, gold eyes, a full rig, hair physics and lip-sync expressions. Flip the **2D / 3D** switch on the live panel and she appears in 3D: she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice. *Appearance › Live character › 3D* also takes any other `.vrm` file (VRoid Studio exports, VRoid Hub, BOOTH; check the model's licence). She is a recolour of the VRoid Project's AvatarSample_B, whose licence allows modification and redistribution, so she ships with the app and anyone may use her. Details, credit and the scripts that made her are in [renderer/character/vrm/README.md](renderer/character/vrm/README.md).
 
 The two pixel-art characters have idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you — that part is **beta**: the frames come out clean, but the animation is not always smooth yet.
 

@@ -1,6 +1,6 @@
 # Lyra in 3D (VRM)
 
-![Lyra, front and back](../../docs/media/lyra-vrm-turnaround.png)
+![Lyra, front and back](../../../docs/media/lyra-vrm-turnaround.png)
 
 `lyra.vrm` is Lyra's 3D model, made to be the mascot. It is a VRM 0.x avatar with a full humanoid rig (55 bones), 11 spring-bone groups for hair and clothes, and 15 expressions (blink, the vowels for lip sync, joy, anger, sorrow, fun…), so any VRM app (VSeeFace, VTube Studio, Project AIRI, three-vrm) can animate it.
 
@@ -12,7 +12,14 @@
 | Outfit | varsity bomber, crop top, pink pleated skirt, star ribbon bows |
 | File | `lyra.vrm`, 15.6 MB, sha256 `c288087cd4e159fd40db80f6e031d2ed540bfd1fd1d1f4521a3d75d380d30ab2` |
 
-The app does not load it yet: the live panel shows the pixel-art packs and Live2D. A VRM renderer is the next step, and this model is what it will show. Until then the file is kept in the repo and not packed into the installers.
+The app shows her when the live panel is switched to **3D** (or *Appearance › Live character › Source › 3D*). The renderer is `renderer/character.js` (`mountVrm`), using three.js and @pixiv/three-vrm from `renderer/vendor/three-vrm.min.js`. That bundle is built from `renderer/vendor/three-vrm.entry.js` with esbuild (three 0.180, @pixiv/three-vrm 3.5.5):
+
+```sh
+npm i three@0.180 @pixiv/three-vrm@3.5.5 esbuild
+npx esbuild renderer/vendor/three-vrm.entry.js --bundle --minify --format=iife --legal-comments=eof --target=chrome120 --outfile=renderer/vendor/three-vrm.min.js
+```
+
+In the app she breathes, blinks, glances around, leans in while writing, tilts her head and looks aside while thinking, and opens her mouth with the voice level when speaking. The hair and skirt use the model's own spring bones.
 
 ## Where she comes from, and the licence
 

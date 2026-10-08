@@ -15,7 +15,7 @@
   const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const hostOf = (u) => { try { return new URL(u).host; } catch { return u; } };
   const toast = (text, kind = '') => { const t = el(`<div class="toast ${kind}">${esc(text)}</div>`); $('#toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'error' ? 7000 : 4000); };
-  window.LyraApp = { settings: () => state.settings, set: (patch) => setSettings(patch), toast, lastContext: () => state.lastContext, char: () => state.char, browserVisible: (on) => syncBrowserView(on), chatId: () => state.chatId, models: () => state.models, playFile: playFile };
+  window.LyraApp = { settings: () => state.settings, set: (patch) => setSettings(patch), setDim: (d) => setDim(d), toast, lastContext: () => state.lastContext, char: () => state.char, browserVisible: (on) => syncBrowserView(on), chatId: () => state.chatId, models: () => state.models, playFile: playFile };
 
   async function setSettings(patch) { state.settings = await lyra.settings.set(patch); applyAll(); return state.settings; }
 
@@ -39,9 +39,21 @@
     const host = floating ? $('#float-stage') : $('#stage');
     if (state.char.el !== host) { state.char.dispose(); state.char = new LyraCharacter(host); state.char.setState(state.charState); }
     if (floating && a.floatPos) { $('#float-char').style.left = a.floatPos.x + 'px'; $('#float-char').style.top = a.floatPos.y + 'px'; $('#float-char').style.right = 'auto'; $('#float-char').style.bottom = 'auto'; }
-    state.char.configure({ source: a.source, gifFolder: a.gifFolder, live2dModel: a.live2dModel, petFolder: a.petFolder, variant: t && t.character === 'pixel' ? 'pixel' : 'default' });
-    $('#stage-caption').textContent = a.source === 'pet' ? `Hermes pet · ${a.petFolder ? a.petFolder.split('/').pop() : 'none chosen'}` : a.source === 'gif' && a.gifFolder.startsWith('builtin:') ? `Built-in pack · ${a.gifFolder.slice(8)}` : a.source === 'gif' ? `GIF pack · ${a.gifFolder ? a.gifFolder.split('/').pop() : 'no folder chosen'}` : a.source === 'live2d' ? `Live2D · ${a.live2dModel ? a.live2dModel.split('/').pop() : 'no model chosen'}` : t && t.character === 'pixel' ? 'Built-in character · pixel' : 'Built-in character';
-    renderPills(); requestAnimationFrame(sendBounds);
+    state.char.configure({ source: a.source, gifFolder: a.gifFolder, live2dModel: a.live2dModel, vrmModel: a.vrmModel, petFolder: a.petFolder, variant: t && t.character === 'pixel' ? 'pixel' : 'default' });
+    $('#stage-caption').textContent = a.source === 'vrm' ? `3D · ${!a.vrmModel || a.vrmModel === 'builtin:lyra' ? 'Lyra' : a.vrmModel.split('/').pop()}` : a.source === 'pet' ? `Hermes pet · ${a.petFolder ? a.petFolder.split('/').pop() : 'none chosen'}` : a.source === 'gif' && a.gifFolder.startsWith('builtin:') ? `Built-in pack · ${a.gifFolder.slice(8)}` : a.source === 'gif' ? `GIF pack · ${a.gifFolder ? a.gifFolder.split('/').pop() : 'no folder chosen'}` : a.source === 'live2d' ? `Live2D · ${a.live2dModel ? a.live2dModel.split('/').pop() : 'no model chosen'}` : t && t.character === 'pixel' ? 'Built-in character · pixel' : 'Built-in character';
+    renderPills(); renderDim(); requestAnimationFrame(sendBounds);
+  }
+  // 2D / 3D switch on the live panel. 3D shows the VRM model; 2D goes back to
+  // whichever 2D source was in use before (GIF pack, pet, Live2D or built-in).
+  function renderDim() {
+    const a = state.settings.appearance; const is3d = a.source === 'vrm';
+    $$('.dim-toggle button').forEach((b) => b.classList.toggle('on', (b.dataset.dim === '3d') === is3d));
+  }
+  function setDim(dim) {
+    const a = state.settings.appearance; const is3d = a.source === 'vrm';
+    if ((dim === '3d') === is3d) return;
+    if (dim === '3d') return setSettings({ appearance: { source: 'vrm', last2d: a.source } });
+    return setSettings({ appearance: { source: a.last2d && a.last2d !== 'vrm' ? a.last2d : 'gif' } });
   }
   function applyAll() { applyTheme(); applyPersona(); renderNow(); if (window.Settings && Settings.isOpen()) Settings.refresh(); }
 
@@ -341,6 +353,7 @@
   /* ---------- header, keys ---------- */
   $('#btn-new-chat').addEventListener('click', newChat);
   $('#chat-search').addEventListener('input', renderChatList);
+  $$('#dim-toggle button').forEach((b) => b.addEventListener('click', () => setDim(b.dataset.dim)));
   $('#btn-live').addEventListener('click', () => { if (state.settings.appearance.placement === 'floating') setSettings({ appearance: { placement: 'panel' }, ui: { livePanel: true } }); else setSettings({ ui: { livePanel: !state.settings.ui.livePanel } }); });
   $('#btn-notify').addEventListener('click', () => Settings.open('notifications'));
   $('#btn-settings').addEventListener('click', () => Settings.open('model'));

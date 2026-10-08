@@ -25,6 +25,17 @@ test('migrate creates the folders the kernel assumes exist', () => {
   for (const d of [p.state, p.extensions, p.themes, p.media]) assert.ok(fs.existsSync(d), `${d} missing`);
 });
 
+test('the state folder pins CommonJS so a module package.json above it cannot break the organs', () => {
+  const ud = tmpdir();
+  fs.writeFileSync(path.join(ud, 'package.json'), '{ "type": "module" }');
+  const p = layout(ud, ROOT);
+  migrate(p);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(p.state, 'package.json'), 'utf8')).type, 'commonjs');
+  fs.writeFileSync(path.join(p.state, 'package.json'), '{ "type": "module" }');
+  migrate(p);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(p.state, 'package.json'), 'utf8')).type, 'commonjs', 'a wrong pin is repaired');
+});
+
 test('migrate lifts a pre-state-folder install into place', () => {
   const ud = tmpdir();
   fs.writeFileSync(path.join(ud, 'settings.json'), '{"persona":{"soul":"old"}}');
