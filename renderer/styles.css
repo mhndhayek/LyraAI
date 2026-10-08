@@ -10,7 +10,6 @@
   /* Room kept clear at the top of a panel for the macOS window buttons, which
      the system draws over the page (see trafficLightPosition in main.js). */
   --titlebar-h: 52px;
-  --char-skin: #e9ebe8; --char-shirt: var(--accent); --char-ink: #1b1c20; --char-cheek: rgba(242, 165, 160, 0.55);
   --transition: 300ms;
 }
 * { box-sizing: border-box; }
@@ -155,18 +154,8 @@ textarea.field { height: auto; min-height: 104px; padding: 10px 12px; line-heigh
 [data-state=idle] .eq i, .eq.paused i { animation: none; transform: scaleY(0.35); }
 @keyframes eq { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
 .stage { height: 250px; border-radius: var(--radius-lg); background: var(--bg); border: var(--border-w) solid var(--line); display: flex; align-items: flex-end; justify-content: center; overflow: hidden; position: relative; }
-.stage .char { width: 236px; height: 236px; display: block; } .stage .char.gif { object-fit: contain; width: 100%; height: 100%; } .stage canvas.char.pet, .mini-stage canvas.char.pet { width: auto !important; height: auto !important; } .stage canvas.char { width: 100% !important; height: 100% !important; }
+.stage .char { width: 236px; height: 236px; display: block; } .stage .char.gif { object-fit: contain; width: 100%; height: 100%; } .stage canvas.char { width: 100% !important; height: 100% !important; }
 .char-missing { font-size: 12px; color: var(--muted); text-align: center; padding: 20px; align-self: center; }
-.c-body { animation: bob 3.2s ease-in-out infinite; } @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-.c-shirt { fill: var(--char-shirt); } .c-skin { fill: var(--char-skin); } .c-cheek { fill: var(--char-cheek); } .c-eye { fill: var(--char-ink); transform-box: fill-box; transform-origin: center; transition: transform 0.08s; } .c-eye.blink { transform: scaleY(0.1); }
-.c-mouth { stroke: var(--char-ink); stroke-width: 3; fill: none; stroke-linecap: round; display: none; transform-box: fill-box; transform-origin: center; } .c-open { fill: var(--char-ink); stroke: none; }
-.c-think, .c-write { display: none; } .c-think circle { fill: var(--char-skin); animation: dots 1.6s ease-in-out infinite; } .c-think circle:nth-child(2) { animation-delay: 0.3s; } .c-think circle:nth-child(3) { animation-delay: 0.6s; }
-.c-write rect { fill: var(--char-skin); } .c-write circle { fill: var(--char-ink); animation: dots 1.2s ease-in-out infinite; } .c-write circle:nth-child(3) { animation-delay: 0.25s; } .c-write circle:nth-child(4) { animation-delay: 0.5s; }
-@keyframes dots { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
-[data-state=idle] .c-smile, [data-state=writing] .c-smile { display: block; } [data-state=thinking] .c-flat, [data-state=thinking] .c-think { display: block; } [data-state=writing] .c-write { display: block; }
-[data-state=speaking] .c-open { display: block; animation: talk 0.45s ease-in-out infinite; } @keyframes talk { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
-.stage .char.pixel { width: 220px; height: 220px; } .p-skin { fill: var(--char-skin); } .p-eye { fill: var(--char-ink); } .p-cheek { fill: var(--char-cheek); } .p-mouth { fill: var(--char-ink); } .p-shirt { fill: var(--char-shirt); }
-.pixel .c-eye.blink { transform: scaleY(0.2); } .pixel .p-open { display: none; } [data-state=speaking] .pixel .p-open { display: block; } [data-state=thinking] .pixel .c-think, [data-state=writing] .pixel .c-write { display: block; }
 .state-pills { display: flex; gap: 4px; } .pill { height: 24px; padding: 0 8px; border-radius: var(--radius-pill); display: flex; align-items: center; font-size: 10.5px; font-weight: 500; white-space: nowrap; color: var(--muted); background: var(--panel); border: var(--border-w) solid var(--line2); cursor: pointer; } .pill.on { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); }
 .stage-caption { font-size: 11px; color: var(--muted); }
 .divider { height: 1px; background: var(--line); }
@@ -176,7 +165,7 @@ textarea.field { height: auto; min-height: 104px; padding: 10px 12px; line-heigh
 .float-char { position: absolute; right: 24px; bottom: 96px; width: 180px; z-index: 5; cursor: grab; user-select: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .float-char.dragging { cursor: grabbing; }
 .float-stage { width: 180px; height: 180px; display: flex; align-items: flex-end; justify-content: center; }
-.float-stage .char { width: 180px; height: 180px; } .float-stage canvas.char.pet { width: auto !important; height: auto !important; }
+.float-stage .char { width: 180px; height: 180px; }
 .float-state { font-size: 10px; font-weight: 600; color: var(--muted); background: var(--panel); border: var(--border-w) solid var(--line2); border-radius: var(--radius-pill); padding: 2px 8px; }
 .float-state[data-state=idle] { display: none; }
 .step-image { margin: 4px 0 0 22px; border-radius: 10px; overflow: hidden; border: var(--border-w) solid var(--line2); max-width: 420px; } .step-image img { display: block; max-width: 100%; max-height: 360px; }

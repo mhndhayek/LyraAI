@@ -39,7 +39,7 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
 | 🎨 **Image generation** | SwarmUI or ComfyUI on your machine or your network. She picks the model and size when you let her. |
 | 🗣️ **Voice** | KittenTTS voices and Whisper transcription run in a local sidecar. Send voice notes, hear replies. |
 | 👥 **More than one of her** | Profiles: each with her own soul, look, voice, animation, goals and model, and her own chats and memory. Switch and the whole app becomes her. |
-| 🎭 **A face** | Two built-in pixel-art characters that blink, think, type and talk, and a 3D Lyra (VRM) one click away on the 2D / 3D switch. Or bring your own GIF pack, Live2D model or `.vrm` avatar. |
+| 🎭 **A face** | Two built-in pixel-art characters that blink, think, type and talk, and a 3D Lyra (VRM) one click away on the 2D / 3D switch. Or bring your own GIF pack or `.vrm` avatar. |
 | 🎯 **Goals** | After a chat, she reflects and writes goals for herself. Let her work on them in her own time, or archive them. |
 | 📱 **On your phone** *(beta)* | Scan a QR code and Safari opens the same chats over HTTPS on your Tailscale network. No account, no cloud. |
 | 🧬 **Self-extending** | Themes, UI changes, new tools and panels, applied live with git checkpoints and automatic rollback. |

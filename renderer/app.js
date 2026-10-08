@@ -28,7 +28,7 @@
     document.documentElement.style.setProperty('--transition', `${state.settings.appearance.transitionMs}ms`);
   }
   function applyPersona() {
-    const p = state.settings.persona; const a = state.settings.appearance; const t = currentTheme();
+    const p = state.settings.persona; const a = state.settings.appearance;
     $('#persona-name').textContent = p.name; document.title = p.name; $('#input').placeholder = `Message ${p.name}`;
     $('#settings-persona-name').textContent = p.name;
     const av = $('#persona-avatar'); const au = avatarUrl(p.avatar); av.innerHTML = au ? `<img src="${au}" alt="">` : esc(p.name.slice(0, 1).toUpperCase());
@@ -39,22 +39,21 @@
     const host = floating ? $('#float-stage') : $('#stage');
     if (state.char.el !== host) { state.char.dispose(); state.char = new LyraCharacter(host); state.char.setState(state.charState); }
     if (floating && a.floatPos) { $('#float-char').style.left = a.floatPos.x + 'px'; $('#float-char').style.top = a.floatPos.y + 'px'; $('#float-char').style.right = 'auto'; $('#float-char').style.bottom = 'auto'; }
-    state.char.configure({ source: a.source, gifFolder: a.gifFolder, live2dModel: a.live2dModel, vrmModel: a.vrmModel, petFolder: a.petFolder, variant: t && t.character === 'pixel' ? 'pixel' : 'default' });
-    $('#stage-caption').textContent = a.source === 'vrm' ? `3D · ${!a.vrmModel || a.vrmModel === 'builtin:lyra' ? 'Lyra' : a.vrmModel.split('/').pop()}` : a.source === 'pet' ? `Hermes pet · ${a.petFolder ? a.petFolder.split('/').pop() : 'none chosen'}` : a.source === 'gif' && a.gifFolder.startsWith('builtin:') ? `Built-in pack · ${a.gifFolder.slice(8)}` : a.source === 'gif' ? `GIF pack · ${a.gifFolder ? a.gifFolder.split('/').pop() : 'no folder chosen'}` : a.source === 'live2d' ? `Live2D · ${a.live2dModel ? a.live2dModel.split('/').pop() : 'no model chosen'}` : t && t.character === 'pixel' ? 'Built-in character · pixel' : 'Built-in character';
+    state.char.configure({ source: a.source === 'vrm' ? 'vrm' : 'gif', gifFolder: a.gifFolder, vrmModel: a.vrmModel });
+    $('#stage-caption').textContent = a.source === 'vrm' ? `3D · ${!a.vrmModel || a.vrmModel === 'builtin:lyra' ? 'Lyra' : a.vrmModel.split('/').pop()}` : a.gifFolder && a.gifFolder.startsWith('builtin:') ? `Built-in pack · ${a.gifFolder.slice(8)}` : `GIF pack · ${a.gifFolder ? a.gifFolder.split('/').pop() : 'no folder chosen'}`;
     renderPills(); renderDim(); requestAnimationFrame(sendBounds);
   }
-  // 2D / 3D switch on the live panel. 3D shows the VRM model; 2D goes back to
-  // whichever 2D source was in use before (GIF pack, pet, Live2D or built-in).
+  // 2D / 3D switch on the live panel: 3D shows the VRM model, 2D the GIF pack.
   function renderDim() {
     const a = state.settings.appearance; const is3d = a.source === 'vrm';
     $$('.dim-toggle button').forEach((b) => b.classList.toggle('on', (b.dataset.dim === '3d') === is3d));
   }
   function setDim(dim) {
-    const a = state.settings.appearance; const is3d = a.source === 'vrm';
+    const is3d = state.settings.appearance.source === 'vrm';
     if ((dim === '3d') === is3d) return;
-    if (dim === '3d') return setSettings({ appearance: { source: 'vrm', last2d: a.source } });
-    return setSettings({ appearance: { source: a.last2d && a.last2d !== 'vrm' ? a.last2d : 'gif' } });
+    return setSettings({ appearance: { source: dim === '3d' ? 'vrm' : 'gif' } });
   }
+
   function applyAll() { applyTheme(); applyPersona(); renderNow(); if (window.Settings && Settings.isOpen()) Settings.refresh(); }
 
   function setCharState(s) {

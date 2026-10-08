@@ -103,13 +103,7 @@ function create(k) {
   h('files:pickImages', async () => { const r = await dialog.showOpenDialog(k.win(), { properties: ['openFile', 'multiSelections'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }] }); if (r.canceled) return []; return r.filePaths.map((f) => { const ext = path.extname(f).slice(1).toLowerCase(); const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`; return { name: path.basename(f), dataUrl: `data:${mime};base64,${fs.readFileSync(f).toString('base64')}` }; }); });
   h('files:pickFolder', async () => { const r = await dialog.showOpenDialog(k.win(), { properties: ['openDirectory'] }); return r.canceled ? null : r.filePaths[0]; });
   h('files:pickFile', async (p) => { const r = await dialog.showOpenDialog(k.win(), { properties: ['openFile'], filters: p.filters || [] }); return r.canceled ? null : r.filePaths[0]; });
-  h('pets:list', () => {
-    const os = require('os'); const out = []; const seen = new Set();
-    const scan = (dir, profile) => { if (!fs.existsSync(dir)) return; for (const e of fs.readdirSync(dir, { withFileTypes: true })) { if (!e.isDirectory()) continue; const p = path.join(dir, e.name); const jp = path.join(p, 'pet.json'); if (!fs.existsSync(jp) || seen.has(p)) continue; seen.add(p); let j = {}; try { j = JSON.parse(fs.readFileSync(jp, 'utf8')); } catch {} out.push({ path: p, slug: e.name, name: j.displayName || e.name, description: j.description || '', profile }); } };
-    const home = path.join(os.homedir(), '.hermes'); scan(path.join(home, 'pets'), 'default');
-    const prof = path.join(home, 'profiles'); if (fs.existsSync(prof)) for (const d of fs.readdirSync(prof)) scan(path.join(prof, d, 'pets'), d);
-    return out;
-  });
+
   h('imagegen:test', (p) => imagegen.test({ ...settings.get().imagegen, ...p }));
   h('mobile:state', () => companion.state());
   h('mobile:start', async () => { await settings.set({ mobile: { enabled: true } }); try { return { ok: true, state: await companion.start() }; } catch (e) { return { ok: false, error: e.message, state: companion.state() }; } });

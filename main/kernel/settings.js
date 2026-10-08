@@ -14,7 +14,7 @@ const DEFAULTS = {
   providers: { list: [{ id: 'lmstudio', name: 'LM Studio', runtime: 'lmstudio', endpoint: 'http://localhost:1234/v1', apiKey: '' }] },
   model: { chat: { provider: 'lmstudio', model: '' }, vision: { provider: 'lmstudio', model: '' }, contextMode: 'auto', contextOverride: 32768, reasoning: 'medium', smartApprovals: true, compression: true, temperature: 0.7, maxSteps: 30, runMinutes: 30 },
   persona: { name: 'Lyra', avatar: 'builtin:catgirl', soul: DEFAULT_SOUL, memoryEnabled: true, store: 'sqlite', shortTerm: true, longTerm: true },
-  appearance: { theme: 'lyra-dark', liveCharacter: true, source: 'gif', live2dModel: '', vrmModel: 'builtin:lyra', last2d: 'gif', gifFolder: 'builtin:catgirl', petFolder: '', floatPos: null, placement: 'panel', transitionMs: 300 },
+  appearance: { theme: 'lyra-dark', liveCharacter: true, source: 'gif', vrmModel: 'builtin:lyra', gifFolder: 'builtin:catgirl', floatPos: null, placement: 'panel', transitionMs: 300 },
   workspace: { folder: path.join(os.homedir(), 'Lyra', 'workspace'), repoDiscovery: true, codeExecution: true, persistentShell: true, fileReadLimit: 100000 },
   safety: { approvalMode: 'ask', timeoutSec: 300, onTimeout: 'deny' },
   browser: { enabled: true, mode: 'visible', autoOpen: true, startPage: 'about:blank', askBeforeDownloads: true },
@@ -162,13 +162,22 @@ class Settings extends EventEmitter {
   // The built-in cast was cut to the original cat girl and the succubus.
   // A profile that used one of the retired packs would otherwise show
   // "No idle.gif", because organ sync replaces the renderer folder.
+  // The same pass retires the old live-character sources (see below).
   migrateRetiredPacks() {
     let changed = false;
     const fix = (v) => { if (typeof v === 'string' && RETIRED_PACKS.includes(v.replace(/^builtin:/, '').replace(/\/$/, '')) && v.startsWith('builtin:')) { changed = true; return 'builtin:catgirl'; } return v; };
     const holders = [this.data, ...(this.data.profiles && Array.isArray(this.data.profiles.list) ? this.data.profiles.list : [])];
     for (const h of holders) {
-      if (isObj(h.appearance)) h.appearance.gifFolder = fix(h.appearance.gifFolder);
-      if (isObj(h.persona)) h.persona.avatar = fix(h.persona.avatar);
+      if (isObj(h.appearance)) {
+        const ap = h.appearance;
+        if ('gifFolder' in ap) ap.gifFolder = fix(ap.gifFolder);
+        // The live character is a GIF pack (2D) or a VRM model (3D). The retired
+        // sources (built-in SVG, Hermes pet, Live2D) fall back to the GIF pack, and
+        // their leftover keys go.
+        if ('source' in ap && ap.source !== 'gif' && ap.source !== 'vrm') { ap.source = 'gif'; changed = true; }
+        for (const k of ['petFolder', 'live2dModel', 'last2d']) if (k in ap) { delete ap[k]; changed = true; }
+      }
+      if (isObj(h.persona) && 'avatar' in h.persona) h.persona.avatar = fix(h.persona.avatar);
     }
     return changed;
   }
