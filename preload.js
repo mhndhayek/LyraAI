@@ -15,7 +15,6 @@ contextBridge.exposeInMainWorld('lyra', {
   workspace: { tree: call('workspace:tree'), repos: call('workspace:repos'), choose: call('workspace:choose'), open: call('workspace:open') },
   files: { pickImages: call('files:pickImages'), pickFolder: call('files:pickFolder'), pickFile: call('files:pickFile') },
   themes: { list: call('themes:list'), openFolder: call('themes:openFolder') },
-  pets: { list: call('pets:list') },
   logs: { list: call('logs:list'), text: call('logs:text'), counts: call('logs:counts'), clear: call('logs:clear'), write: call('logs:write'), open: call('logs:open') },
   packs: { list: call('packs:list') },
   mobile: { state: call('mobile:state'), start: call('mobile:start'), stop: call('mobile:stop'), tailnet: call('mobile:tailnet'), newCode: call('mobile:newCode'), revoke: call('mobile:revoke'), renewCert: call('mobile:renewCert'), qr: call('mobile:qr') },
@@ -25,5 +24,6 @@ contextBridge.exposeInMainWorld('lyra', {
   extensions: { list: call('ext:list'), set: call('ext:set'), approve: call('ext:approve'), call: call('ext:call'), panels: call('ext:panels'), openFolder: call('ext:openFolder') },
   profiles: { list: call('profiles:list'), create: call('profiles:create'), use: call('profiles:use'), rename: call('profiles:rename'), delete: call('profiles:delete') },
   tools: { list: call('tools:list') },
+  mcp: { status: call('mcp:status'), reconnect: call('mcp:reconnect'), test: call('mcp:test') },
   onEvent: (cb) => { const h = (_, e) => cb(e); ipcRenderer.on('lyra:event', h); return () => ipcRenderer.removeListener('lyra:event', h); },
 });

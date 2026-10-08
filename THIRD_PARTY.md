@@ -8,12 +8,13 @@ Lyra AI Agent stands on these projects. Each keeps its own license.
 | [electron-builder](https://www.electron.build/) | compiling the installers | MIT |
 | [ESLint](https://eslint.org/) | linting in the quality gate (development only) | MIT |
 | [marked](https://github.com/markedjs/marked) | rendering markdown in chat | MIT |
-| [PixiJS](https://pixijs.com/) and [pixi-live2d-display](https://github.com/guansss/pixi-live2d-display) | Live2D characters | MIT |
 | [qrcode](https://github.com/soldair/node-qrcode) | the phone pairing code | MIT |
 | [KittenTTS](https://github.com/KittenML/KittenTTS) | text to speech in the voice sidecar | Apache-2.0 |
 | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | speech to text in the voice sidecar | MIT |
+| [three.js](https://threejs.org/) | 3D rendering for the VRM character (bundled in `renderer/vendor/three-vrm.min.js`) | MIT |
+| [@pixiv/three-vrm](https://github.com/pixiv/three-vrm) | loads and animates VRM avatars (same bundle) | MIT |
 | [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans) | the Pixel theme's font | SIL Open Font License 1.1 |
 | [Tailscale](https://tailscale.com/) | private network and HTTPS certificate for phone access (installed separately) | BSD-3-Clause client |
 
-Live2D Cubism Core is not included; the Live2D character option needs your own copy under Live2D's terms.
-The built-in characters were generated with [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI) and the Z-Image-Turbo model, then cut and animated by `scripts/make_character.py`.
+The two built-in characters were generated with [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI) and the Z-Image-Turbo model, then cut and animated by `scripts/make_character.py`.
+Lyra's 3D model (`renderer/character/vrm/lyra.vrm`) is a recolour of AvatarSample_B by the [VRoid Project](https://vroid.com/) (pixiv), used under its VRoid Hub conditions, which allow modification, redistribution and commercial use without credit. The conditions stay embedded in the file and apply to it rather than this repository's license.

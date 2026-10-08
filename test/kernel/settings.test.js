@@ -37,6 +37,15 @@ test('a fresh install gets the documented defaults', () => {
   assert.equal(d.tools.web_search, false);
 });
 
+test('the 3D character defaults to the shipped Lyra model and the 2D side is the pixel pack', () => {
+  const d = new Settings(file()).get();
+  assert.equal(d.appearance.source, 'gif');
+  assert.equal(d.appearance.vrmModel, 'builtin:lyra');
+  const shipped = path.join(__dirname, '..', '..', 'renderer', 'character', 'vrm', 'lyra.vrm');
+  const head = Buffer.alloc(4); const fd = fs.openSync(shipped, 'r'); fs.readSync(fd, head, 0, 4, 0); fs.closeSync(fd);
+  assert.equal(head.toString('latin1'), 'glTF', 'builtin:lyra points at a real VRM (binary glTF)');
+});
+
 test('every default section survives a save and reload untouched', () => {
   const f = file();
   const a = new Settings(f);

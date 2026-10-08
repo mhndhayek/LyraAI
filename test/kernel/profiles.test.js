@@ -101,7 +101,7 @@ test('everything that makes her herself changes together on a switch', () => {
   app.settings.set({ persona: { soul: 'the first soul' }, appearance: { theme: 'pixel', gifFolder: 'builtin:fox' }, voice: { voice: 'Rosie' }, goals: { autonomous: true }, model: { temperature: 0.2 } });
   const iris = app.settings.createProfile({ name: 'Iris' });
   app.use(iris.id);
-  app.settings.set({ persona: { soul: 'a different soul' }, appearance: { theme: 'lyra-light', gifFolder: 'builtin:cowboy' }, voice: { voice: 'Luna' }, goals: { autonomous: false }, model: { temperature: 0.9 } });
+  app.settings.set({ persona: { soul: 'a different soul' }, appearance: { theme: 'lyra-light', gifFolder: 'builtin:succubus' }, voice: { voice: 'Luna' }, goals: { autonomous: false }, model: { temperature: 0.9 } });
 
   const hers = app.settings.get();
   assert.equal(hers.persona.name, 'Iris');
@@ -135,4 +135,60 @@ test('deleting a profile leaves the others alone', () => {
   assert.deepEqual(app.store.listChats().map((c) => c.title), ['kept']);
   assert.equal(fs.existsSync(dir), false);
   app.close();
+});
+
+test('a profile on a retired built-in pack falls back to the cat girl', () => {
+  const userData = tmpdir();
+  const paths = layout(userData, path.join(__dirname, '..', '..'));
+  migrate(paths);
+  fs.mkdirSync(path.dirname(paths.settingsFile), { recursive: true });
+  fs.writeFileSync(paths.settingsFile, JSON.stringify({
+    ui: { setupDone: true },
+    profiles: { active: 'cow', list: [
+      { id: 'cow', name: 'Cow', dataDir: '', persona: { name: 'Cow', avatar: 'builtin:cowboy' }, appearance: { source: 'gif', gifFolder: 'builtin:cowboy' } },
+      { id: 'sue', name: 'Sue', dataDir: 'profiles/sue', persona: { name: 'Sue', avatar: 'builtin:succubus' }, appearance: { source: 'gif', gifFolder: 'builtin:succubus' } },
+      { id: 'own', name: 'Own', dataDir: 'profiles/own', persona: { name: 'Own', avatar: '/Users/me/fox.png' }, appearance: { source: 'gif', gifFolder: '/Users/me/packs/foxgirl' } },
+    ] },
+  }));
+  const settings = new Settings(paths.settingsFile);
+  assert.equal(settings.get().appearance.gifFolder, 'builtin:catgirl', 'a retired pack is swapped for the original');
+  assert.equal(settings.get().persona.avatar, 'builtin:catgirl');
+  settings.switchProfile('sue');
+  assert.equal(settings.get().appearance.gifFolder, 'builtin:succubus', 'a pack that still ships is left alone');
+  settings.switchProfile('own');
+  assert.equal(settings.get().appearance.gifFolder, '/Users/me/packs/foxgirl', 'a pack outside the app is left alone');
+  assert.equal(settings.get().persona.avatar, '/Users/me/fox.png');
+  const saved = JSON.parse(fs.readFileSync(paths.settingsFile, 'utf8'));
+  assert.equal(saved.profiles.list[0].appearance.gifFolder, 'builtin:catgirl', 'the fix is written back to disk');
+});
+
+test('the retired live-character sources fall back to the GIF pack, 3D is kept', () => {
+  const userData = tmpdir();
+  const paths = layout(userData, path.join(__dirname, '..', '..'));
+  migrate(paths);
+  fs.mkdirSync(path.dirname(paths.settingsFile), { recursive: true });
+  fs.writeFileSync(paths.settingsFile, JSON.stringify({
+    ui: { setupDone: true },
+    profiles: { active: 'svg', list: [
+      { id: 'svg', name: 'Svg', dataDir: '', appearance: { source: 'svg', gifFolder: 'builtin:succubus' } },
+      { id: 'pet', name: 'Pet', dataDir: 'profiles/pet', appearance: { source: 'pet', petFolder: '/Users/me/.hermes/pets/boba' } },
+      { id: 'l2d', name: 'L2d', dataDir: 'profiles/l2d', appearance: { source: 'live2d', live2dModel: '/Users/me/hiyori.model3.json', last2d: 'live2d' } },
+      { id: 'vrm', name: 'Vrm', dataDir: 'profiles/vrm', appearance: { source: 'vrm', vrmModel: '/Users/me/me.vrm' } },
+    ] },
+  }));
+  const settings = new Settings(paths.settingsFile);
+  assert.equal(settings.get().appearance.source, 'gif', 'built-in SVG becomes the GIF pack');
+  assert.equal(settings.get().appearance.gifFolder, 'builtin:succubus', 'and keeps the pack it had');
+  settings.switchProfile('pet');
+  assert.equal(settings.get().appearance.source, 'gif');
+  assert.equal(settings.get().appearance.gifFolder, 'builtin:catgirl', 'a pet with no pack gets the cat girl');
+  settings.switchProfile('l2d');
+  assert.equal(settings.get().appearance.source, 'gif');
+  settings.switchProfile('vrm');
+  assert.equal(settings.get().appearance.source, 'vrm', '3D stays 3D');
+  assert.equal(settings.get().appearance.vrmModel, '/Users/me/me.vrm');
+  const saved = JSON.parse(fs.readFileSync(paths.settingsFile, 'utf8'));
+  for (const p of saved.profiles.list) {
+    for (const k of ['petFolder', 'live2dModel', 'last2d']) assert.ok(!(k in (p.appearance || {})), `${p.id}: ${k} is gone`);
+  }
 });

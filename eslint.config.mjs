@@ -27,7 +27,7 @@ const browserGlobals = {
   performance: 'readonly', history: 'readonly', EventSource: 'readonly', matchMedia: 'readonly',
   // Provided by the app itself: the preload bridge, vendored libraries, and the
   // globals the renderer scripts publish for one another.
-  lyra: 'readonly', marked: 'readonly', PIXI: 'readonly', Live2DCubismCore: 'readonly',
+  lyra: 'readonly', marked: 'readonly', LyraVRM: 'readonly',
   icon: 'readonly', fillIcons: 'readonly', ICONS: 'readonly', Settings: 'readonly', Setup: 'readonly', LyraCharacter: 'readonly',
 };
 

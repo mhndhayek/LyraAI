@@ -39,7 +39,7 @@ k.emit = (chatId, type, payload) => {
 
 function listThemes() {
   const out = [];
-  const scan = (dir, builtin) => { if (!fs.existsSync(dir)) return; for (const e of fs.readdirSync(dir, { withFileTypes: true })) { if (!e.isDirectory()) continue; const jp = path.join(dir, e.name, 'theme.json'); if (!fs.existsSync(jp)) continue; try { const j = JSON.parse(fs.readFileSync(jp, 'utf8')); out.push({ id: e.name, name: j.name || e.name, scheme: j.scheme || 'dark', character: j.character || 'default', css: pathToFileURL(path.join(dir, e.name, 'theme.css')).href, builtin, vars: j.vars || {} }); } catch {} } };
+  const scan = (dir, builtin) => { if (!fs.existsSync(dir)) return; for (const e of fs.readdirSync(dir, { withFileTypes: true })) { if (!e.isDirectory()) continue; const jp = path.join(dir, e.name, 'theme.json'); if (!fs.existsSync(jp)) continue; try { const j = JSON.parse(fs.readFileSync(jp, 'utf8')); out.push({ id: e.name, name: j.name || e.name, scheme: j.scheme || 'dark', css: pathToFileURL(path.join(dir, e.name, 'theme.css')).href, builtin, vars: j.vars || {} }); } catch {} } };
   scan(path.join(k.paths.organsRenderer, 'themes'), true); scan(k.paths.themes, false);
   return out;
 }
@@ -184,7 +184,7 @@ app.whenReady().then(async () => {
     return QR.toString(text, { type: 'svg', margin: 1, width: p.width || 220, color: { dark: p.dark || '#101114', light: p.light || '#ffffff' } });
   });
   h('themes:list', () => listThemes());
-  h('themes:openFolder', () => { const d = k.paths.themes; fs.mkdirSync(d, { recursive: true }); const readme = path.join(d, 'README.txt'); if (!fs.existsSync(readme)) fs.writeFileSync(readme, 'Drop a folder here with theme.json ({"name":"My theme","scheme":"dark","character":"default"}) and theme.css. Copy a built-in theme from organs/renderer/themes to start.\n'); return eshell.openPath(d); });
+  h('themes:openFolder', () => { const d = k.paths.themes; fs.mkdirSync(d, { recursive: true }); const readme = path.join(d, 'README.txt'); if (!fs.existsSync(readme)) fs.writeFileSync(readme, 'Drop a folder here with theme.json ({"name":"My theme","scheme":"dark"}) and theme.css. Copy a built-in theme from organs/renderer/themes to start.\n'); return eshell.openPath(d); });
   h('app:paths', () => ({ userData: k.paths.userData, workspace: k.root(), themes: k.paths.themes, state: k.paths.state, voiceReady: !!(k.organs && k.organs.voice.available()), version: k.version, safeMode: k.safeMode }));
 
   k.settings.on('change', (data, before, patch) => {

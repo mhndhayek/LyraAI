@@ -4,7 +4,7 @@
   // Menu groups: the assistant herself, her character, what surrounds her, and the app.
   const NAV = [
     // A label can be a function when it depends on what the user named the assistant.
-    [() => S().persona.name, [['profiles', 'Profiles', 'user'], ['model', 'Model', 'cpu'], ['provider', 'Provider', 'server'], ['memory', 'Memory & context', 'database'], ['tools', 'Tools', 'tool'], ['imagegen', 'Image generation', 'image']]],
+    [() => S().persona.name, [['profiles', 'Profiles', 'user'], ['model', 'Model', 'cpu'], ['provider', 'Provider', 'server'], ['memory', 'Memory & context', 'database'], ['tools', 'Tools', 'tool'], ['mcp', 'MCP servers', 'server'], ['imagegen', 'Image generation', 'image']]],
     ['Character', [['persona', 'Persona & chat', 'persona'], ['appearance', 'Appearance', 'sun'], ['voice', 'Voice', 'volume'], ['goals', 'AI goals', 'target']]],
     ['Around it', [['workspace', 'Workspace', 'folder'], ['browser', 'Browser', 'globe'], ['safety', 'Safety', 'shield'], ['notifications', 'Notifications', 'bell'], ['mobile', 'Mobile', 'phone']]],
     ['App', [['extensions', 'Extensions', 'plus'], ['recovery', 'Recovery', 'git'], ['about', 'About', 'info']]],
@@ -40,7 +40,7 @@
       const st = await lyra.kernel.state(); const L = st.links || {}; const s = S();
       const go = (url) => () => lyra.app.openExternal({ url });
       const hero = el(`<div class="card" style="flex-direction:row;align-items:center;gap:18px"><img src="character/catgirl/avatar.png" alt="" style="width:76px;height:76px;image-rendering:pixelated;border-radius:18px;background:var(--hover)"><div><div style="font-size:17px;font-weight:600;color:var(--bright)">Lyra AI Agent</div><div class="d" style="font-size:12px;color:var(--muted);margin-top:3px">A local-first AI agent that lives on your computer, remembers, uses tools, and can grow itself. Your chats never leave this machine.</div></div></div>`);
-      const credits = el(`<div class="d" style="font-size:12px;color:var(--muted);line-height:1.6">Built with Electron, marked, PixiJS, pixi-live2d-display and qrcode. Voice by KittenTTS and faster-whisper. Pixel font Pixelify Sans. The characters were drawn with SwarmUI and Z-Image-Turbo, then animated by hand; the recipe is in the docs (ask ${esc(s.persona.name)} to read the avatars topic).</div>`);
+      const credits = el(`<div class="d" style="font-size:12px;color:var(--muted);line-height:1.6">Built with Electron, marked, three.js, three-vrm and qrcode. Voice by KittenTTS and faster-whisper. Pixel font Pixelify Sans. The characters were drawn with SwarmUI and Z-Image-Turbo, then animated by hand; the recipe is in the docs (ask ${esc(s.persona.name)} to read the avatars topic).</div>`);
       return [
         title('About', 'Version, license, source code and how to support the project.'),
         hero,
@@ -205,33 +205,26 @@
     async appearance() {
       const s = S(); const a = s.appearance; const themes = await lyra.themes.list();
       const grid = el('<div class="theme-grid"></div>');
-      themes.forEach((t) => { const c = el(`<div class="theme-card ${t.id === a.theme ? 'on' : ''}"><div class="sw"><i style="background:${esc(t.vars.bg || '#000')}"></i><i style="background:${esc(t.vars.side || '#222')}"></i><i style="background:${esc(t.vars.accent || '#4fc8b4')}"></i><i style="background:${esc(t.vars.text || '#fff')}"></i></div><div class="n">${esc(t.name)}</div><div class="k">${t.scheme}${t.character === 'pixel' ? ' · pixel character' : ''}${t.builtin ? '' : ' · yours'}</div></div>`); c.addEventListener('click', () => set({ appearance: { theme: t.id } }).then(refresh)); grid.appendChild(c); });
+      themes.forEach((t) => { const c = el(`<div class="theme-card ${t.id === a.theme ? 'on' : ''}"><div class="sw"><i style="background:${esc(t.vars.bg || '#000')}"></i><i style="background:${esc(t.vars.side || '#222')}"></i><i style="background:${esc(t.vars.accent || '#4fc8b4')}"></i><i style="background:${esc(t.vars.text || '#fff')}"></i></div><div class="n">${esc(t.name)}</div><div class="k">${t.scheme}${t.builtin ? '' : ' · yours'}</div></div>`); c.addEventListener('click', () => set({ appearance: { theme: t.id } }).then(refresh)); grid.appendChild(c); });
       const themeBtns = el('<div style="display:flex;gap:8px"></div>'); themeBtns.appendChild(btn('Open themes folder', () => lyra.themes.openFolder(), { ic: 'folder' })); themeBtns.appendChild(btn('Rescan', refresh, { ic: 'refresh' }));
       const srcRows = [];
-      if (a.source === 'pet') {
-        const pets = await lyra.pets.list();
-        const opts = [{ v: '', l: pets.length ? 'Choose a pet…' : 'No Hermes pets found' }, ...pets.map((p) => ({ v: p.path, l: `${p.name} (${p.slug}${p.profile !== 'default' ? ' · ' + p.profile : ''})` }))];
-        if (a.petFolder && !pets.some((p) => p.path === a.petFolder)) opts.push({ v: a.petFolder, l: a.petFolder.split('/').pop() });
-        srcRows.push(row('Hermes pet', 'Installed pets from ~/.hermes (pet.json + spritesheet). Or pick any folder with a petdex spritesheet.', [select(opts, a.petFolder, (v) => set({ appearance: { petFolder: v } }).then(refresh), 300), btn('Folder…', async () => { const f = await lyra.files.pickFolder(); if (f) set({ appearance: { petFolder: f } }).then(refresh); })]));
-        srcRows.push(el(`<div class="d" style="font-size:12px;color:var(--muted);padding:4px 0">States: idle → idle row · thinking → review · writing → running · speaking → waving.</div>`));
-      }
-      if (a.source === 'gif') {
+      if (a.source !== 'vrm') {
         const packs = await lyra.packs.list(); const cur = a.gifFolder.startsWith('builtin:') ? a.gifFolder.slice(8) : null;
         const grid = el('<div class="theme-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>');
         packs.forEach((p) => { const c = el(`<div class="theme-card ${p.id === cur ? 'on' : ''}" style="align-items:center;text-align:center"><img src="character/${esc(p.id)}/avatar.png" alt="" style="width:72px;height:72px;border-radius:50%;image-rendering:pixelated"><div class="n">${esc(p.name)}</div>${p.description ? `<div class="k">${esc(p.description)}</div>` : ''}</div>`); c.addEventListener('click', () => { const patch = { appearance: { gifFolder: `builtin:${p.id}` } }; if (!s.persona.avatar || s.persona.avatar.startsWith('builtin:')) patch.persona = { avatar: `builtin:${p.id}` }; set(patch).then(refresh); }); grid.appendChild(c); });
         srcRows.push(el('<div class="group-label">Built-in characters</div>'), grid);
         srcRows.push(row('Your own GIF pack', `A folder with idle.gif, thinking.gif, writing.gif and speaking.gif; idle-2.gif … idle-6.gif play as idle variations. Ask ${esc(s.persona.name)} to draw a new character (it knows the recipe) ${BETA} — the frames come out clean, but the animation is not always smooth yet.`, [field(cur ? `Built-in: ${cur}` : a.gifFolder, null, { w: 220, mono: true, ro: true }), btn('Choose folder', async () => { const f = await lyra.files.pickFolder(); if (f) set({ appearance: { gifFolder: f } }).then(refresh); })]));
       }
-      if (a.source === 'live2d') srcRows.push(row('Model file', 'A Cubism 4 model (.model3.json). Put live2dcubismcore.min.js from the Live2D site in the same folder.', [field(a.live2dModel, null, { w: 240, mono: true, ro: true }), btn('Choose', async () => { const f = await lyra.files.pickFile({ filters: [{ name: 'Live2D model', extensions: ['json'] }] }); if (f) set({ appearance: { live2dModel: f } }).then(refresh); })]));
+      if (a.source === 'vrm') srcRows.push(row('3D model', 'Lyra’s own VRM model ships with the app. Any .vrm file works: VRoid Studio exports, VRoid Hub and BOOTH downloads (check the model’s licence).', [field(!a.vrmModel || a.vrmModel === 'builtin:lyra' ? 'Lyra (built-in)' : a.vrmModel, null, { w: 240, mono: true, ro: true }), btn('Choose', async () => { const f = await lyra.files.pickFile({ filters: [{ name: 'VRM model', extensions: ['vrm'] }] }); if (f) set({ appearance: { vrmModel: f } }).then(refresh); }), a.vrmModel && a.vrmModel !== 'builtin:lyra' ? btn('Use Lyra', () => set({ appearance: { vrmModel: 'builtin:lyra' } }).then(refresh)) : null].filter(Boolean)));
       const preview = el(`<div style="display:flex;gap:16px;align-items:stretch"><div class="mini-stage" id="mini-stage"></div><div style="display:flex;flex-direction:column;gap:8px;justify-content:center"><div class="d" style="font-size:12px;color:var(--muted);font-weight:500">Preview a state</div></div></div>`);
       const col = preview.lastElementChild; ['idle', 'thinking', 'writing', 'speaking'].forEach((st, i) => { const b = el(`<button class="btn small ${i === 1 ? 'primary' : ''}" style="justify-content:flex-start">${st[0].toUpperCase() + st.slice(1)}</button>`); b.addEventListener('click', () => { col.querySelectorAll('.btn').forEach((x) => x.classList.toggle('primary', x === b)); previewChar && previewChar.setState(st); }); col.appendChild(b); });
-      setTimeout(() => { const t = themes.find((x) => x.id === a.theme); previewChar = new LyraCharacter($('#mini-stage')); previewChar.configure({ source: a.source, gifFolder: a.gifFolder, live2dModel: a.live2dModel, petFolder: a.petFolder, variant: t && t.character === 'pixel' ? 'pixel' : 'default' }); previewChar.setState('thinking'); }, 0);
+      setTimeout(() => { if (previewChar) previewChar.dispose(); previewChar = new LyraCharacter($('#mini-stage')); previewChar.configure({ source: a.source === 'vrm' ? 'vrm' : 'gif', gifFolder: a.gifFolder, vrmModel: a.vrmModel }); previewChar.setState('thinking'); }, 0);
       return [
         title('Appearance', 'Themes restyle the whole app, and the live character shows how Lyra is doing.'),
         group('Theme', [grid, themeBtns]),
         group('Live character', [
           row(`Show ${esc(s.persona.name)} as a live character`, 'Animates while thinking, writing and speaking, with lip sync when it talks.', toggle(a.liveCharacter, (v) => set({ appearance: { liveCharacter: v } }))),
-          row('Source', 'Built-in follows the theme. A Hermes pet is a petdex spritesheet. A GIF pack uses one loop per state. Live2D animates a model you provide.', seg([{ v: 'svg', l: 'Built-in' }, { v: 'pet', l: 'Hermes pet' }, { v: 'gif', l: 'GIF pack' }, { v: 'live2d', l: 'Live2D' }], a.source, (v) => set({ appearance: { source: v } }).then(refresh))),
+          row('Source', 'A GIF pack is the 2D character, one loop per state. 3D shows a VRM model, Lyra’s own by default. The 2D / 3D switch on the live panel flips between them.', seg([{ v: 'gif', l: '2D · GIF pack' }, { v: 'vrm', l: '3D' }], a.source === 'vrm' ? 'vrm' : 'gif', (v) => set({ appearance: { source: v } }).then(refresh))),
           ...srcRows,
           row('Where', 'Floating puts the character over the chat; drag it anywhere.', seg([{ v: 'panel', l: 'Right panel' }, { v: 'floating', l: 'Floating' }, { v: 'header', l: 'Header only' }], a.placement, (v) => set({ appearance: { placement: v } }))),
           row('Transitions', 'Speed of UI and state transitions.', slider(0, 800, 50, a.transitionMs, (v) => `${v} ms`, (v) => set({ appearance: { transitionMs: v } }))),
@@ -521,6 +514,57 @@
       TOOL_ITEMS.forEach(([k, ic, n, d]) => { const it = el(`<div class="item ${t[k] ? 'on' : 'off'}">${icon(ic, 16)}<div class="col"><span class="n">${n}</span><span class="d">${d}</span></div></div>`); it.appendChild(toggle(t[k], (v) => { set({ tools: { [k]: v } }); it.classList.toggle('on', v); it.classList.toggle('off', !v); })); list.appendChild(it); });
       return [title('Tools', `What ${esc(s.persona.name)} can reach. Turn any off and it disappears from ${esc(s.persona.name)}’s side.`), row(`${esc(s.persona.name)} can use tools`, 'Master switch.', toggle(t.enabled, (v) => set({ tools: { enabled: v } }))), list];
     },
+    async mcp() {
+      const s = S(); const servers = (s.mcp && s.mcp.servers) || []; const status = await lyra.mcp.status();
+      const save = (list) => set({ mcp: { servers: list } }).then(refresh);
+      const cards = el('<div style="display:flex;flex-direction:column;gap:10px"></div>');
+      servers.forEach((sv) => {
+        const st = status.find((x) => x.id === sv.id) || { state: 'idle', tools: [] };
+        const dot = st.state === 'ready' ? 'on' : st.state === 'connecting' ? 'busy' : st.state === 'error' ? 'off' : 'busy';
+        const label = st.state === 'ready' ? `Connected${st.server ? ` to ${esc(st.server.name)} ${esc(st.server.version || '')}` : ''} · ${st.tools.length} tool${st.tools.length === 1 ? '' : 's'}` : st.state === 'connecting' ? 'Connecting…' : st.state === 'error' ? `Not connected: ${esc(st.error || 'error')}` : st.state === 'off' ? 'Switched off' : 'Waiting to connect';
+        const c = el(`<div class="card" style="gap:10px"><div style="display:flex;align-items:center;gap:8px"><span style="display:flex;color:var(--muted)">${icon('server', 16)}</span><span class="spacer"></span></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div class="status-line"><span class="dot ${dot}"></span>${label}</div></div>`);
+        const [head, l1, l2] = c.children;
+        const upd = (patch) => save(servers.map((x) => (x.id === sv.id ? { ...x, ...patch } : x)));
+        head.insertBefore(field(sv.name, (v) => v.trim() && upd({ name: v.trim() }), { w: 200 }), head.lastElementChild);
+        head.appendChild(toggle(sv.enabled !== false, (v) => upd({ enabled: v })));
+        const rm = el(`<button class="icon-btn" title="Remove server">${icon('trash', 15)}</button>`); rm.addEventListener('click', () => { if (confirm(`Remove “${sv.name}”?`)) save(servers.filter((x) => x.id !== sv.id)); }); head.appendChild(rm);
+        l1.appendChild(field(sv.url, (v) => v.trim() && upd({ url: v.trim() }), { w: 420, mono: true, ph: 'https://host/mcp' }));
+        l2.appendChild(field(sv.token || '', (v) => upd({ token: v.trim() }), { w: 300, mono: true, type: 'password', ph: 'Bearer token (optional)' }));
+        l2.appendChild(btn('Reconnect', async (e) => { e.target.disabled = true; await lyra.mcp.reconnect(); refresh(); }, { ic: 'refresh' }));
+        if (st.tools.length) {
+          const det = el(`<details><summary style="cursor:pointer;font-size:12px;color:var(--muted)">Tools ${esc(s.persona.name)} gets from it</summary><div class="list" style="margin-top:8px"></div></details>`);
+          st.tools.forEach((t) => det.querySelector('.list').appendChild(el(`<div class="item on">${icon('tool', 16)}<div class="col"><span class="n mono">${esc(t.as)}</span><span class="d">${esc(t.description.split('\n')[0].slice(0, 160))}${t.readOnly ? ' · read-only' : ''}</span></div></div>`)));
+          c.appendChild(det);
+        }
+        cards.appendChild(c);
+      });
+      if (!servers.length) cards.appendChild(el(`<div class="card dashed"><div class="d" style="font-size:12px;color:var(--muted)">No MCP servers yet. Add one below and its tools join ${esc(s.persona.name)}’s.</div></div>`));
+      // Add form: test first, then save.
+      const add = { name: '', url: '', token: '' };
+      const nameF = field('', (v) => { add.name = v.trim(); }, { w: 160, ph: 'Name, e.g. Media hub' });
+      const urlF = field('', (v) => { add.url = v.trim(); }, { w: 340, mono: true, ph: 'https://host/mcp' });
+      const tokF = field('', (v) => { add.token = v.trim(); }, { w: 240, mono: true, type: 'password', ph: 'Bearer token (optional)' });
+      [nameF, urlF, tokF].forEach((f) => f.addEventListener('input', () => { add.name = nameF.value.trim(); add.url = urlF.value.trim(); add.token = tokF.value.trim(); }));
+      const out = el('<div class="d" style="font-size:12px;color:var(--muted)"></div>');
+      const addBtn = btn('Test and add', async (e) => {
+        if (!/^https?:\/\//.test(add.url)) { out.textContent = 'Enter the server URL (http:// or https://).'; return; }
+        e.target.disabled = true; out.textContent = 'Connecting…';
+        const r = await lyra.mcp.test({ name: add.name || 'server', url: add.url, token: add.token });
+        e.target.disabled = false;
+        if (!r.ok) { out.textContent = `Could not connect: ${r.error}`; return; }
+        const name = add.name || (r.server && r.server.name) || 'MCP server';
+        await save(servers.concat([{ id: `mcp-${Date.now().toString(36)}`, name, url: add.url, token: add.token, enabled: true }]));
+        toast(`Connected to ${name}: ${r.tools} tools.`);
+      }, { primary: true, ic: 'plus' });
+      const form = el('<div class="card" style="gap:10px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div></div>');
+      form.children[0].append(nameF, urlF); form.children[1].append(tokF, addBtn); form.appendChild(out);
+      return [
+        title('MCP servers', `Connect ${esc(s.persona.name)} to Model Context Protocol servers over HTTP. Their tools show up next to the built-in ones, named mcp_&lt;server&gt;_&lt;tool&gt;. Read-only tools run under smart approvals; anything else asks first.`),
+        row(`${esc(s.persona.name)} can use MCP tools`, 'Switch every MCP server’s tools off at once without removing the servers.', toggle(s.tools.mcp !== false, (v) => set({ tools: { mcp: v } }))),
+        group('Servers', [cards]),
+        group('Add a server', [form]),
+      ];
+    },
     async goals() {
       const s = S(); const g = s.goals; const list = await lyra.goals.list(); const usage = await lyra.goals.usage();
       const box = el('<div style="display:flex;flex-direction:column;gap:10px"></div>');
@@ -598,8 +642,9 @@
   window.Settings = {
     // An error arrived: update the badge only, never re-render (that could loop).
     noteError() { errorCount += 1; if (open) renderNav(); },
+    current() { return current; },
     open(section) { if (section && sections[section]) current = section; open = true; $('#settings').hidden = false; window.LyraApp.browserVisible(false); render(); },
-    close() { open = false; $('#settings').hidden = true; if (previewChar) { previewChar.clearTimers(); previewChar.destroyLive2d(); previewChar = null; } window.LyraApp.browserVisible(true); $('#input').focus(); },
+    close() { open = false; $('#settings').hidden = true; if (previewChar) { previewChar.dispose(); previewChar = null; } window.LyraApp.browserVisible(true); $('#input').focus(); },
     refresh, isOpen: () => open,
     // Shared with the setup guide, so its pages are built from the same controls and describe the same tools.
     ui: { row, group, toggle, seg, select, field, slider, btn, title },

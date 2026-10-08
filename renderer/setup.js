@@ -84,7 +84,7 @@
     });
     const tgrid = el('<div class="theme-grid"></div>');
     themes.forEach((t) => {
-      const c = el(`<div class="theme-card ${t.id === a.theme ? 'on' : ''}"><div class="sw"><i style="background:${esc(t.vars.bg || '#000')}"></i><i style="background:${esc(t.vars.side || '#222')}"></i><i style="background:${esc(t.vars.accent || '#4fc8b4')}"></i><i style="background:${esc(t.vars.text || '#fff')}"></i></div><div class="n">${esc(t.name)}</div><div class="k">${t.scheme}${t.character === 'pixel' ? ' · pixel character' : ''}</div></div>`);
+      const c = el(`<div class="theme-card ${t.id === a.theme ? 'on' : ''}"><div class="sw"><i style="background:${esc(t.vars.bg || '#000')}"></i><i style="background:${esc(t.vars.side || '#222')}"></i><i style="background:${esc(t.vars.accent || '#4fc8b4')}"></i><i style="background:${esc(t.vars.text || '#fff')}"></i></div><div class="n">${esc(t.name)}</div><div class="k">${t.scheme}</div></div>`);
       c.addEventListener('click', () => set({ appearance: { theme: t.id } }).then(render));
       tgrid.appendChild(c);
     });

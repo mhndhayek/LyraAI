@@ -36,27 +36,38 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
 | 💾 **A memory of her own** | Long-term memory across chats and short-term notes per chat, in SQLite on your disk. Only Lyra writes to it. |
 | 🛠️ **Real tools, with a gate** | Files, shell, code, browser, web search, images, notifications. Risky actions ask first; you decide how much she may do alone. |
 | 🌐 **A browser you can watch** | She browses inside the app. Take over when you want, hand it back when you are done. |
+| 🔌 **MCP servers** | Connect any Model Context Protocol server over HTTP (Bearer token supported) and its tools join hers, behind the same approval gate. Point her at a media hub and she makes images, music, speech and video on your GPU box. |
 | 🎨 **Image generation** | SwarmUI or ComfyUI on your machine or your network. She picks the model and size when you let her. |
 | 🗣️ **Voice** | KittenTTS voices and Whisper transcription run in a local sidecar. Send voice notes, hear replies. |
 | 👥 **More than one of her** | Profiles: each with her own soul, look, voice, animation, goals and model, and her own chats and memory. Switch and the whole app becomes her. |
-| 🎭 **A face** | Eight built-in pixel-art characters that blink, think, type and talk, or bring your own GIF pack or Live2D model. |
+| 🎭 **A face** | Two built-in pixel-art characters that blink, think, type and talk, and a 3D Lyra (VRM) one click away on the 2D / 3D switch. Or bring your own GIF pack or `.vrm` avatar. |
 | 🎯 **Goals** | After a chat, she reflects and writes goals for herself. Let her work on them in her own time, or archive them. |
 | 📱 **On your phone** *(beta)* | Scan a QR code and Safari opens the same chats over HTTPS on your Tailscale network. No account, no cloud. |
 | 🧬 **Self-extending** | Themes, UI changes, new tools and panels, applied live with git checkpoints and automatic rollback. |
-| 🧩 **Themes** | Not just colors: a theme can change fonts, shapes and the character. The Pixel theme turns the whole app into pixel art. |
+| 🧩 **Themes** | Not just colors: a theme can change fonts and shapes. The Pixel theme turns the whole app into pixel art. |
 | 🪵 **Honest logs** | Every failure is logged. Lyra can read her own log, so you can ask her why something broke. |
 
 ## Meet the cast
 
 <p align="center">
-  <img src="docs/media/cast.png" width="900" alt="The eight built-in characters">
+  <img src="docs/media/cast.png" width="420" alt="The two built-in characters: Lyra the cat girl and the succubus">
 </p>
 
 <p align="center">
-  Lyra &nbsp;·&nbsp; Fox girl &nbsp;·&nbsp; Cowboy &nbsp;·&nbsp; Agent &nbsp;·&nbsp; Butterbot &nbsp;·&nbsp; Succubus &nbsp;·&nbsp; Dapper &nbsp;·&nbsp; Silver
+  Lyra, the original &nbsp;·&nbsp; Succubus
 </p>
 
-Every character has idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you — that part is **beta**: the frames come out clean, but the animation is not always smooth yet.
+The cast is down to two: Lyra, the original pixel-art cat girl, and the succubus. The other six packs (fox girl, cowboy, agent, butterbot, dapper, silver) were retired; a profile that used one of them switches back to Lyra on its own when it updates. Your own GIF packs and Live2D models are not touched.
+
+### Lyra in 3D
+
+<p align="center">
+  <img src="docs/media/lyra-vrm.png" width="300" alt="Lyra's 3D model: pink hair fading to blue, gold eyes, star ribbon bows">
+</p>
+
+Lyra has a 3D body: [`lyra.vrm`](renderer/character/vrm/), a VRM avatar with pink-to-blue hair, gold eyes, a full rig, hair physics and lip-sync expressions. Flip the **2D / 3D** switch on the live panel and she appears in 3D: she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice. *Appearance › Live character › 3D* also takes any other `.vrm` file (VRoid Studio exports, VRoid Hub, BOOTH; check the model's licence). She is a recolour of the VRoid Project's AvatarSample_B, whose licence allows modification and redistribution, so she ships with the app and anyone may use her. Details, credit and the scripts that made her are in [renderer/character/vrm/README.md](renderer/character/vrm/README.md).
+
+The two pixel-art characters have idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you — that part is **beta**: the frames come out clean, but the animation is not always smooth yet.
 
 ## Quick start
 

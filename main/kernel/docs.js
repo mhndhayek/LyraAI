@@ -27,6 +27,8 @@ class Docs {
       // think it is editing the app for everyone.
       `You are the profile "${profiles.list.find((p) => p.id === profiles.active).name}", one of ${profiles.list.length}. Persona, appearance, voice, goals, model and providers belong to this profile; everything else is shared by all of them. Only the user adds, switches or removes profiles, and the other profiles' settings are not yours to read.`, ''];
     const curFlat = Object.fromEntries(flatten(cur));
+    // MCP entries carry tokens: the agent sees which servers exist, never the token.
+    if (Array.isArray(curFlat['mcp.servers'])) curFlat['mcp.servers'] = curFlat['mcp.servers'].map((x) => ({ name: x.name, url: x.url, enabled: x.enabled !== false, token: x.token ? '[hidden]' : '' }));
     for (const [p, def] of flatten(DEFAULTS)) { const lock = LOCKED.find((l) => p === l || p.startsWith(l + '.')); lines.push(`- ${p} = ${JSON.stringify(curFlat[p])} (default ${JSON.stringify(def)})${lock ? ` LOCKED: ${REASONS[lock]}` : p.startsWith('model.') ? ' (queued until idle)' : ''}`); }
     // Locked settings that have no default to list, so the agent still learns
     // they exist and that they are refused. Their values are deliberately not
@@ -37,8 +39,8 @@ class Docs {
   }
   toolsDoc() {
     const o = this.k.organs; if (!o) return 'Organs not loaded.';
-    const s = this.k.settings.get(); const all = o.tools.enabledTools(s, this.k.extensions.tools());
-    return ['# Tools available to you right now', '', ...all.map((t) => `## ${t.name}${t.extension ? ` (extension ${t.extension})` : ''}\n${t.description}\nParameters: ${JSON.stringify(t.parameters)}\n`)].join('\n');
+    const s = this.k.settings.get(); const all = o.tools.enabledTools(s, this.k.extensions.tools().concat(o.mcp ? o.mcp.tools() : []));
+    return ['# Tools available to you right now', '', ...all.map((t) => `## ${t.name}${t.extension ? ` (extension ${t.extension})` : ''}${t.mcpServer ? ` (MCP server ${t.mcpServer})` : ''}\n${t.description}\nParameters: ${JSON.stringify(t.parameters)}\n`)].join('\n');
   }
   uiDoc() {
     const dir = this.k.paths.organsRenderer; const files = [];

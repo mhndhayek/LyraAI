@@ -55,6 +55,17 @@ Only Lyra writes to memory (the `remember` tool). Long-term entries are shared a
 - Risky actions (shell, code, editing the app) are refused from a phone session unless you allow them there. Approvals can still be answered from the phone.
 - Chats, memory and files never leave the Mac; the phone is a window onto it. The Mac has to be awake.
 
+## MCP servers
+
+*Settings › MCP servers* connects Lyra to remote [Model Context Protocol](https://modelcontextprotocol.io) servers over Streamable HTTP. Enter a name, the URL (for example `https://lucix.tail141c99.ts.net/hub/mcp`) and, when the server wants one, a Bearer token, then press **Test and add**: Lyra connects, lists the tools and saves the server only when that works.
+
+- The tools join hers as `mcp_<server>_<tool>`, so two servers never clash. The card lists them, and *Tools* shows them too.
+- They run behind the same gate as everything else: tools the server marks read-only run under smart approvals, the rest ask first.
+- Images and audio a tool returns are saved under the media folder, and the path goes to the chat. Long jobs return a job id; she polls the server's status tool until the job is done.
+- A server that restarts is picked up again: an expired session is re-initialised once, and **Reconnect** forces a fresh one.
+- Only you add, edit or remove servers. The agent cannot change `mcp` through `configure_app`, and its view of the settings shows `[hidden]` instead of the token. `settings.json` is written owner-only (600).
+- *Lyra can use MCP tools* switches every server's tools off at once without forgetting the servers.
+
 ## Logs
 
 Everything that fails leaves a line: `Settings › Recovery › Logs` shows errors, warnings and events from the kernel, the agent, the voice engine, model calls, tools, the browser, extensions and the window itself, filterable by level, source and text, with a copy button. Files live in `logs/` under the app data folder as one JSONL file per day, kept for a week, with API keys redacted. Lyra reads the same log with its `read_logs` tool, so you can ask it why something broke, including in a later session.
@@ -68,7 +79,7 @@ Three modes under *Safety*: ask, auto-approve, no restrictions. With *Smart appr
 A theme is a folder with `theme.json` and `theme.css`. The base UI is built on CSS variables and stable class names, so a theme can change fonts, shapes, borders, animation and the character, not just colours. Built-in: Lyra Dark, Lyra Light, and Pixel (bundled Pixelify Sans font, hard edges, pixel-art character). Your own go in `~/Library/Application Support/Lyra/themes/<id>/` (*Settings › Appearance › Open themes folder*); copy a built-in one from `renderer/themes/` to start.
 
 ```json
-{ "name": "My theme", "scheme": "dark", "character": "default", "vars": { "bg": "#111", "side": "#181818", "accent": "#ff8800", "text": "#eee" } }
+{ "name": "My theme", "scheme": "dark", "vars": { "bg": "#111", "side": "#181818", "accent": "#ff8800", "text": "#eee" } }
 ```
 
 `character` may be `default` or `pixel`; `vars` only feeds the swatches in the theme picker.
@@ -77,9 +88,9 @@ A theme is a folder with `theme.json` and `theme.css`. The base UI is built on C
 
 Text to speech uses KittenTTS through the Python sidecar in `voice/`. In the packaged app, press **Install voice engine** under *Settings › Voice* once: it builds the environment under Lyra's data folder (needs uv or python3, and `brew install espeak-ng`). Without it, replies fall back to the macOS voice, which ignores the voice choice, and the Voice page says so. Emoji, code blocks and markdown marks are never read aloud. Replies longer than about 450 characters are split into sentences and joined, because KittenTTS synthesises one pass at a time. Text to speech otherwise (friendly names such as Rosie map to KittenTTS voices in `voice/server.py`); if the sidecar is missing, macOS `say` is used. *Your own* points at any OpenAI-compatible `/v1/audio/speech` endpoint. Speech to text uses faster-whisper in the same sidecar.
 
-## Live2D
+## Live character: 2D or 3D
 
-Choose a `.model3.json` under *Appearance › Live character › Live2D* and put `live2dcubismcore.min.js` (from the Live2D website, it is not redistributable) in the same folder. Motion groups named Idle/Think/Tap/Speak are used for the states; lip sync drives `ParamMouthOpenY`. GIF packs are simpler: a folder with `idle.gif`, `thinking.gif`, `writing.gif`, `speaking.gif`.
+The live panel shows Lyra as a 2D GIF pack or a 3D VRM model; the **2D / 3D** switch at the top of the panel flips between them. Under *Appearance › Live character* pick the GIF pack (the cat girl, the succubus, or your own folder with idle/thinking/writing/speaking.gif) and the 3D model (Lyra's own, or any `.vrm` file such as a VRoid Studio export). In 3D she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice.
 
 ## AI goals
 

@@ -36,6 +36,11 @@ function migrate(p) {
   const oldThemes = path.join(p.userData, 'themes');
   if (fs.existsSync(oldThemes) && !fs.existsSync(p.themes)) fs.renameSync(oldThemes, p.themes);
   for (const d of [p.extensions, p.themes, p.media]) fs.mkdirSync(d, { recursive: true });
+  // The organs are CommonJS. Node decides that from the nearest package.json up the
+  // tree, so a stray {"type":"module"} in a parent folder (one in the home folder is
+  // enough) would make every organ fail with "require is not defined". Pin it here.
+  const pin = path.join(p.state, 'package.json');
+  try { if (!fs.existsSync(pin) || JSON.parse(fs.readFileSync(pin, 'utf8')).type !== 'commonjs') fs.writeFileSync(pin, '{ "type": "commonjs" }\n'); } catch { fs.writeFileSync(pin, '{ "type": "commonjs" }\n'); }
 }
 
 function copyDir(src, dst, { skip = [] } = {}) {
