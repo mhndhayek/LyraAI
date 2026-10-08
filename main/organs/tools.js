@@ -329,10 +329,12 @@ const TOOLS = [
 
 const byName = Object.fromEntries(TOOLS.map((t) => [t.name, t]));
 
+// extra: tools from extensions (key 'ext') and from MCP servers (key 'mcp'); each
+// family has its own switch under settings.tools.
 function enabledTools(settings, extra = []) {
   const t = settings.tools;
   if (!t.enabled) return [];
-  const ext = t.ext === false ? [] : extra;
+  const ext = extra.filter((x) => (x.key === 'mcp' ? t.mcp !== false : t.ext !== false));
   return ext.concat(TOOLS.filter((x) => t[x.key] !== false && !(x.key === 'image_gen' && !settings.imagegen.enabled) && !(x.key === 'browser' && !settings.browser.enabled) && !(x.key === 'web_search' && !settings.browser.enabled) && !(x.name === 'run_code' && !settings.workspace.codeExecution)));
 }
 function schemaFor(tools) { return tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })); }

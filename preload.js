@@ -24,5 +24,6 @@ contextBridge.exposeInMainWorld('lyra', {
   extensions: { list: call('ext:list'), set: call('ext:set'), approve: call('ext:approve'), call: call('ext:call'), panels: call('ext:panels'), openFolder: call('ext:openFolder') },
   profiles: { list: call('profiles:list'), create: call('profiles:create'), use: call('profiles:use'), rename: call('profiles:rename'), delete: call('profiles:delete') },
   tools: { list: call('tools:list') },
+  mcp: { status: call('mcp:status'), reconnect: call('mcp:reconnect'), test: call('mcp:test') },
   onEvent: (cb) => { const h = (_, e) => cb(e); ipcRenderer.on('lyra:event', h); return () => ipcRenderer.removeListener('lyra:event', h); },
 });

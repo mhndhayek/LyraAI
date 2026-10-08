@@ -36,6 +36,7 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
 | 💾 **A memory of her own** | Long-term memory across chats and short-term notes per chat, in SQLite on your disk. Only Lyra writes to it. |
 | 🛠️ **Real tools, with a gate** | Files, shell, code, browser, web search, images, notifications. Risky actions ask first; you decide how much she may do alone. |
 | 🌐 **A browser you can watch** | She browses inside the app. Take over when you want, hand it back when you are done. |
+| 🔌 **MCP servers** | Connect any Model Context Protocol server over HTTP (Bearer token supported) and its tools join hers, behind the same approval gate. Point her at a media hub and she makes images, music, speech and video on your GPU box. |
 | 🎨 **Image generation** | SwarmUI or ComfyUI on your machine or your network. She picks the model and size when you let her. |
 | 🗣️ **Voice** | KittenTTS voices and Whisper transcription run in a local sidecar. Send voice notes, hear replies. |
 | 👥 **More than one of her** | Profiles: each with her own soul, look, voice, animation, goals and model, and her own chats and memory. Switch and the whole app becomes her. |
@@ -43,7 +44,7 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
 | 🎯 **Goals** | After a chat, she reflects and writes goals for herself. Let her work on them in her own time, or archive them. |
 | 📱 **On your phone** *(beta)* | Scan a QR code and Safari opens the same chats over HTTPS on your Tailscale network. No account, no cloud. |
 | 🧬 **Self-extending** | Themes, UI changes, new tools and panels, applied live with git checkpoints and automatic rollback. |
-| 🧩 **Themes** | Not just colors: a theme can change fonts, shapes and the character. The Pixel theme turns the whole app into pixel art. |
+| 🧩 **Themes** | Not just colors: a theme can change fonts and shapes. The Pixel theme turns the whole app into pixel art. |
 | 🪵 **Honest logs** | Every failure is logged. Lyra can read her own log, so you can ask her why something broke. |
 
 ## Meet the cast

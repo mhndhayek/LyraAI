@@ -87,10 +87,12 @@ class Agent {
       }
       parts.push(`Memory rules: only you write to memory. Use the remember tool with scope "long" for durable facts about the user, their machines, network, preferences and projects, and scope "short" for working notes in this chat. Do not ask permission to remember ordinary things.`);
     }
-    const tools = enabledTools(s);
+    const tools = enabledTools(s, this.extraTools());
     if (tools.length) {
       const bmode = s.browser.mode === 'headless' ? 'headless (the user only sees a status line in chat)' : 'visible inside the app (the user watches and can take over)';
       parts.push(`You have tools. Use them instead of guessing: read files before editing, run commands to verify, open pages to check facts. Some actions need the user's approval; if one is denied, respect it and say so. Your browser runs ${bmode}. Keep files you create inside the workspace.`);
+      const mcpNames = [...new Set(tools.filter((t) => t.key === 'mcp').map((t) => t.mcpServer))];
+      if (mcpNames.length) parts.push(`Tools named mcp_<server>_<tool> come from MCP servers the user connected (${mcpNames.join(', ')}). Use them for what they offer, such as generating images, music, speech or video on the user's media hub. A tool that returns a job_id runs in the background: poll its jobs_status tool until it is done.`);
     }
     if (s.tools.app && tools.some((t) => t.key === 'app')) {
       const k = this.ctx.kernel; const st = k.appState();
@@ -132,7 +134,7 @@ class Agent {
     let model;
     try { model = await this.pickModel(false); }
     catch (e) { model = { id: (s.model.chat && s.model.chat.model) || 'no model', label: 'no model reachable', providerName: '', context: s.model.contextMode === 'manual' ? s.model.contextOverride : 8192, error: e.message }; }
-    const tools = schemaFor(enabledTools(s, this.ctx.kernel.extensions.tools()));
+    const tools = schemaFor(enabledTools(s, this.extraTools()));
     const { messages: hist } = this.history(chatId);
     const parts = {
       system: estimateTokens(this.systemPrompt(chatId, model)),
@@ -158,6 +160,8 @@ class Agent {
     return text || '(no description)';
   }
 
+  // Tools from extensions and from connected MCP servers.
+  extraTools() { const k = this.ctx.kernel; return k.extensions.tools().concat(this.ctx.mcp ? this.ctx.mcp.tools() : []); }
   async run({ chatId, text = '', images = [], audio = null, internal = false, skipPersist = false, origin = 'desktop' }) {
     const { settings, store, emit, approvals, browser, voice, notify } = this.ctx;
     const s = settings.get();
@@ -196,7 +200,7 @@ class Agent {
       const system = this.systemPrompt(chatId, model);
       let { chat: c, messages: hist } = this.history(chatId);
       let summary = c.summary || null;
-      let toolDefs = enabledTools(s, this.ctx.kernel.extensions.tools()); let toolSchema = schemaFor(toolDefs);
+      let toolDefs = enabledTools(s, this.extraTools()); let toolSchema = schemaFor(toolDefs);
       const fixed = estimateTokens(system) + estimateTokens(JSON.stringify(toolSchema));
       if (s.model.compression && s.memory.autoCompression) {
         const r = await maybeCompress({ history: hist, previousSummary: summary, fixedTokens: fixed, contextLength: model.context, settings: s, llm, model: model.id, endpoint: model.endpoint, apiKey: model.apiKey, log: (t) => emit(chatId, 'notice', { text: t }) }).catch((e) => { emit(chatId, 'notice', { text: `Compression skipped: ${e.message}` }); return null; });
@@ -221,7 +225,7 @@ class Agent {
         if (run.stopped) break;
         drainQueue();
         emit(chatId, 'progress', { id: asst.id, step: steps, max: maxSteps });
-        toolDefs = enabledTools(s, this.ctx.kernel.extensions.tools()); toolSchema = schemaFor(toolDefs);
+        toolDefs = enabledTools(s, this.extraTools()); toolSchema = schemaFor(toolDefs);
         const res = await llm.chatStream({
           endpoint: model.endpoint, apiKey: model.apiKey, model: model.id, messages, tools: model.tools === false ? undefined : toolSchema, temperature: s.model.temperature, reasoning: s.model.reasoning, signal: run.abort.signal,
           onDelta: (d) => { if (firstToken) { firstToken = false; this.setState('writing'); } content.text += d; emit(chatId, 'delta', { id: asst.id, text: d }); },
@@ -238,7 +242,7 @@ class Agent {
         for (const tc of res.toolCalls) {
           if (run.stopped) break;
           let args = {}; try { args = JSON.parse(tc.function.arguments || '{}'); } catch { args = {}; }
-          const liveDefs = enabledTools(s, this.ctx.kernel.extensions.tools()); const tool = liveDefs.find((t) => t.name === tc.function.name);
+          const liveDefs = enabledTools(s, this.extraTools()); const tool = liveDefs.find((t) => t.name === tc.function.name);
           const step = { id: id(), type: 'tool', name: tc.function.name, icon: tool ? tool.icon : 'tool', summary: tool ? safe(() => tool.summary(args, toolCtx), tc.function.name) : `Unknown tool ${tc.function.name}`, status: 'running', args: clampText(JSON.stringify(args), 600) };
           content.steps.push(step); emit(chatId, 'step', { id: asst.id, step });
           let result;

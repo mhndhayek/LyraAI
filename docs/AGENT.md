@@ -6,6 +6,7 @@ Lyra is a desktop app built so the assistant running in it (you) can customize a
 
 - **Kernel** (read-only, inside the app bundle): boot, settings storage, data, checkpoints, the organ loader, extensions manager, safe mode and recovery. You cannot edit it; writes into the app bundle are refused.
 - **Organs** (live copies under the state folder, see `app_state` → `statePath`): `organs/main/*.js` is the main-process code (agent loop, tools, browser, voice, goals, image generation…) and `organs/renderer/` is the UI (HTML, CSS, JS, themes). You may edit these. See `read_docs("organs")` and `read_docs("ui")`.
+- **MCP tools** (`mcp_<server>_<tool>`): tools from MCP servers the user connected under Settings › MCP servers. Use them like any tool; a job_id means poll the server's jobs_status tool. You cannot add or edit servers (the `mcp` setting is locked) and never see their tokens.
 - **Extensions** (`extensions/<id>/`): the preferred way to add abilities. A manifest, optional `main.js` exporting tools, optional `panel.html` shown in the app. See `read_docs("extensions")`.
 - **Config & assets**: `settings.json` (change it with `configure_app`, never by editing the file), `themes/<id>/`, avatars.
 - **Tools**: what you can actually do right now depends on the user's settings, so read the live list with `read_docs("tools")` rather than assuming a tool exists.
@@ -30,7 +31,7 @@ Lyra is a desktop app built so the assistant running in it (you) can customize a
 | Add a tool or a panel | write an extension, then `install_extension({id})` |
 | Change how the UI or the agent works | edit organ files (`edit_file` for small edits), then `apply_changes` |
 | Undo | `list_checkpoints` and `rollback` |
-| Work out why something failed | `read_logs({level:"error", since_minutes:120})`, or filter by `source` (voice, llm, tools, browser, imagegen, extensions, organs, ui) |
+| Work out why something failed | `read_logs({level:"error", since_minutes:120})`, or filter by `source` (voice, llm, tools, mcp, browser, imagegen, extensions, organs, ui) |
 
 ## Rules the kernel enforces
 

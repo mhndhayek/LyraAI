@@ -15,6 +15,7 @@ const { makeNotifier } = require('./notify');
 const llm = require('./llm');
 const imagegen = require('./imagegen');
 const tools = require('./tools');
+const { McpManager } = require('./mcp');
 const { id } = require('./util');
 
 function saveDataUrl(dir, name, dataUrl) {
@@ -36,7 +37,9 @@ function create(k) {
   const voice = new Voice({ settings, appPath: k.paths.appPath, userData: k.paths.userData, emit, logs: k.logs });
   // Warm the voice model shortly after start so the first spoken reply is not slow.
   const warmTimer = setTimeout(() => { if (settings.get().voice.readAloud && voice.available()) voice.warm(); }, 6000);
-  const ctx = { settings, get store() { return k.store; }, approvals, browser, voice, notify: notifier.notify, emit, root, runShell, mediaDir: k.paths.media, kernel: k };
+  const mcp = new McpManager({ settings, emit, mediaDir: k.paths.media, log: (level, msg) => { try { k.logs[level === 'warn' ? 'warn' : 'info']('mcp', msg); } catch {} } });
+  const mcpTimer = setTimeout(() => { mcp.sync().catch(() => {}); }, 1500);
+  const ctx = { settings, get store() { return k.store; }, approvals, browser, voice, notify: notifier.notify, emit, root, runShell, mediaDir: k.paths.media, kernel: k, mcp };
   const agent = new Agent(ctx);
   const goals = new Goals({ settings, get store() { return k.store; }, agent, emit, notify: notifier.notify });
   goals.start();
@@ -45,6 +48,7 @@ function create(k) {
 
   const onSettings = (data, before, patch) => {
     if (patch.workspace && patch.workspace.folder && before && patch.workspace.folder !== before.workspace.folder) { shellInst.kill(); shellInst = new PersistentShell(root()); agent.repoCache.at = 0; }
+    if (patch.mcp) mcp.sync().catch(() => {});
   };
   settings.on('change', onSettings);
 
@@ -116,12 +120,16 @@ function create(k) {
   h('app:notifyStatus', () => { const { Notification } = require('electron'); return { supported: Notification.isSupported(), blocked: notifier.state.blocked, lastError: notifier.state.lastError }; });
   h('app:openNotificationSettings', () => eshell.openExternal('x-apple.systempreferences:com.apple.Notifications-Settings.extension'));
   h('app:openExternal', (p) => eshell.openExternal(p.url));
-  h('tools:list', () => { const s = settings.get(); const all = tools.enabledTools(s, k.extensions.tools()); return tools.TOOLS.map((t) => ({ name: t.name, key: t.key, description: t.description, enabled: all.includes(t) })).concat(k.extensions.tools().map((t) => ({ name: t.name, key: 'ext', extension: t.extension, description: t.description, enabled: all.includes(t) }))); });
+  h('mcp:status', () => mcp.status());
+  h('mcp:reconnect', () => mcp.sync({ force: true }));
+  h('mcp:test', (p) => mcp.test(p || {}));
+  h('tools:list', () => { const s = settings.get(); const all = tools.enabledTools(s, k.extensions.tools().concat(mcp.tools())); return tools.TOOLS.map((t) => ({ name: t.name, key: t.key, description: t.description, enabled: all.includes(t) })).concat(k.extensions.tools().map((t) => ({ name: t.name, key: 'ext', extension: t.extension, description: t.description, enabled: all.includes(t) }))).concat(mcp.tools().map((t) => ({ name: t.name, key: 'mcp', server: t.mcpServer, description: t.description, enabled: all.includes(t) }))); });
 
   return {
-    agent, browser, voice, goals, approvals, notifier, tools, llm, runShell, companion,
+    agent, browser, voice, goals, approvals, notifier, tools, llm, runShell, companion, mcp,
     dispose() {
-      clearTimeout(warmTimer); clearTimeout(mobileTimer);
+      clearTimeout(warmTimer); clearTimeout(mobileTimer); clearTimeout(mcpTimer);
+      try { mcp.dispose(); } catch {}
       try { companion.stop(); } catch {}
       settings.off('change', onSettings);
       try { goals.stop(); } catch {}

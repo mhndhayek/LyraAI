@@ -12,6 +12,7 @@
     "companion.js": "The phone companion: an HTTPS server bound to the tailnet that serves the mobile web app and its chat API, with paired device tokens.",
     "compression.js": "Context estimation and summarisation.",
     "imagegen.js": "SwarmUI / ComfyUI image generation.",
+    "mcp.js": "MCP client: remote servers over Streamable HTTP (Bearer token), their tools offered to the agent behind the approval gate.",
     "approvals.js": "Approval gate with modes, smart approvals and timeouts.",
     "notify.js": "Desktop notifications with the AppleScript fallback.",
     "shell.js": "Persistent zsh and one-shot runner.",

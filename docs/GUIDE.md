@@ -55,6 +55,17 @@ Only Lyra writes to memory (the `remember` tool). Long-term entries are shared a
 - Risky actions (shell, code, editing the app) are refused from a phone session unless you allow them there. Approvals can still be answered from the phone.
 - Chats, memory and files never leave the Mac; the phone is a window onto it. The Mac has to be awake.
 
+## MCP servers
+
+*Settings › MCP servers* connects Lyra to remote [Model Context Protocol](https://modelcontextprotocol.io) servers over Streamable HTTP. Enter a name, the URL (for example `https://lucix.tail141c99.ts.net/hub/mcp`) and, when the server wants one, a Bearer token, then press **Test and add**: Lyra connects, lists the tools and saves the server only when that works.
+
+- The tools join hers as `mcp_<server>_<tool>`, so two servers never clash. The card lists them, and *Tools* shows them too.
+- They run behind the same gate as everything else: tools the server marks read-only run under smart approvals, the rest ask first.
+- Images and audio a tool returns are saved under the media folder, and the path goes to the chat. Long jobs return a job id; she polls the server's status tool until the job is done.
+- A server that restarts is picked up again: an expired session is re-initialised once, and **Reconnect** forces a fresh one.
+- Only you add, edit or remove servers. The agent cannot change `mcp` through `configure_app`, and its view of the settings shows `[hidden]` instead of the token. `settings.json` is written owner-only (600).
+- *Lyra can use MCP tools* switches every server's tools off at once without forgetting the servers.
+
 ## Logs
 
 Everything that fails leaves a line: `Settings › Recovery › Logs` shows errors, warnings and events from the kernel, the agent, the voice engine, model calls, tools, the browser, extensions and the window itself, filterable by level, source and text, with a copy button. Files live in `logs/` under the app data folder as one JSONL file per day, kept for a week, with API keys redacted. Lyra reads the same log with its `read_logs` tool, so you can ask it why something broke, including in a later session.

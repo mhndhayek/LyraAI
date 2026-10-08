@@ -21,8 +21,10 @@ const DEFAULTS = {
   memory: { longTerm: true, memoryBudget: 8000, profileBudget: 2000, autoCompression: true, threshold: 0.8, target: 0.5 },
   voice: { engine: 'kitten', kittenModel: 'KittenML/kitten-tts-nano-0.1', voice: 'Rosie', customEndpoint: 'http://localhost:8880/v1', customModel: 'tts-1', customVoice: 'alloy', readAloud: true, stt: true, showTranscript: true, sttModel: 'small', sidecarPython: '' },
   notifications: { desktop: true, approvals: true, longTask: true, goals: true, sound: true },
-  tools: { enabled: true, read_file: true, write_file: true, shell: true, run_code: true, browser: true, web_search: false, vision: true, memory_write: true, repos: true, notify: true, image_gen: true, http: true, app: true, ext: true },
+  tools: { enabled: true, read_file: true, write_file: true, shell: true, run_code: true, browser: true, web_search: false, vision: true, memory_write: true, repos: true, notify: true, image_gen: true, http: true, app: true, ext: true, mcp: true },
   goals: { autonomous: false, dailyMinutes: 30 },
+  // Remote MCP servers ({ id, name, url, token, enabled }); their tools join the agent's.
+  mcp: { servers: [] },
   chat: { followUp: 'steer' },
   mobile: { enabled: false, port: 8443, allowHighRiskTools: false, autoStart: true },
   kernel: { checkpoints: true, dailyWrites: 60, autoApply: true, uiReadyTimeoutMs: 10000 },
@@ -204,7 +206,9 @@ class Settings extends EventEmitter {
     // shared copies out keeps one answer in the file for who she is.
     const out = { ...this.data };
     for (const k of PROFILE_SECTIONS) delete out[k];
-    fs.writeFileSync(this.file, JSON.stringify(out, null, 2));
+    // Owner-only: the file holds provider API keys and MCP tokens.
+    fs.writeFileSync(this.file, JSON.stringify(out, null, 2), { mode: 0o600 });
+    try { fs.chmodSync(this.file, 0o600); } catch {}
   }
   get() { return this.view; }
   set(patch) {

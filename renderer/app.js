@@ -251,6 +251,7 @@
       case 'kernel': toast(e.text, e.level === 'warn' ? 'error' : ''); if (e.chatId && e.chatId === state.chatId) { const m = currentAssistantEl(); if (m) m.querySelector('.steps').appendChild(el(`<div class="step ${e.level === 'warn' ? 'error' : 'done'}">${icon('cpu', 14)}<span class="txt">${esc(e.text)}</span></div>`)); } if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
       case 'log': if (e.entry && e.entry.level === 'error') { state.lastLogError = e.entry; if (window.Settings) Settings.noteError(); } break;
       case 'mobile': if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
+      case 'mcp': if (window.Settings && Settings.isOpen() && Settings.current && Settings.current() === 'mcp') Settings.refresh(); break;
       case 'extensions': renderPanels(); if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
       case 'debug': if (e.open && e.open.startsWith('settings')) Settings.open(e.open.split(':')[1] || 'model'); if (e.open && e.open.startsWith('setup')) Setup.open(Number(e.open.split(':')[1]) || 0); if (e.scroll) setTimeout(() => { const c = $('#settings-content'); if (c) c.scrollTop = e.scroll === 'bottom' ? c.scrollHeight : Number(e.scroll) || 0; }, 900); if (e.send) { input.value = e.send; send(); } if (e.browser) showBrowserPanel(true); break;
     }
