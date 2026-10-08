@@ -17,3 +17,4 @@ Lyra AI Agent stands on these projects. Each keeps its own license.
 
 Live2D Cubism Core is not included; the Live2D character option needs your own copy under Live2D's terms.
 The two built-in characters were generated with [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI) and the Z-Image-Turbo model, then cut and animated by `scripts/make_character.py`.
+Lyra's 3D model (`assets/vrm/lyra.vrm`) is a recolour of AvatarSample_B by the [VRoid Project](https://vroid.com/) (pixiv), used under its VRoid Hub conditions, which allow modification, redistribution and commercial use without credit. The conditions stay embedded in the file and apply to it rather than this repository's license.
