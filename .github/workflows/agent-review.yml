@@ -1,0 +1,43 @@
+# Puts every pull request in exactly one agent's review queue: a branch named
+# claudia/... waits for Lucima, lucima/... for Claudia, anything else for
+# Claudia. Each push re-queues it, because the old review was of an older commit.
+# The agents poll their queue (scripts/agent-review.js queue); see
+# docs/agent-review.md.
+name: Agent review routing
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+concurrency:
+  group: agent-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  route:
+    name: Route to reviewer
+    runs-on: ubuntu-latest
+    # A fork's token cannot label; those are reviewed by a person.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Create the labels if this repo does not have them yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for l in needs-review:claudia needs-review:lucima reviewed:claudia reviewed:lucima changes-requested; do
+            gh label create "$l" --color ededed --force >/dev/null
+          done
+      - name: Label for the reviewer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: node scripts/agent-review.js route --pr "$PR" --branch "$BRANCH"
