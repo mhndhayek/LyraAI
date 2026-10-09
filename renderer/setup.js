@@ -12,12 +12,13 @@
   const toast = (t, k) => window.LyraApp.toast(t, k);
   // The controls are the settings page's own, so the two look and behave alike.
   const ui = () => window.Settings.ui;
-  const RUNTIMES = [
-    { v: 'lmstudio', l: 'LM Studio', ep: 'http://localhost:1234/v1', get: 'https://lmstudio.ai', hint: 'Open LM Studio, load a model and start its server, then check again.' },
-    { v: 'ollama', l: 'Ollama', ep: 'http://localhost:11434/v1', get: 'https://ollama.com/download', hint: 'Make sure Ollama is running with a model pulled, then check again.' },
-    { v: 'llamacpp', l: 'llama.cpp', ep: 'http://localhost:8080/v1', get: 'https://github.com/ggml-org/llama.cpp', hint: 'Start llama-server with a model, then check again.' },
-    { v: 'openai', l: 'OpenAI-compatible API', ep: 'https://api.example.com/v1', get: '', hint: 'Check that the base URL ends in /v1 and the key is right.' },
+  // Shortcuts that only fill in the URL: the runtime itself is detected.
+  const QUICK = [
+    { kind: 'lmstudio', l: 'LM Studio', ep: 'http://localhost:1234/v1', get: 'https://lmstudio.ai' },
+    { kind: 'ollama', l: 'Ollama', ep: 'http://localhost:11434/v1', get: 'https://ollama.com/download' },
+    { kind: 'llama.cpp', l: 'llama.cpp', ep: 'http://localhost:8080/v1', get: 'https://github.com/ggml-org/llama.cpp' },
   ];
+  const normalize = (v) => { let s = String(v || '').trim(); if (!s) return ''; if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(s)) s = `http://${s}`; s = s.replace(/\/+$/, ''); return /\/v\d+$/.test(s) ? s : `${s}/v1`; };
   const packOf = (s) => (s.appearance.source === 'gif' && s.appearance.gifFolder.startsWith('builtin:') ? s.appearance.gifFolder.slice(8) : null);
   let open = false, step = 0, seq = 0, models = null, modelChecked = false, imageTest = null;
 
@@ -40,33 +41,40 @@
   }
 
   async function model() {
-    const s = S(); const { title, row, seg, field, btn, select } = ui();
+    const s = S(); const { title, row, field, btn, select } = ui();
     const provs = s.providers.list; const prov = provs.find((p) => p.id === s.model.chat.provider) || provs[0];
-    const rt = RUNTIMES.find((r) => r.v === prov.runtime) || RUNTIMES[0];
     const known = models || window.LyraApp.models(); const info = known && known.byProvider ? known.byProvider[prov.id] : null;
     const save = (patch) => set({ providers: { list: provs.map((p) => (p.id === prov.id ? { ...p, ...patch } : p)) } });
     const check = async (e) => {
-      const b = e ? e.currentTarget : null; if (b) { b.disabled = true; b.textContent = 'Checking…'; }
+      const b = e ? e.currentTarget : null; if (b) { b.disabled = true; b.textContent = 'Connecting…'; }
+      const line = document.querySelector('#setup-content .status-line'); if (line) line.innerHTML = '<span class="dot busy"></span>Connecting…';
       try { models = await lyra.models.detect(); } catch (err) { toast(err.message || String(err), 'error'); } finally { render(); }
     };
-    const card = el('<div class="card" style="gap:10px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div class="status-line"></div></div>');
-    const [l1, l2, st] = card.children;
-    l1.appendChild(seg(RUNTIMES.map((r) => ({ v: r.v, l: r.l })), prov.runtime, (v) => { const r = RUNTIMES.find((x) => x.v === v); models = null; save({ runtime: v, endpoint: r.ep }).then(render); }));
-    l2.appendChild(field(prov.endpoint, (v) => { models = null; save({ endpoint: v.trim().replace(/\/$/, '') }).then(render); }, { w: 280, mono: true, ph: rt.ep }));
-    if (prov.runtime === 'openai') l2.appendChild(field(prov.apiKey, (v) => save({ apiKey: v.trim() }), { w: 200, type: 'password', ph: 'API key' }));
-    l2.appendChild(btn('Check connection', check, { primary: true, ic: 'refresh', small: false }));
-    if (rt.get && !(info && info.ok)) l2.appendChild(btn(`Get ${rt.l}`, () => lyra.app.openExternal({ url: rt.get }), { ic: 'globe', small: false }));
-    st.innerHTML = !info ? '<span class="dot off"></span>Not checked yet.'
-      : info.ok ? `<span class="dot"></span>Connected · ${info.list.length} model${info.list.length === 1 ? '' : 's'} at ${esc(info.endpoint)}`
-        : `<span class="dot off"></span>Not reachable at ${esc(info.endpoint)}: ${esc(info.error || 'unknown error')}. ${esc(rt.hint)}`;
-    const parts = [title('Which model do I think with?', 'I talk to a model server on this computer. LM Studio is the default; Ollama, llama.cpp and any OpenAI-compatible API work too. Start it, load a model, then check the connection.'), card];
+    const card = el('<div class="card" style="gap:10px"><div class="conn-row"></div><div class="conn-row"></div><div class="conn-row"></div><div class="status-line"></div></div>');
+    const [l1, l2, chips, st] = card.children;
+    const url = field(prov.endpoint, (v) => { const ep = normalize(v); save({ endpoint: ep }).then(() => check()); }, { w: 300, mono: true, ph: 'http://localhost:1234/v1' });
+    l1.appendChild(el('<span class="conn-label">Base URL</span>')); l1.appendChild(url);
+    // Always offered: a local server can sit behind a key too (llama-server --api-key).
+    const key = field(prov.apiKey, (v) => { save({ apiKey: v.trim() }).then(() => check()); }, { w: 300, type: 'password', ph: 'API key (optional)' });
+    l2.appendChild(el('<span class="conn-label">API key</span>')); l2.appendChild(key);
+    l2.appendChild(btn('Connect', check, { primary: true, ic: 'refresh', small: false }));
+    chips.appendChild(el('<span class="conn-label d">Quick fill</span>'));
+    QUICK.forEach((q) => { const c = el(`<button class="chip ${prov.endpoint === q.ep ? 'on' : ''}" type="button">${window.brandLogo(q.kind, 14)}<span>${esc(q.l)}</span></button>`); c.addEventListener('click', () => save({ endpoint: q.ep }).then(() => check())); chips.appendChild(c); });
+    const kind = info && info.ok ? info.source : null;
+    if (!info) st.innerHTML = '<span class="dot off"></span>Not checked yet.';
+    else if (info.ok) st.innerHTML = `<span class="dot"></span>${window.brandLogo(kind, 16)}<span>Connected · ${esc(info.summary || window.brandName(kind))}</span>`;
+    else if (info.needsKey) { st.innerHTML = `<span class="dot off"></span>${esc(info.error || 'This server needs an API key.')} Paste it above, then Connect.`; setTimeout(() => key.focus(), 0); }
+    else {
+      const local = QUICK.find((q) => prov.endpoint && prov.endpoint.startsWith(q.ep.replace(/\/v1$/, '')));
+      st.innerHTML = `<span class="dot off"></span>Nothing answered at ${esc(info.endpoint)}: ${esc(info.error || 'unknown error')}. Check the address ends in /v1 and the server is running.`;
+      if (local) st.appendChild(btn(`Get ${local.l}`, () => lyra.app.openExternal({ url: local.get }), { ic: 'globe' }));
+    }
+    const parts = [title('Which model do I think with?', 'Paste the address of any OpenAI-compatible server, ending in /v1. LM Studio, Ollama, llama.cpp, vLLM and hosted APIs all work. I work out which one it is. Add a key if the server needs one.'), card];
     if (info && info.ok) {
       const usable = info.list.filter((x) => !x.id.includes('embed'));
-      const opts = [{ v: '', l: 'Auto (the first loaded model)' }, ...usable.map((x) => ({ v: x.id, l: `${x.label || x.id}${x.context ? ` · ${Math.round(x.context / 1024)}k context` : ''}` }))];
-      if (s.model.chat.model && !usable.some((x) => x.id === s.model.chat.model)) opts.push({ v: s.model.chat.model, l: `${s.model.chat.model} (not detected)` });
-      parts.push(row('Model', 'The one I use for conversation and tools. Auto takes whatever the server has loaded.', select(opts, s.model.chat.model, (v) => set({ model: { chat: { provider: prov.id, model: v } } }), 320)));
+      parts.push(row('Model', 'The one I use for conversation and tools. Auto takes one the server already has loaded.', select(window.Settings.modelOptions(usable, s.model.chat.model, 'Auto (a loaded model)'), s.model.chat.model, (v) => set({ model: { chat: { provider: prov.id, model: v } } }), 360)));
     }
-    parts.push(el('<div class="d" style="font-size:12px;color:var(--muted)">A separate vision model, more presets and the context length are under Settings › Model and Provider.</div>'));
+    parts.push(el('<div class="d" style="font-size:12px;color:var(--muted)">A separate vision model, more servers and the context length are under Settings › Model and Provider.</div>'));
     // The first visit checks on its own, so a server that is already running
     // shows up without a click.
     if (!info && !modelChecked) { modelChecked = true; check(); }
