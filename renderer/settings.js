@@ -28,7 +28,22 @@
   const group = (label, rows) => { const g = el(`<div>${label ? `<div class="group-label">${label}</div>` : ''}</div>`); rows.forEach((r) => g.appendChild(r)); return g; };
   const toggle = (on, cb) => { const t = el(`<button class="toggle ${on ? 'on' : ''}" role="switch" aria-checked="${!!on}"></button>`); t.addEventListener('click', () => { const v = !t.classList.contains('on'); t.classList.toggle('on', v); cb(v); }); return t; };
   const seg = (opts, val, cb) => { const s = el(`<div class="seg">${opts.map((o) => `<button data-v="${esc(o.v)}" class="${o.v === val ? 'on' : ''}">${esc(o.l)}</button>`).join('')}</div>`); s.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { s.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); cb(b.dataset.v); })); return s; };
-  const select = (opts, val, cb, w = 220) => { const s = el(`<select class="select" style="width:${w}px">${opts.map((o) => `<option value="${esc(o.v)}" ${String(o.v) === String(val) ? 'selected' : ''}>${esc(o.l)}</option>`).join('')}</select>`); s.addEventListener('change', () => cb(s.value)); return s; };
+  // An option with { group: 'Name', opts: [...] } becomes an <optgroup>.
+  const optHtml = (o, val) => (o.opts ? `<optgroup label="${esc(o.group)}">${o.opts.map((x) => optHtml(x, val)).join('')}</optgroup>` : `<option value="${esc(o.v)}" ${o.title ? `title="${esc(o.title)}"` : ''} ${String(o.v) === String(val) ? 'selected' : ''}>${esc(o.l)}</option>`);
+  const select = (opts, val, cb, w = 220) => { const s = el(`<select class="select" style="width:${w}px">${opts.map((o) => optHtml(o, val)).join('')}</select>`); s.addEventListener('change', () => cb(s.value)); return s; };
+  // Models grouped by what the server says: loaded ones first, then the ones it
+  // starts on first use (slowly), then any whose state the server does not report.
+  const modelLabel = (x) => `${x.label || x.id}${x.context ? ` · ${Math.round(x.context / 1024)}k` : ''}`;
+  const modelOpt = (x, extra = '') => ({ v: x.id, l: modelLabel(x) + extra, title: [x.id, x.context && `${x.context.toLocaleString()} tokens of context`, x.quant, x.loaded === false && 'not loaded yet: the first message loads it, which can take a while'].filter(Boolean).join(' · ') });
+  function modelOptions(list, current, autoLabel) {
+    const loaded = list.filter((x) => x.loaded === true); const cold = list.filter((x) => x.loaded === false); const unknown = list.filter((x) => x.loaded !== true && x.loaded !== false);
+    const opts = [{ v: '', l: autoLabel }];
+    if (loaded.length) opts.push({ group: 'Loaded', opts: loaded.map((x) => modelOpt(x)) });
+    if (cold.length) opts.push({ group: 'Available · loads on first use, may be slow', opts: cold.map((x) => modelOpt(x, x.loading ? ' · loading now' : '')) });
+    if (unknown.length) opts.push(...(loaded.length || cold.length ? [{ group: 'Models', opts: unknown.map((x) => modelOpt(x)) }] : unknown.map((x) => modelOpt(x))));
+    if (current && !list.some((x) => x.id === current)) opts.push({ v: current, l: `${current} (not detected)` });
+    return opts;
+  }
   const field = (val, cb, { w = 260, mono = false, type = 'text', ph = '', ro = false } = {}) => { const f = el(`<input class="field ${mono ? 'mono' : ''}" type="${type}" style="width:${w}px" placeholder="${esc(ph)}" ${ro ? 'readonly' : ''}>`); f.value = val ?? ''; if (cb) { f.addEventListener('change', () => cb(type === 'number' ? Number(f.value) : f.value)); f.addEventListener('keydown', (e) => e.key === 'Enter' && f.blur()); } return f; };
   const slider = (min, max, step, val, fmt, cb) => { const s = el(`<div class="slider"><span class="val">${fmt(val)}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}"></div>`); const i = s.querySelector('input'); i.addEventListener('input', () => { s.querySelector('.val').textContent = fmt(Number(i.value)); }); i.addEventListener('change', () => cb(Number(i.value))); return s; };
   const btn = (label, cb, { primary = false, ic = '', danger = false, small = true } = {}) => { const b = el(`<button class="btn ${small ? 'small' : ''} ${primary ? 'primary' : ''} ${danger ? 'danger' : ''}">${ic ? icon(ic, 14) : ''}${esc(label)}</button>`); b.addEventListener('click', cb); return b; };
@@ -62,14 +77,13 @@
       const roleBlock = (role, label, desc, filter) => {
         const sel = s.model[role]; const prov = provs.find((p) => p.id === sel.provider) || provs[0]; const info = m.byProvider[prov.id];
         const list = (info && info.list) || []; const usable = list.filter(filter);
-        const opts = [{ v: '', l: role === 'vision' ? 'Auto (first vision model on this preset)' : 'Auto (first loaded model on this preset)' }, ...usable.map((x) => ({ v: x.id, l: `${x.label || x.id}${x.context ? ` · ${Math.round(x.context / 1024)}k context` : ''}${x.quant ? ' · ' + x.quant : ''}${x.loaded && !x.quant ? ' · loaded' : ''}` }))];
-        if (sel.model && !usable.some((x) => x.id === sel.model)) opts.push({ v: sel.model, l: `${sel.model} (not detected)` });
+        const opts = modelOptions(usable, sel.model, role === 'vision' ? 'Auto (a loaded vision model on this server)' : 'Auto (a loaded model on this server)');
         const card = el(`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div class="t" style="font-size:14px;font-weight:500;color:var(--bright)">${esc(label)}</div><div class="d" style="font-size:12px;color:var(--muted)">${desc}</div></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div><div class="status-line"></div></div>`);
         const ctl = card.children[1];
         ctl.appendChild(select(provOpts, prov.id, (v) => set({ model: { [role]: { provider: v, model: '' } } }).then(refresh), 180));
         ctl.appendChild(select(opts, sel.model, (v) => set({ model: { [role]: { model: v } } }), 360));
         const st = card.lastElementChild;
-        st.innerHTML = info ? (info.ok ? `<span class="dot"></span>${esc(prov.name)} · ${esc(info.endpoint)} · ${usable.length} ${role === 'vision' ? 'vision ' : ''}model${usable.length === 1 ? '' : 's'}${info.source === 'lmstudio' ? ' · context and vision read from LM Studio' : info.source === 'llama.cpp' ? ' · context read from llama.cpp' : ''}` : `<span class="dot off"></span>${esc(prov.name)} not reachable at ${esc(info.endpoint)}: ${esc(info.error || 'unknown error')}`) : '<span class="dot off"></span>Not checked yet';
+        st.innerHTML = info ? (info.ok ? `<span class="dot"></span>${window.brandLogo(info.source, 14)}<span>${esc(prov.name)} · ${esc(info.summary || '')}${role === 'vision' ? ` · ${usable.length} can see` : ''}</span>` : `<span class="dot off"></span>${esc(prov.name)} ${info.needsKey ? 'needs an API key (Settings › Provider)' : `not reachable at ${esc(info.endpoint)}: ${esc(info.error || 'unknown error')}`}`) : '<span class="dot off"></span>Not checked yet';
         return card;
       };
       const chatSel = s.model.chat; const chatProv = provs.find((p) => p.id === chatSel.provider) || provs[0]; const chatInfo = m.byProvider[chatProv.id]; const detected = chatInfo && chatInfo.list.find((x) => x.id === (chatSel.model || (chatInfo.list[0] || {}).id));
@@ -82,7 +96,7 @@
       toolsRow.appendChild(btn('Detect models on all presets', async (e) => { e.target.disabled = true; try { await lyra.models.detect(); } finally { refresh(); } }, { ic: 'refresh' }));
       toolsRow.appendChild(btn('Manage presets', () => { current = 'provider'; render(); }, { ic: 'server' }));
       return [
-        title('Model', `${esc(s.persona.name)}’s model and the vision model can come from different provider presets (LM Studio, Ollama, llama.cpp, a remote API). Presets are set up under Provider.`),
+        title('Model', `${esc(s.persona.name)}’s model and the vision model can come from different servers. Servers are added under Provider.`),
         toolsRow,
         roleBlock('chat', s.persona.name, 'Used for conversation, tools, summaries and goals.', (x) => !x.id.includes('embed')),
         roleBlock('vision', 'Vision model', `Used when you send a picture or ${esc(s.persona.name)} looks at one. Falls back to ${esc(s.persona.name)}’s own model if it can see.`, (x) => x.vision),
@@ -355,28 +369,32 @@
     },
     async provider() {
       const s = S(); const m = window.LyraApp.models() || { byProvider: {} }; const provs = s.providers.list;
-      const RUNTIMES = [{ v: 'lmstudio', l: 'LM Studio', ep: 'http://localhost:1234/v1' }, { v: 'ollama', l: 'Ollama', ep: 'http://localhost:11434/v1' }, { v: 'llamacpp', l: 'llama.cpp server', ep: 'http://localhost:8080/v1' }, { v: 'openai', l: 'OpenAI-compatible / remote API', ep: 'https://api.example.com/v1' }];
+      // Quick fills for the URL only: what is behind it is detected on Connect.
+      const QUICK = [{ kind: 'lmstudio', l: 'LM Studio', ep: 'http://localhost:1234/v1' }, { kind: 'ollama', l: 'Ollama', ep: 'http://localhost:11434/v1' }, { kind: 'llama.cpp', l: 'llama.cpp', ep: 'http://localhost:8080/v1' }];
+      const normalize = (v) => { let x = String(v || '').trim(); if (!x) return ''; if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(x)) x = `http://${x}`; x = x.replace(/\/+$/, ''); return /\/v\d+$/.test(x) ? x : `${x}/v1`; };
       const save = (list) => set({ providers: { list } }).then(() => lyra.models.detect()).then(refresh);
       const cards = el('<div style="display:flex;flex-direction:column;gap:10px"></div>');
       provs.forEach((p, i) => {
         const info = m.byProvider[p.id]; const inUse = [s.model.chat.provider === p.id ? s.persona.name : null, s.model.vision.provider === p.id ? 'vision' : null].filter(Boolean);
-        const c = el(`<div class="card" style="gap:10px"><div style="display:flex;align-items:center;gap:8px"><span style="display:flex;color:var(--muted)">${icon('server', 16)}</span><span class="spacer"></span></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div class="status-line"></div></div>`);
+        const kind = (info && info.ok && info.source) || p.detected;
+        const c = el(`<div class="card" style="gap:10px"><div style="display:flex;align-items:center;gap:8px"><span class="prov-logo" title="${esc(kind ? window.brandName(kind) : 'Not connected yet')}">${kind ? window.brandLogo(kind, 18) : icon('server', 16)}</span><span class="spacer"></span></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div><div class="status-line"></div></div>`);
         const head = c.children[0], l1 = c.children[1], l2 = c.children[2], st = c.children[3];
         head.insertBefore(field(p.name, (v) => { const list = provs.map((x) => x.id === p.id ? { ...x, name: v.trim() || x.name } : x); set({ providers: { list } }).then(refresh); }, { w: 200 }), head.lastElementChild);
         if (inUse.length) head.insertBefore(el(`<span class="d" style="font-size:12px;color:var(--accent)">used for ${inUse.map(esc).join(' + ')}</span>`), head.lastElementChild);
         const rm = el(`<button class="icon-btn" title="Remove preset">${icon('trash', 15)}</button>`); rm.disabled = provs.length === 1; rm.addEventListener('click', () => { if (provs.length === 1) return; if (!confirm(`Remove “${p.name}”?`)) return; const list = provs.filter((x) => x.id !== p.id); const patch = { providers: { list } }; const fb = list[0].id; const mp = {}; if (s.model.chat.provider === p.id) mp.chat = { provider: fb, model: '' }; if (s.model.vision.provider === p.id) mp.vision = { provider: fb, model: '' }; if (Object.keys(mp).length) patch.model = mp; set(patch).then(() => lyra.models.detect()).then(refresh); }); head.appendChild(rm);
-        l1.appendChild(select(RUNTIMES, p.runtime, (v) => { const r = RUNTIMES.find((x) => x.v === v); save(provs.map((x) => x.id === p.id ? { ...x, runtime: v, endpoint: r.ep } : x)); }, 220));
-        l1.appendChild(field(p.endpoint, (v) => save(provs.map((x) => x.id === p.id ? { ...x, endpoint: v.trim().replace(/\/$/, '') } : x)), { w: 300, mono: true, ph: 'http://localhost:1234/v1' }));
-        l2.appendChild(field(p.apiKey, (v) => save(provs.map((x) => x.id === p.id ? { ...x, apiKey: v.trim() } : x)), { w: 300, type: 'password', ph: p.runtime === 'openai' ? 'API key (sent as bearer token)' : 'API key (not needed locally)' }));
-        l2.appendChild(btn('Test', async (e) => { e.target.disabled = true; try { const r = await lyra.app.testConnection({ endpoint: p.endpoint, apiKey: p.apiKey }); toast(r.ok ? `${p.name}: ${r.count} models (${r.source})` : `${p.name}: not reachable (${r.error || 'unknown error'})`, r.ok ? '' : 'error'); await lyra.models.detect(); refresh(); } finally { e.target.disabled = false; } }));
-        st.innerHTML = info ? (info.ok ? `<span class="dot"></span>Connected · ${info.list.length} models · ${esc(info.source)}` : `<span class="dot off"></span>Not reachable: ${esc(info.error || 'unknown error')}`) : '<span class="dot off"></span>Not checked';
+        l1.appendChild(field(p.endpoint, (v) => save(provs.map((x) => x.id === p.id ? { ...x, endpoint: normalize(v) } : x)), { w: 320, mono: true, ph: 'http://localhost:1234/v1' }));
+        QUICK.forEach((q) => { const c = el(`<button class="chip ${p.endpoint === q.ep ? 'on' : ''}" type="button" title="Fill in ${esc(q.ep)}">${window.brandLogo(q.kind, 14)}<span>${esc(q.l)}</span></button>`); c.addEventListener('click', () => save(provs.map((x) => x.id === p.id ? { ...x, endpoint: q.ep } : x))); l1.appendChild(c); });
+        const keyField = field(p.apiKey, (v) => save(provs.map((x) => x.id === p.id ? { ...x, apiKey: v.trim() } : x)), { w: 320, type: 'password', ph: 'API key (optional, sent as a bearer token)' });
+        l2.appendChild(keyField);
+        l2.appendChild(btn('Connect', async (e) => { e.target.disabled = true; try { await lyra.models.detect(); refresh(); } finally { e.target.disabled = false; } }, { ic: 'refresh' }));
+        st.innerHTML = info ? (info.ok ? `<span class="dot"></span>${window.brandLogo(info.source, 14)}<span>Connected · ${esc(info.summary || '')}${info.version ? ` · ${esc(info.version)}` : ''}</span>` : info.needsKey ? `<span class="dot off"></span>${esc(info.error)}` : `<span class="dot off"></span>Not reachable: ${esc(info.error || 'unknown error')}`) : '<span class="dot off"></span>Not checked';
         cards.appendChild(c);
       });
       const add = el('<div style="display:flex;gap:8px;flex-wrap:wrap"></div>');
-      RUNTIMES.forEach((r) => add.appendChild(btn(`Add ${r.l}`, () => { const id = `${r.v}-${Date.now().toString(36)}`; save([...provs, { id, name: provs.some((x) => x.name === r.l) ? `${r.l} ${provs.length + 1}` : r.l, runtime: r.v, endpoint: r.ep, apiKey: '' }]); }, { ic: 'plus' })));
+      add.appendChild(btn('Add a server', () => { const id = `server-${Date.now().toString(36)}`; save([...provs, { id, name: `Server ${provs.length + 1}`, runtime: 'openai', endpoint: '', apiKey: '' }]); }, { ic: 'plus' }));
       return [
-        title('Provider', `Presets for where models run. Add one per runtime or API, then pick a preset for ${esc(s.persona.name)} and for the vision model under Model. Local runtimes keep everything on this machine.`),
-        cards, group('Add a preset', [add]),
+        title('Provider', `Servers where models run. Each is one address ending in /v1, plus a key if it needs one. LM Studio, Ollama, llama.cpp, vLLM or a hosted API are recognised on their own. Pick a server for ${esc(s.persona.name)} and for the vision model under Model.`),
+        cards, group('Add', [add]),
       ];
     },
     async mobile() {
@@ -648,6 +666,7 @@
     refresh, isOpen: () => open,
     // Shared with the setup guide, so its pages are built from the same controls and describe the same tools.
     ui: { row, group, toggle, seg, select, field, slider, btn, title },
+    modelOptions,
     toolItems: () => TOOL_ITEMS,
   };
 })();
