@@ -11,7 +11,7 @@ You have real tools (files, shell, browser, memory, images, and the app itself).
 Think briefly in private, then answer. Emoji are fine in small doses.`;
 
 const DEFAULTS = {
-  providers: { list: [{ id: 'lmstudio', name: 'LM Studio', runtime: 'lmstudio', endpoint: 'http://localhost:1234/v1', apiKey: '' }] },
+  providers: { list: [{ id: 'lmstudio', name: 'LM Studio', runtime: 'lmstudio', detected: 'lmstudio', endpoint: 'http://localhost:1234/v1', apiKey: '' }] },
   model: { chat: { provider: 'lmstudio', model: '' }, vision: { provider: 'lmstudio', model: '' }, contextMode: 'auto', contextOverride: 32768, reasoning: 'medium', smartApprovals: true, compression: true, temperature: 0.7, maxSteps: 30, runMinutes: 30 },
   persona: { name: 'Lyra', avatar: 'builtin:catgirl', soul: DEFAULT_SOUL, memoryEnabled: true, store: 'sqlite', shortTerm: true, longTerm: true },
   appearance: { theme: 'lyra-dark', liveCharacter: true, source: 'gif', vrmModel: 'builtin:lyra', gifFolder: 'builtin:catgirl', floatPos: null, placement: 'panel', transitionMs: 300 },
@@ -196,9 +196,14 @@ class Settings extends EventEmitter {
     if (d.provider) {
       const p = d.provider; const first = d.providers.list[0];
       Object.assign(first, { runtime: p.runtime || first.runtime, endpoint: p.endpoint || first.endpoint, apiKey: p.apiKey || '' });
+      delete first.detected;
       delete d.provider;
     }
     for (const role of ['chat', 'vision']) if (typeof d.model[role] !== 'object' || !d.model[role]) d.model[role] = { provider: d.providers.list[0].id, model: typeof d.model[role] === 'string' ? d.model[role] : '' };
+    // 0.9.13: the runtime is detected from the URL, not picked. What was picked
+    // becomes the first guess, so the right logo shows before the first check.
+    const RUNTIME_KIND = { lmstudio: 'lmstudio', ollama: 'ollama', llamacpp: 'llama.cpp', openai: 'openai' };
+    for (const p of d.providers.list) if (p && !p.detected && RUNTIME_KIND[p.runtime]) p.detected = RUNTIME_KIND[p.runtime];
   }
   save() {
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
