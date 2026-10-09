@@ -106,3 +106,16 @@ test('the lockfile is present and in sync with the manifest', () => {
     assert.ok(range, `${name} has no version range`);
   }
 });
+
+// The 3D mascot is a binary asset: if the file changes, the README hash must
+// change with it, or nobody notices the model was rebuilt (or swapped).
+test('the VRM file matches the hash in its README', () => {
+  const crypto = require('crypto');
+  const vrm = path.join(ROOT, 'renderer', 'character', 'vrm', 'lyra.vrm');
+  assert.ok(has('renderer/character/vrm/lyra.vrm'), 'the 3D model is missing');
+  const actual = crypto.createHash('sha256').update(fs.readFileSync(vrm)).digest('hex');
+  const readme = fs.readFileSync(path.join(ROOT, 'renderer', 'character', 'vrm', 'README.md'), 'utf8');
+  const m = /lyra\.vrm`, [\d.]+ MB, sha256 `([0-9a-f]{64})`/.exec(readme);
+  assert.ok(m, 'the VRM README has no sha256 line to check against');
+  assert.equal(actual, m[1], 'lyra.vrm changed but the README sha256 was not updated');
+});
