@@ -4,16 +4,15 @@ Usage: python paint.py <variant> ; writes out_<variant>/*.png (only changed text
 import sys, os, colorsys
 import numpy as np
 from PIL import Image
+import common
+from common import s2l, l2s, hex2, hsv, skin_mask, dark_skin, paint_blush, feather, BROW_DARKEN, deepen_mouth
 
 V = sys.argv[1]
 SRC, A = 'texB', 'texA'
 OUT = f'out_{V}'; os.makedirs(OUT, exist_ok=True)
 
-def s2l(c): c = np.asarray(c, float); return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
-def l2s(c): c = np.clip(c, 0, 1); return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
 def load(d, n): return np.asarray(Image.open(f'{d}/{n}.png').convert('RGBA'), float) / 255
 def save(a, n): Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8), 'RGBA').save(f'{OUT}/{n}.png')
-def hex2(c): return np.array([int(c[i:i + 2], 16) / 255 for i in (1, 3, 5)])
 
 PAL = {
     # root -> mid -> tip, streak colour (on the purple base), accent lock colour (Hair_05)
@@ -64,12 +63,6 @@ def region_recolour(name, mask, colour_fn):
     new = np.where(mask[..., None], colour_fn(im.shape[:2]) * shade, rgb)
     out = im.copy(); out[..., :3] = l2s(new); return out
 
-def hsv(a):
-    r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    mx, mn = a[..., :3].max(-1), a[..., :3].min(-1); d = mx - mn + 1e-9
-    hh = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) * 60
-    return hh, (mx - mn) / (mx + 1e-9), mx
-
 def purple_mask(a):  # B's indigo/purple hair paint
     hh, s, v = hsv(a[..., :3])
     return (a[..., 3] > 0.05) & (hh > 225) & (hh < 300) & (s > 0.12)
@@ -89,9 +82,6 @@ recolour_strip('F00_000_Hair_00_05', streaks=False, flat=P['lock'])   # the cyan
 
 # ---------- skin: B -> A's tone ----------
 a_face = load(A, 'F00_000_00_Face_00')
-def skin_mask(a):
-    hh, s, v = hsv(a[..., :3])
-    return (a[..., 3] > 0.5) & ((hh < 45) | (hh > 340)) & (s > 0.12) & (s < 0.62) & (v > 0.25)
 sa = s2l(a_face[..., :3])[skin_mask(a_face)]
 A_tone = np.median(sa, 0)
 b_face = load(SRC, 'F00_000_00_Face_00')
@@ -105,12 +95,15 @@ def fix_skin(name, hair_cap=True):
     # A and B share VRoid's UV layout: where both are bare skin, take A's own painted
     # skin (its lighter, pinker shading); elsewhere fall back to a per-channel gain.
     a = load(A, name); am = skin_mask(a) & (a[..., :3].max(-1) > 0.85)   # bare light skin only, not A's sheer tights
-    from PIL import ImageFilter
-    feather = lambda mm, r: np.asarray(Image.fromarray((mm * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(r)), float) / 255
     mf = feather(m, 1.2)
     both = feather(m & am, 1.5)[..., None]
     skin = np.clip(rgb * gain, 0, 1) * (1 - both) + s2l(a[..., :3]) * both
+    # story 08: the same feathered mask carries the 10% darken + saturation lift,
+    # so only skin moves and hair, eyes and outfit keep their colour.
+    skin = skin * (1 - mf[..., None]) + dark_skin(skin) * mf[..., None]
     new = rgb * (1 - mf[..., None]) + skin * mf[..., None]
+    if name == 'F00_000_00_Face_00':
+        new = paint_blush(im, new, mf)  # blush goes on top of the darkened skin
     if hair_cap:  # indigo hair painted on the scalp / back of head -> root colour
         pm = purple_mask(im) & ~m
         L = lum(rgb); ref = np.percentile(L[pm], 70) if pm.any() else 1
@@ -124,5 +117,11 @@ fix_skin('F00_000_00_Body_00')
 
 # ---------- brows to match ----------
 br = load(SRC, 'F00_000_00_FaceBrow_00'); m = br[..., 3] > 0.02
-out = region_recolour('F00_000_00_FaceBrow_00', m, lambda s: P['brow']); save(out, 'F00_000_00_FaceBrow_00')
+brow = region_recolour('F00_000_00_FaceBrow_00', m, lambda s: P['brow'])
+brow[..., :3] = l2s(s2l(brow[..., :3]) * BROW_DARKEN)   # story 08: brows a touch darker
+save(brow, 'F00_000_00_FaceBrow_00')
+
+# ---------- mouth: deeper so aa/oh lip sync reads ----------
+out = deepen_mouth(load(SRC, 'F00_000_00_FaceMouth_00'))
+save(out, 'F00_000_00_FaceMouth_00')
 print('done', V)
