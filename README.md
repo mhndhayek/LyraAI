@@ -67,6 +67,12 @@ The cast is down to two: Lyra, the original pixel-art cat girl, and the succubus
 
 Lyra has a 3D body: [`lyra.vrm`](renderer/character/vrm/), a VRM avatar with pink-to-blue hair, gold eyes, a full rig, hair physics and lip-sync expressions. Flip the **2D / 3D** switch on the live panel and she appears in 3D: she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice. *Appearance › Live character › 3D* also takes any other `.vrm` file (VRoid Studio exports, VRoid Hub, BOOTH; check the model's licence). She is a recolour of the VRoid Project's AvatarSample_B, whose licence allows modification and redistribution, so she ships with the app and anyone may use her. Details, credit and the scripts that made her are in [renderer/character/vrm/README.md](renderer/character/vrm/README.md).
 
+The 3D face is lit with a 3-point setup (key, fill, rim) instead of a single flat light, and her skin sits ~10 % darker at a warm tan with a subtle baked cheek blush that deepens as she gets happy — the difference, side by side:
+
+<p align="center">
+  <img src="docs/media/lyra-08-demo.png" width="720" alt="Before and after: the flat single-light face on the left, the 3-point lit face with warm shade and a speaking blush on the right">
+</p>
+
 The two pixel-art characters have idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you — that part is **beta**: the frames come out clean, but the animation is not always smooth yet.
 
 ## Quick start
