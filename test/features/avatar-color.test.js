@@ -1,79 +1,58 @@
 // Story 08: the 3D avatar's face colour is a measured spec, not a vibe.
 // The skin must read #e1bda2 (10% darker, still warm), the face texture must
 // carry the subtle base blush, and the renderer must deepen the blush when the
-// 'happy' expression is on. The heavy checks (median colour, GLB integrity)
-// shell out to the committed Python tools; the renderer checks read the source,
-// the same way wiring.test.js does.
+// 'happy' expression is on. The VRM checks decode the file in pure Node (the
+// same maths as tools/measure.py, the committed Blender-free QA gate) so CI's
+// Node-only runners need no Python; the renderer checks read the source, the
+// way wiring.test.js does.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
 const { ROOT } = require('../helpers/tmp');
+const { vrmGltf, vrmImages, pngToRgba, measureFaceSkin } = require('../helpers/vrm-color');
 
 const VRM = path.join(ROOT, 'renderer', 'character', 'vrm', 'lyra.vrm');
-const TOOLS = path.join(ROOT, 'renderer', 'character', 'vrm', 'tools');
 const CHARACTER_JS = path.join(ROOT, 'renderer', 'character.js');
 
 const read = (p) => fs.readFileSync(p, 'utf8');
-const run = (args) => execFileSync('python3', args, { encoding: 'utf8', timeout: 120000 });
+const vrmBuf = () => fs.readFileSync(VRM);
+// A pixel (x, y) of a decoded RGBA texture.
+const px = (rgba, x, y) => {
+  const i = (y * rgba.width + x) * 4;
+  return [rgba.data[i], rgba.data[i + 1], rgba.data[i + 2], rgba.data[i + 3]];
+};
+const faceTex = () => pngToRgba(vrmImages(vrmBuf())['F00_000_00_Face_00']);
 
 test('the colour gate passes: median face skin is #e1bda2 within +/-3', () => {
-  const out = run([path.join(TOOLS, 'measure.py'), VRM]);
-  assert.match(out, /PASS/, `measure.py did not pass the gate:\n${out}`);
-  const m = /median face skin #([0-9a-f]{6})/.exec(out);
-  assert.ok(m, `measure.py printed no median:\n${out}`);
-  const got = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
-  const target = [0xE1, 0xBD, 0xA2];
-  got.forEach((g, i) => assert.ok(Math.abs(g - target[i]) <= 3, `channel ${i} is ${g}, target ${target[i]} +/- 3`));
+  const r = measureFaceSkin(VRM);
+  assert.ok(r.pixels > 50000, `too few skin pixels measured (${r.pixels}) — the face texture is wrong`);
+  assert.ok(r.pass, `median face skin is ${r.hex} (rgb ${r.rgb}), target #e1bda2 within +/-3`);
 });
 
 test('the shipped VRM is still a healthy model: 15 expressions and the full rig', () => {
-  const script = `
-import struct, json, sys
-data = open(sys.argv[1], 'rb').read()
-off = 12; chunks = {}
-while off < len(data):
-    clen, ctype = struct.unpack_from('<II', data, off)
-    chunks[ctype] = data[off+8:off+8+clen]; off += 8 + clen
-g = json.loads(chunks[0x4E4F534A])
-v = g['extensions']['VRM']
-groups = len(v.get('blendShapeMaster', {}).get('blendShapeGroups', []))
-joints = set()
-for s in g.get('skins', []):
-    for j in s['joints']: joints.add(j)
-print(groups, len(joints))
-`;
-  const out = run(['-c', script, VRM]);
-  const [groups, joints] = out.trim().split(/\s+/).map(Number);
+  const g = vrmGltf(vrmBuf());
+  const v = g.extensions.VRM;
+  const groups = (v.blendShapeMaster?.blendShapeGroups || []).length;
+  const joints = new Set();
+  for (const s of g.skins || []) for (const j of s.joints) joints.add(j);
   assert.equal(groups, 15, `the model must keep its 15 expressions, has ${groups}`);
-  assert.ok(joints >= 50, `the model must keep its full rig (55 humanoid bones), has ${joints} joints`);
+  assert.ok(joints.size >= 50, `the model must keep its full rig (55 humanoid bones), has ${joints.size} joints`);
 });
 
 test('the face texture carries the base blush and the skin is not washed out', () => {
-  // The blush check samples the cheek zones of the shipped face texture directly.
-  const script = `
-import struct, json, sys, io
-import numpy as np
-from PIL import Image
-data = open(sys.argv[1], 'rb').read()
-off = 12; chunks = {}
-while off < len(data):
-    clen, ctype = struct.unpack_from('<II', data, off)
-    chunks[ctype] = data[off+8:off+8+clen]; off += 8 + clen
-g = json.loads(chunks[0x4E4F534A]); b = chunks[0x004E4942]
-name = 'F00_000_00_Face_00'
-i = [k for k in range(len(g['images'])) if g['images'][k].get('name') == name][0]
-img = g['images'][i]; bv = g['bufferViews'][img['bufferView']]
-a = np.asarray(Image.open(io.BytesIO(b[bv['byteOffset']:bv['byteOffset']+bv['byteLength']])).convert('RGBA'), float) / 255
-def pinkish(c): return (c[0] - max(c[1], c[2])) * 255
-cheeks = [a[665, 355], a[665, 660]]
-skin = a[450, 512]
-print(pinkish(cheeks[0]), pinkish(cheeks[1]), pinkish(skin))
-`;
-  const [l, r, skinPink] = run(['-c', script, VRM]).trim().split(/\s+/).map(Number);
-  // The cheeks must be visibly pinker than the plain forehead skin.
-  assert.ok(Math.max(l, r) > skinPink + 6, `cheeks (pinkness ${l}/${r}) must read pinker than the skin (${skinPink})`);
+  const face = faceTex();
+  const pinkish = ([r, g, b]) => (r - Math.max(g, b)) * 255;
+  const cheekL = px(face, 355, 665);
+  const cheekR = px(face, 660, 665);
+  const skin = px(face, 512, 450); // plain forehead, away from the cheeks
+  // The cheeks must be visibly pinker than the plain skin, and the skin itself
+  // must be a saturated warm tan, not a washed-out grey.
+  assert.ok(Math.max(pinkish(cheekL), pinkish(cheekR)) > pinkish(skin) + 6,
+    `cheeks (pinkness ${pinkish(cheekL)}/${pinkish(cheekR)}) must read pinker than the skin (${pinkish(skin)})`);
+  const [sr, sg, sb] = skin;
+  assert.ok(sr > sg && sg > sb, `the skin should be warm (R>G>B), got rgb ${sr},${sg},${sb}`);
+  assert.ok(sr - sb > 40, `the skin should be a saturated tan, not grey, got rgb ${sr},${sg},${sb}`);
 });
 
 test('the renderer deepens the blush as the happy expression rises', () => {
