@@ -122,6 +122,7 @@ test('a single legacy provider is lifted into the provider list', () => {
   const d = new Settings(f).get();
   assert.equal(d.provider, undefined, 'the old shape is removed');
   assert.equal(d.providers.list[0].runtime, 'ollama');
+  assert.equal(d.providers.list[0].detected, 'ollama', 'the old pick becomes the first guess of what is behind the URL');
   assert.equal(d.providers.list[0].endpoint, 'http://localhost:11434/v1');
   assert.equal(d.providers.list[0].apiKey, 'k');
 });

@@ -16,5 +16,16 @@ Lyra AI Agent stands on these projects. Each keeps its own license.
 | [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans) | the Pixel theme's font | SIL Open Font License 1.1 |
 | [Tailscale](https://tailscale.com/) | private network and HTTPS certificate for phone access (installed separately) | BSD-3-Clause client |
 
+The runtime logos in `renderer/icons.js` (`window.BRANDS`) are the projects' own marks, shown only to say which server Lyra is connected to. They are trademarks of their owners and are not licensed under this repository's license:
+
+| Logo | Source | Note |
+| --- | --- | --- |
+| llama.cpp | [ggml-org/llama.cpp `media/llama1-icon-transparent.svg`](https://github.com/ggml-org/llama.cpp/tree/master/media) | from the MIT-licensed repository |
+| LM Studio | [files.lmstudio.ai/lmstudio_icon2.svg](https://files.lmstudio.ai/lmstudio_icon2.svg), path as packaged by [Simple Icons](https://simpleicons.org/) 16.34.0 | trademark of Element Labs |
+| Ollama | [ollama/ollama](https://github.com/ollama/ollama), path as packaged by Simple Icons 16.34.0 | trademark of Ollama |
+| vLLM | [vllm-project/media-kit](https://github.com/vllm-project/media-kit), path as packaged by Simple Icons 16.34.0 | trademark of the vLLM project |
+
+The generic "OpenAI-compatible" plug is drawn for Lyra and is not anyone's mark.
+
 The two built-in characters were generated with [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI) and the Z-Image-Turbo model, then cut and animated by `scripts/make_character.py`.
 Lyra's 3D model (`renderer/character/vrm/lyra.vrm`) is a recolour of AvatarSample_B by the [VRoid Project](https://vroid.com/) (pixiv), used under its VRoid Hub conditions, which allow modification, redistribution and commercial use without credit. The conditions stay embedded in the file and apply to it rather than this repository's license.

@@ -35,7 +35,19 @@ class Agent {
   async detectModels(force = false) {
     if (!force && Date.now() - this.models.at < 60000) return this.models;
     const byProvider = {};
-    await Promise.all(this.providers().map(async (p) => { const r = await llm.listModels({ endpoint: p.endpoint, apiKey: p.apiKey }); byProvider[p.id] = { ok: r.ok, list: r.models, error: r.error, source: r.source, endpoint: p.endpoint }; }));
+    await Promise.all(this.providers().map(async (p) => {
+      const r = await llm.listModels({ endpoint: p.endpoint, apiKey: p.apiKey });
+      byProvider[p.id] = { ok: r.ok, list: r.models, error: r.error, source: r.source, router: r.router, needsKey: r.needsKey, version: r.version || null, summary: llm.summarize(r), endpoint: p.endpoint };
+    }));
+    // Remember what each server turned out to be, so its logo shows before the
+    // next check. A name that is still a default ("LM Studio", "Server 2")
+    // follows what was found; a name the user typed is left alone.
+    const list = this.providers(); const updated = list.map((p) => {
+      const r = byProvider[p.id]; if (!r || !r.ok) return p;
+      const name = llm.isDefaultName(p.name) && p.name !== llm.KIND_NAMES[r.source] ? llm.KIND_NAMES[r.source] : p.name;
+      return r.source !== p.detected || name !== p.name ? { ...p, detected: r.source, name } : p;
+    });
+    if (updated.some((p, i) => p !== list[i])) this.ctx.settings.set({ providers: { list: updated } });
     this.models = { at: Date.now(), byProvider };
     this.ctx.emit(null, 'models', this.models);
     return this.models;
@@ -48,7 +60,7 @@ class Agent {
       const sel = s.model[role] || {}; const prov = this.providerById(sel.provider); const info = m.byProvider[prov.id] || { ok: false, list: [], error: 'not checked' };
       const find = (mid) => info.list.find((x) => x.id === mid) || null;
       let chosen = sel.model ? find(sel.model) : null;
-      if (!chosen && !sel.model) chosen = role === 'vision' ? (info.list.find((x) => x.vision && x.loaded) || info.list.find((x) => x.vision) || null) : (info.list.find((x) => x.loaded && !x.id.includes('embed')) || info.list.find((x) => !x.id.includes('embed')) || null);
+      if (!chosen && !sel.model) chosen = llm.autoPick(info.list, role === 'vision' ? (x) => x.vision : undefined);
       if (!chosen && sel.model) chosen = { id: sel.model, context: null, vision: role === 'vision', tools: true, undetected: true };
       return chosen ? { ...chosen, provider: prov.id, providerName: prov.name, endpoint: prov.endpoint, apiKey: prov.apiKey, error: info.error } : { missing: true, provider: prov, error: info.error };
     };
