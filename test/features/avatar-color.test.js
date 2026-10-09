@@ -62,10 +62,33 @@ test('the renderer deepens the blush as the happy expression rises', () => {
   // ...and applied to the blush overlay material.
   assert.match(js, /blushMats\.push\(mat\)/, 'the renderer must build the blush overlay');
   assert.match(js, /bm\.opacity = blushA/, 'the blush opacity must follow happy');
-  // Full happy must reach roughly 3x the painted base (base alpha 0.16 in tools/common.py, overlay up to 0.45).
-  const m = /blushA = Math\.min\(1, ex\.getValue\('happy'\)\) \* ([\d.]+)/.exec(js);
-  assert.ok(m, 'the blush gain constant is missing');
-  assert.ok(Number(m[1]) >= 0.3, `full happy should reach ~3x the base blush, gain is ${m[1]}`);
+  // Extract the pure opacity mapping (and the BLUSH_MAX it multiplies by) and
+  // assert its behaviour: 0 at rest, a gain of ~3x the painted base (0.16) at
+  // full happy, clamped outside [0,1].
+  const fn = new Function(`
+    const src = ${JSON.stringify(js)};
+    const max = /const BLUSH_MAX = ([\\d.]+)/.exec(src);
+    if (!max) throw new Error('BLUSH_MAX constant not found');
+    const BLUSH_MAX = Number(max[1]);
+    const m = /const blushOpacity = \\((\\w+)\\) => (.+?);/.exec(src);
+    if (!m) throw new Error('blushOpacity mapping not found');
+    const blushOpacity = new Function(m[1], 'BLUSH_MAX', 'return ' + m[2]);
+    return (h) => blushOpacity(h, BLUSH_MAX);
+  `)();
+  assert.equal(fn(0), 0, 'no blush at rest (happy = 0)');
+  assert.ok(fn(1) >= 0.3, `full happy should reach ~3x the base blush (0.16), got ${fn(1)}`);
+  assert.ok(fn(1) <= 0.5, `full happy blush should stay a tint, not a sticker, got ${fn(1)}`);
+  assert.equal(fn(0.5), fn(1) / 2, 'the mapping should be linear in the happy value');
+  assert.equal(fn(-2), 0, 'out-of-range low happy clamps to no blush');
+  assert.equal(fn(5), fn(1), 'out-of-range high happy clamps to full blush');
+});
+
+test('the warm MToon shade is applied only to skin materials, including multi-material meshes', () => {
+  const js = read(CHARACTER_JS);
+  // Only the _SKIN materials (face + body) take the warm shade — hair, eyes,
+  // cloth and the painted face overlays keep their own.
+  assert.match(js, /matIsSkin\s*=\s*\(m\)\s*=>[^;]*\/_SKIN\/i/, 'the shade must be limited to the _SKIN materials');
+  assert.match(js, /Array\.isArray\(o\.material\)\s*\?\s*o\.material\s*:\s*\[o\.material\]/, 'multi-material meshes (o.material arrays) must be walked, not skipped');
 });
 
 test('the renderer gives the face real light and warm shadows', () => {

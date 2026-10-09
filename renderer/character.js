@@ -80,13 +80,24 @@
       const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35); fill.position.set(-1.5, 0.8, 1.0); scene.add(fill);
       const rim = new THREE.DirectionalLight(0xbfd4ff, 0.5); rim.position.set(0, 1.2, -1.5); scene.add(rim);
       scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-      // Shadows should read as warm skin, not grey: the MToon shade colour is a warm tone.
+      // Shadows should read as warm skin, not grey: the MToon shade colour of the
+      // skin materials is a warm tone (the story asks for the skin _ShadeColor,
+      // so hair, eyes and outfit keep their own). `o.material` can be an array
+      // on multi-material meshes, so walk it.
       const SHADE = new THREE.Color('#c99a86');
-      vrm.scene.traverse((o) => { o.frustumCulled = false; if (o.isMesh && o.material) { if (o.material.shadeColor) o.material.shadeColor.copy(SHADE); o.material.needsUpdate = true; } });
+      // The VRoid material names end in the part they dress: ..._SKIN for the
+      // face and body, ..._HAIR, ..._CLOTH, ..._EYE, ..._FACE for the painted
+      // overlays. Only the _SKIN ones get the warm shade.
+      const matIsSkin = (m) => m && m.name && /_SKIN/i.test(m.name);
+      vrm.scene.traverse((o) => { o.frustumCulled = false; if (!o.isMesh) return; const mats = Array.isArray(o.material) ? o.material : [o.material]; for (const m of mats) { if (!m) continue; if (matIsSkin(m) && m.shadeColor) { m.shadeColor.copy(SHADE); m.needsUpdate = true; } } });
       // Blush: a cheek overlay per side whose opacity follows the 'happy'
       // expression at runtime, on top of the subtle base blush painted into the
       // face texture. Full happy reaches about 3x the base.
       const BLUSH_COLOR = 0xff7d9c;
+      const BLUSH_MAX = 0.45;
+      // Pure so a test can assert the mapping directly: 0 at rest, BLUSH_MAX at
+      // full happy, clamped for out-of-range expressions.
+      const blushOpacity = (happy) => Math.min(1, Math.max(0, happy)) * BLUSH_MAX;
       const blushMats = [];
       {
         const head = hum.getNormalizedBoneNode('head');
@@ -142,7 +153,7 @@
           let bl = 0; if (blinkT >= 0) { blinkT += dt; bl = blinkT < 0.07 ? blinkT / 0.07 : blinkT < 0.16 ? 1 - (blinkT - 0.07) / 0.09 : 0; if (blinkT >= 0.16) { blinkT = -1; nextBlink = t + 2.2 + Math.random() * 3.5; } }
           ex.setValue('blink', bl); ex.setValue('happy', cur.happy * (1 - bl));
           // Blush overlay follows the happy expression (0 at rest, ~3x the base at full happy).
-          const blushA = Math.min(1, ex.getValue('happy')) * 0.45;
+          const blushA = blushOpacity(ex.getValue('happy'));
           for (const bm of blushMats) bm.opacity = blushA;
           if (!this.audio) ex.setValue('aa', s === 'speaking' ? (0.25 + 0.25 * Math.sin(t * 14)) * (Math.sin(t * 3.1) > -0.6 ? 1 : 0) : 0);
         }
