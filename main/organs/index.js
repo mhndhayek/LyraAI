@@ -103,6 +103,8 @@ function create(k) {
   h('voice:speak', async (p) => voice.tts(p.text));
   h('voice:transcribe', async (p) => { const f = saveDataUrl(path.join(k.paths.media, 'stt'), 'voice.webm', p.dataUrl); return voice.stt(f); });
   h('state:set', (p) => { agent.setState(p.state); return true; });
+  // The window reports when spoken audio really starts and stops (story 05).
+  h('voice:playing', (p) => agent.voicePlaying(p || {}));
   h('memory:list', (p) => k.store.listMemories(p.scope, p.chatId));
   h('memory:delete', (p) => { k.store.deleteMemory(p.id); return true; });
   h('memory:clear', (p) => { k.store.clearMemories(p.scope, p.chatId); return true; });

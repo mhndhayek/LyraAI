@@ -25,7 +25,7 @@
 
   /* ---- controls ---- */
   const row = (t, d, ctl, opts = {}) => { const r = el(`<div class="row"><div class="lbl"><div class="t">${t}</div>${d ? `<div class="d">${d}</div>` : ''}</div><div class="ctl"></div></div>`); (Array.isArray(ctl) ? ctl : [ctl]).filter(Boolean).forEach((c) => r.querySelector('.ctl').appendChild(typeof c === 'string' ? el(`<span>${c}</span>`) : c)); return r; };
-  const group = (label, rows) => { const g = el(`<div>${label ? `<div class="group-label">${label}</div>` : ''}</div>`); rows.forEach((r) => g.appendChild(r)); return g; };
+  const group = (label, rows) => { const g = el(`<div>${label ? `<div class="group-label">${label}</div>` : ''}</div>`); rows.filter(Boolean).forEach((r) => g.appendChild(r)); return g; };
   const toggle = (on, cb) => { const t = el(`<button class="toggle ${on ? 'on' : ''}" role="switch" aria-checked="${!!on}"></button>`); t.addEventListener('click', () => { const v = !t.classList.contains('on'); t.classList.toggle('on', v); cb(v); }); return t; };
   const seg = (opts, val, cb) => { const s = el(`<div class="seg">${opts.map((o) => `<button data-v="${esc(o.v)}" class="${o.v === val ? 'on' : ''}">${esc(o.l)}</button>`).join('')}</div>`); s.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { s.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); cb(b.dataset.v); })); return s; };
   // An option with { group: 'Name', opts: [...] } becomes an <optgroup>.
@@ -358,7 +358,8 @@
         group('Text to speech', [
           row('Engine', 'KittenTTS is built in. “Your own” points at any OpenAI-compatible TTS endpoint.', seg([{ v: 'kitten', l: 'KittenTTS' }, { v: 'custom', l: 'Your own' }], v.engine, (x) => set({ voice: { engine: x } }).then(refresh))),
           ...engineRows,
-          row('Read responses aloud', `${esc(s.persona.name)} speaks every reply. Long replies are split into sentences and joined, because the engine can only synthesise about 450 characters at a time.`, toggle(v.readAloud, (x) => set({ voice: { readAloud: x } }))),
+          row('Read responses aloud', `${esc(s.persona.name)} speaks every reply.`, toggle(v.readAloud, (x) => set({ voice: { readAloud: x } }).then(refresh))),
+          v.readAloud ? row('Start speaking before the reply is finished', `${esc(s.persona.name)} reads each sentence as soon as she has written it. Off: she waits for the whole reply, then reads it in one go.`, toggle(v.streamSpeech !== false, (x) => set({ voice: { streamSpeech: x } }))) : null,
           row('Voice engine status', paths.voiceReady ? 'Loads its model in the background after start.' : 'Not installed yet.', [el(`<span class="d" style="font-size:12px;color:var(--muted);max-width:260px">${esc(lastLine)}</span>`), btn('Warm up now', async (e) => { e.target.disabled = true; const ok = await lyra.voice.warm(); toast(ok ? 'Voice engine loaded and ready.' : 'Could not load the voice engine; see Settings › Recovery › Logs.', ok ? '' : 'error'); refresh(); })]),
         ]),
         group('Speech to text', [
