@@ -32,14 +32,14 @@
       "id": "lean_type", "file": "lean_type.vrma", "loop": true,
       "states": ["writing"], "weight": 1,
       "source": "authored in Blender 5.2, VRM add-on 4.7",
-      "licence": "LyraAI",
+      "licence": "MIT (this repository)",
       "url": "https://github.com/mhndhayek/LyraAI"
     },
     "talk_idle": {
       "id": "talk_idle", "file": "talk_idle.vrma", "loop": true,
       "states": ["speaking"], "weight": 1,
       "source": "authored in Blender 5.2, VRM add-on 4.7",
-      "licence": "LyraAI",
+      "licence": "MIT (this repository)",
       "url": "https://github.com/mhndhayek/LyraAI"
     },
     "wave": {
@@ -53,7 +53,7 @@
       "id": "nod", "file": "nod.vrma", "loop": false,
       "states": ["one-shot"], "weight": 1,
       "source": "authored in Blender 5.2, VRM add-on 4.7",
-      "licence": "LyraAI",
+      "licence": "MIT (this repository)",
       "url": "https://github.com/mhndhayek/LyraAI"
     },
     "happy_bounce": {
@@ -67,14 +67,14 @@
       "id": "walk", "file": "walk.vrma", "loop": true,
       "states": ["walking"], "weight": 1,
       "source": "authored in Blender 5.2, VRM add-on 4.7",
-      "licence": "LyraAI",
+      "licence": "MIT (this repository)",
       "url": "https://github.com/mhndhayek/LyraAI"
     },
     "turn": {
       "id": "turn", "file": "turn.vrma", "loop": false,
       "states": ["turn"], "weight": 1,
       "source": "authored in Blender 5.2, VRM add-on 4.7",
-      "licence": "LyraAI",
+      "licence": "MIT (this repository)",
       "url": "https://github.com/mhndhayek/LyraAI"
     }
   }
