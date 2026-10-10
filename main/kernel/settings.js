@@ -13,8 +13,8 @@ Think briefly in private, then answer. Emoji are fine in small doses.`;
 const DEFAULTS = {
   providers: { list: [{ id: 'lmstudio', name: 'LM Studio', runtime: 'lmstudio', detected: 'lmstudio', endpoint: 'http://localhost:1234/v1', apiKey: '' }] },
   model: { chat: { provider: 'lmstudio', model: '' }, vision: { provider: 'lmstudio', model: '' }, contextMode: 'auto', contextOverride: 32768, reasoning: 'medium', smartApprovals: true, compression: true, temperature: 0.7, maxSteps: 30, runMinutes: 30 },
-  persona: { name: 'Lyra', avatar: 'builtin:catgirl', soul: DEFAULT_SOUL, memoryEnabled: true, store: 'sqlite', shortTerm: true, longTerm: true },
-  appearance: { theme: 'lyra-dark', liveCharacter: true, source: 'gif', vrmModel: 'builtin:lyra', gifFolder: 'builtin:catgirl', floatPos: null, placement: 'panel', transitionMs: 300 },
+  persona: { name: 'Lyra', avatar: 'builtin:lyra', soul: DEFAULT_SOUL, memoryEnabled: true, store: 'sqlite', shortTerm: true, longTerm: true },
+  appearance: { theme: 'lyra-dark', liveCharacter: true, source: 'vrm', vrmModel: 'builtin:lyra', gifFolder: null, floatPos: null, placement: 'panel', transitionMs: 300 },
   workspace: { folder: path.join(os.homedir(), 'Lyra', 'workspace'), repoDiscovery: true, codeExecution: true, persistentShell: true, fileReadLimit: 100000 },
   safety: { approvalMode: 'ask', timeoutSec: 300, onTimeout: 'deny' },
   browser: { enabled: true, mode: 'visible', autoOpen: true, startPage: 'about:blank', askBeforeDownloads: true },
@@ -46,7 +46,7 @@ function merge(base, patch) {
 // with. Everything else — safety, the workspace, the browser, phone access,
 // kernel limits — is the user's and is shared by every profile.
 // Built-in GIF packs that used to ship and were retired.
-const RETIRED_PACKS = ['agent', 'butterbot', 'cowboy', 'dapper', 'foxgirl', 'silver'];
+const RETIRED_PACKS = ['agent', 'butterbot', 'cowboy', 'dapper', 'foxgirl', 'silver', 'catgirl', 'succubus'];
 const PROFILE_SECTIONS = ['persona', 'appearance', 'voice', 'goals', 'model', 'providers'];
 const slug = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32);
 
@@ -161,23 +161,23 @@ class Settings extends EventEmitter {
     this.save();
     return { removed: p, profiles: this.profiles() };
   }
-  // The built-in cast was cut to the original cat girl and the succubus.
-  // A profile that used one of the retired packs would otherwise show
-  // "No idle.gif", because organ sync replaces the renderer folder.
-  // The same pass retires the old live-character sources (see below).
+  // The built-in cast was cut to the 3D Lyra. A profile on a retired 2D pack
+  // (or an old live-character source) would otherwise show nothing, because
+  // organ sync replaces the renderer folder.
   migrateRetiredPacks() {
     let changed = false;
-    const fix = (v) => { if (typeof v === 'string' && RETIRED_PACKS.includes(v.replace(/^builtin:/, '').replace(/\/$/, '')) && v.startsWith('builtin:')) { changed = true; return 'builtin:catgirl'; } return v; };
+    const fix = (v) => { if (typeof v === 'string' && RETIRED_PACKS.includes(v.replace(/^builtin:/, '').replace(/\/$/, '')) && v.startsWith('builtin:')) { changed = true; return 'builtin:lyra'; } return v; };
     const holders = [this.data, ...(this.data.profiles && Array.isArray(this.data.profiles.list) ? this.data.profiles.list : [])];
     for (const h of holders) {
       if (isObj(h.appearance)) {
         const ap = h.appearance;
         if ('gifFolder' in ap) ap.gifFolder = fix(ap.gifFolder);
-        // The live character is a GIF pack (2D) or a VRM model (3D). The retired
-        // sources (built-in SVG, Hermes pet, Live2D) fall back to the GIF pack, and
-        // their leftover keys go.
-        if ('source' in ap && ap.source !== 'gif' && ap.source !== 'vrm') { ap.source = 'gif'; changed = true; }
-        for (const k of ['petFolder', 'live2dModel', 'last2d']) if (k in ap) { delete ap[k]; changed = true; }
+        // The live character is 3D VRM now. The retired sources (built-in SVG,
+        // Hermes pet, Live2D, and the old 2D GIF packs) all fall back to the
+        // shipped Lyra VRM model.
+        if ('source' in ap && ap.source !== 'vrm') { ap.source = 'vrm'; changed = true; }
+        if (!ap.vrmModel) ap.vrmModel = 'builtin:lyra';
+        for (const k of ['petFolder', 'live2dModel', 'last2d', 'gifFolder']) if (k in ap) { delete ap[k]; changed = true; }
       }
       if (isObj(h.persona) && 'avatar' in h.persona) h.persona.avatar = fix(h.persona.avatar);
     }

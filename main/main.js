@@ -176,7 +176,6 @@ app.whenReady().then(async () => {
   h('ext:call', async (p) => { try { return { ok: true, result: await k.extensions.call(p.id, p.tool, p.args) }; } catch (e) { return { ok: false, error: e.message }; } });
   h('ext:panels', () => k.extensions.panels().map((x) => ({ ...x, url: pathToFileURL(x.file).href })));
   h('ext:openFolder', () => eshell.openPath(k.paths.extensions));
-  h('packs:list', () => { const dir = path.join(k.paths.organsRenderer, 'character'); if (!fs.existsSync(dir)) return []; return fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory() && fs.existsSync(path.join(dir, e.name, 'idle.gif'))).map((e) => { let meta = {}; try { meta = JSON.parse(fs.readFileSync(path.join(dir, e.name, 'pack.json'), 'utf8')); } catch {} return { id: e.name, name: meta.name || e.name, description: meta.description || '', avatar: fs.existsSync(path.join(dir, e.name, 'avatar.png')) }; }); });
   // Drawn in the kernel: organs live outside the bundle and cannot load npm packages.
   h('mobile:qr', async (p) => {
     const QR = require('qrcode');

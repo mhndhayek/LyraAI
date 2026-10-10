@@ -87,8 +87,25 @@ def shoot(back, cz, scale, px, path):
 span = H * 1.06
 shoot(False, ctr.z, span, 900, prefix + "_front.png")
 shoot(True, ctr.z, span, 900, prefix + "_back.png")
-bust = H * 0.30
+
+# The bust preview must not show the T-pose: relax the arms down by the sides,
+# exactly as the app's runtime loop poses them (character.js), shoot, restore.
+def relaxed_arms(on):
+    # This rig's local X is the arm-swing axis (verified against hand world
+    # positions: both hands drop to the hips). The angles match the app's
+    # runtime loop (character.js), so the preview pose is what users see.
+    pose = { 'J_Bip_L_UpperArm': -1.20, 'J_Bip_R_UpperArm': -1.20, 'J_Bip_L_LowerArm': 0.12, 'J_Bip_R_LowerArm': -0.12 }
+    for name, rx in pose.items():
+        b = arm.pose.bones.get(name)
+        if b:
+            b.rotation_mode = 'XYZ'
+            b.rotation_euler = (rx if on else 0, 0, 0)
+    bpy.context.view_layer.update()
+
+relaxed_arms(True)
+bust = H * 0.34
 shoot(False, maxs.z - bust * 0.52, bust, 900, prefix + "_bust.png")
+relaxed_arms(False)
 
 for o in list(bpy.data.objects):
     if o.type in ('CAMERA', 'LIGHT'): bpy.data.objects.remove(o, do_unlink=True)

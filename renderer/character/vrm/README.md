@@ -10,9 +10,9 @@
 | Eyes | gold |
 | Skin | warm tan (#e1bda2), with a subtle painted blush on the cheeks |
 | Outfit | varsity bomber, crop top, pink pleated skirt, star ribbon bows |
-| File | `lyra.vrm`, 16.7 MB, sha256 `a22f069b47871bf77945cdc1686d2b1f8c2952eee335fa046b37d768f964d5c5` |
+| File | `lyra.vrm`, 16.7 MB, sha256 `a22f069b47871bf77945cdc1686d2b1f8c2952eee335fa046b37d768f964d5c5` · `avatar.png`, the bust preview rendered from this file |
 
-The app shows her when the live panel is switched to **3D** (or *Appearance › Live character › Source › 3D*). The renderer is `renderer/character.js` (`mountVrm`), using three.js and @pixiv/three-vrm from `renderer/vendor/three-vrm.min.js`. That bundle is built from `renderer/vendor/three-vrm.entry.js` with esbuild (three 0.180, @pixiv/three-vrm 3.5.5, @pixiv/three-vrm-animation 3.5.5):
+The app shows her on the welcome page, in the live panel and on the phone. The renderer is `renderer/character.js` (`mountVrm`), using three.js and @pixiv/three-vrm from `renderer/vendor/three-vrm.min.js`. That bundle is built from `renderer/vendor/three-vrm.entry.js` with esbuild (three 0.180, @pixiv/three-vrm 3.5.5, @pixiv/three-vrm-animation 3.5.5):
 
 ```sh
 npm i three@0.180 @pixiv/three-vrm@3.5.5 @pixiv/three-vrm-animation@3.5.5 esbuild

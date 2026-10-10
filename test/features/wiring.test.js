@@ -104,10 +104,11 @@ test('the settings pages call the assistant by name, not "the brain"', () => {
 
 test('the unfinished features say so where the user meets them', () => {
   const ui = read('renderer', 'settings.js');
-  // Phone access and drawing a new character both work but are not finished.
+  // Phone access works but is not finished, and it is offered in the UI.
   assert.match(ui, /BETA_SECTIONS = new Set\(\['mobile'\]\)/, 'the phone section must be marked in the menu');
   assert.match(ui, /title\(`Mobile \$\{BETA\}`/, 'the phone page must be marked at the top');
-  assert.match(ui, /to draw a new character[^`]*\$\{BETA\}/, 'drawing a character must be marked where it is offered');
+  // The 2D character-drawing pipeline was retired with the pixel packs, so the
+  // UI no longer offers it and needs no badge there; the recipe doc still warns.
   assert.match(read('renderer', 'styles.css'), /\.beta \{/, 'the badge needs a style or it renders as bare text');
   // And the docs agree with the app.
   assert.match(read('docs', 'AVATARS.md'), /\*\*Beta\.\*\*/, 'the avatar recipe should warn before someone follows it');
