@@ -19,7 +19,7 @@ const DEFAULTS = {
   safety: { approvalMode: 'ask', timeoutSec: 300, onTimeout: 'deny' },
   browser: { enabled: true, mode: 'visible', autoOpen: true, startPage: 'about:blank', askBeforeDownloads: true },
   memory: { longTerm: true, memoryBudget: 8000, profileBudget: 2000, autoCompression: true, threshold: 0.8, target: 0.5 },
-  voice: { engine: 'kitten', kittenModel: 'KittenML/kitten-tts-nano-0.1', voice: 'Rosie', customEndpoint: 'http://localhost:8880/v1', customModel: 'tts-1', customVoice: 'alloy', readAloud: true, stt: true, showTranscript: true, sttModel: 'small', sidecarPython: '' },
+  voice: { engine: 'kitten', kittenModel: 'KittenML/kitten-tts-nano-0.1', voice: 'Rosie', customEndpoint: 'http://localhost:8880/v1', customModel: 'tts-1', customVoice: 'alloy', readAloud: true, streamSpeech: true, stt: true, showTranscript: true, sttModel: 'small', sidecarPython: '' },
   notifications: { desktop: true, approvals: true, longTask: true, goals: true, sound: true },
   tools: { enabled: true, read_file: true, write_file: true, shell: true, run_code: true, browser: true, web_search: false, vision: true, memory_write: true, repos: true, notify: true, image_gen: true, http: true, app: true, ext: true, mcp: true },
   goals: { autonomous: false, dailyMinutes: 30 },
