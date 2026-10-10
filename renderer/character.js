@@ -70,10 +70,52 @@
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.setSize(W(), H()); renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.domElement.className = 'char vrm'; this.el.innerHTML = ''; this.el.appendChild(renderer.domElement);
       const scene = new THREE.Scene(); scene.add(vrm.scene);
-      const light = new THREE.DirectionalLight(0xffffff, Math.PI); light.position.set(0.5, 1.5, 1.5); scene.add(light); scene.add(new THREE.AmbientLight(0xffffff, 0.6));
       // Frame the upper body: the head and shoulders fill the stage, like the pixel busts.
       const hum = vrm.humanoid; const pos = (b) => { const n = hum.getNormalizedBoneNode(b); return n ? n.getWorldPosition(new THREE.Vector3()) : null; };
       vrm.scene.updateMatrixWorld(true);
+      // Story 08: key light about 45° to the side, a weak fill from the other side
+      // and a soft rim from behind, with a lower ambient, so the face has real
+      // modelling instead of a flat frontal wash.
+      const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(1.4, 1.5, 1.2); scene.add(key);
+      const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35); fill.position.set(-1.5, 0.8, 1.0); scene.add(fill);
+      const rim = new THREE.DirectionalLight(0xbfd4ff, 0.5); rim.position.set(0, 1.2, -1.5); scene.add(rim);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+      // Shadows should read as warm skin, not grey: the MToon shade colour of the
+      // skin materials is a warm tone (the story asks for the skin _ShadeColor,
+      // so hair, eyes and outfit keep their own). `o.material` can be an array
+      // on multi-material meshes, so walk it.
+      const SHADE = new THREE.Color('#c99a86');
+      // The VRoid material names end in the part they dress: ..._SKIN for the
+      // face and body, ..._HAIR, ..._CLOTH, ..._EYE, ..._FACE for the painted
+      // overlays. Only the _SKIN ones get the warm shade.
+      const matIsSkin = (m) => m && m.name && /_SKIN/i.test(m.name);
+      vrm.scene.traverse((o) => { o.frustumCulled = false; if (!o.isMesh) return; const mats = Array.isArray(o.material) ? o.material : [o.material]; for (const m of mats) { if (!m) continue; if (matIsSkin(m) && m.shadeColor) { m.shadeColor.copy(SHADE); m.needsUpdate = true; } } });
+      // Blush: a cheek overlay per side whose opacity follows the 'happy'
+      // expression at runtime, on top of the subtle base blush painted into the
+      // face texture. Full happy reaches about 3x the base.
+      const BLUSH_COLOR = 0xff7d9c;
+      const BLUSH_MAX = 0.45;
+      // Pure so a test can assert the mapping directly: 0 at rest, BLUSH_MAX at
+      // full happy, clamped for out-of-range expressions.
+      const blushOpacity = (happy) => Math.min(1, Math.max(0, happy)) * BLUSH_MAX;
+      const blushMats = [];
+      {
+        const head = hum.getNormalizedBoneNode('head');
+        const headSize = new THREE.Box3().setFromObject(head).getSize(new THREE.Vector3()).y || 0.22;
+        for (const side of [1, -1]) {
+          const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
+          const ctx = canvas.getContext('2d');
+          const grd = ctx.createRadialGradient(64, 64, 8, 64, 64, 60);
+          grd.addColorStop(0, 'rgba(255,125,156,0.9)'); grd.addColorStop(0.65, 'rgba(255,125,156,0.45)'); grd.addColorStop(1, 'rgba(255,125,156,0)');
+          ctx.fillStyle = grd; ctx.fillRect(0, 0, 128, 128);
+          const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace;
+          const mat = new THREE.MeshBasicMaterial({ map: tex, color: BLUSH_COLOR, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+          const plane = new THREE.Mesh(new THREE.PlaneGeometry(headSize * 0.55, headSize * 0.4), mat);
+          plane.position.set(side * headSize * 0.34, -headSize * 0.16, headSize * 0.30);
+          plane.rotation.y = side * 0.5;
+          head.add(plane); blushMats.push(mat);
+        }
+      }
       const chest = pos('upperChest') || pos('chest') || new THREE.Vector3(0, 1.2, 0);
       // Frame from the real top of the model (hair crown, ears) down to the chest, with headroom.
       // The head bone sits at the base of the skull, so it cannot be used for the top.
@@ -110,6 +152,9 @@
           if (blinkT < 0 && t > nextBlink) blinkT = 0;
           let bl = 0; if (blinkT >= 0) { blinkT += dt; bl = blinkT < 0.07 ? blinkT / 0.07 : blinkT < 0.16 ? 1 - (blinkT - 0.07) / 0.09 : 0; if (blinkT >= 0.16) { blinkT = -1; nextBlink = t + 2.2 + Math.random() * 3.5; } }
           ex.setValue('blink', bl); ex.setValue('happy', cur.happy * (1 - bl));
+          // Blush overlay follows the happy expression (0 at rest, ~3x the base at full happy).
+          const blushA = blushOpacity(ex.getValue('happy'));
+          for (const bm of blushMats) bm.opacity = blushA;
           if (!this.audio) ex.setValue('aa', s === 'speaking' ? (0.25 + 0.25 * Math.sin(t * 14)) * (Math.sin(t * 3.1) > -0.6 ? 1 : 0) : 0);
         }
         vrm.update(dt);
