@@ -4,9 +4,10 @@
 // claudia/... is reviewed by Lucima and lucima/... by Claudia. Anything else
 // (Dependabot, a person) goes to Claudia, so every pull request gets a review.
 //
-// Both agents push as the same GitHub account, and GitHub does not let an
-// account approve its own pull request, so a review is a comment plus the
-// "agent-review" commit status. The merge itself stays with the owner.
+// A review is a comment plus the "agent-review" commit status, not a GitHub
+// approval: Lucima still shares the owner's account, and GitHub does not let an
+// account approve its own pull request (accounts: docs/agent-review.md). The
+// merge itself stays with the owner.
 //
 //   route   --pr N --branch B          label a pull request for its reviewer (CI runs this)
 //   queue   --me NAME [--gate]          pull requests waiting for NAME's review, as JSON

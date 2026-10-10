@@ -30,10 +30,24 @@ author opens PR ─► workflow labels it needs-review:<other> ─► reviewer's
 Every new push puts the pull request back in the reviewer's queue. A verdict covers only
 the commit it reviewed.
 
-Both agents push as the same GitHub account, and GitHub won't let an account approve its own
-pull request. So a verdict is a **comment** plus an **`agent-review` commit status**, not a
-GitHub "Approve". The required check is still `QA Gate`; `agent-review` is what Hanood reads
-before merging.
+A verdict is a **comment** plus an **`agent-review` commit status**, not a GitHub "Approve".
+The required check is still `QA Gate`; `agent-review` is what Hanood reads before merging.
+
+## Who posts as whom
+
+| Agent   | GitHub account    | Set up in its Hermes profile                          |
+|---------|-------------------|-------------------------------------------------------|
+| Claudia | `claudiasenorita` | `GH_CONFIG_DIR` + `scripts/claudia-gh-env.sh`         |
+| Lucima  | `mhndhayek`       | none yet: it shares Hanood's login                    |
+
+Each agent's comments, verdicts, commits and pushes must come from its own account, so the
+author line on a pull request tells you who really wrote it. Cron jobs start with a bare
+environment, and a bare `gh` or `git` falls back to Hanood's login (`~/.config/gh` and the
+macOS keychain). So the agent's cron gate loads its identity first, checks `gh api user` and
+refuses to run if the login is wrong.
+
+Approvals stay out of the loop even with separate accounts. Lucima still shares Hanood's
+account, and GitHub won't let an account approve its own pull request.
 
 ## Reviewing (what the reviewer's cron does)
 
