@@ -26,8 +26,8 @@ Lyra is a desktop app built so the assistant running in it (you) can customize a
 | Change a setting (theme, voice, character, image backend, budgets…) | `configure_app({patch})` — read `read_docs("settings")` for paths |
 | Restyle the app | write `themes/<id>/theme.json` + `theme.css`, then `configure_app({appearance:{theme:"<id>"}})` |
 | Change your picture | `configure_app({persona:{avatar:"<png path>"}})` |
-| Show yourself in 2D or 3D | `configure_app({appearance:{source:"gif"}})` or `{appearance:{source:"vrm"}}`; another VRM: `{appearance:{vrmModel:"<path>.vrm"}}` |
-| Switch to another built-in character, or make a new animated one | `configure_app({appearance:{source:"gif",gifFolder:"builtin:<id>"}})`; to draw a new one read `read_docs("avatars")` (needs the user's SwarmUI) |
+| Show a different 3D character | `configure_app({appearance:{vrmModel:"<path>.vrm"}})` — the app is VRM-only; `builtin:lyra` is the default |
+| Add a new animated character | build a VRM file and point at it with `vrmModel` (see `read_docs("avatars")`; a GIF pack retires on its own and falls back to Lyra) |
 | Add a tool or a panel | write an extension, then `install_extension({id})` |
 | Change how the UI or the agent works | edit organ files (`edit_file` for small edits), then `apply_changes` |
 | Undo | `list_checkpoints` and `rollback` |

@@ -94,7 +94,7 @@
     const themes = await lyra.themes.list();
     // 3D-first: Lyra (3D) is always selected; the "More characters" card is greyed.
     const lyraCard = el(`<div class="theme-card setup-pack on"><img src="character/vrm/avatar.png" alt=""><div class="n">Lyra (3D)</div><div class="k">Selected</div></div>`);
-    const comingSoon = el(`<div class="theme-card setup-pack coming-soon"><div class="n">More characters</div><div class="k">Coming soon</div></div>`);
+    const comingSoon = el(`<div class="theme-card setup-pack coming-soon"><span class="coming-badge">soon</span><div class="n">More characters</div><div class="k">Coming soon</div></div>`);
     const grid = el('<div class="theme-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"></div>');
     grid.appendChild(lyraCard);
     grid.appendChild(comingSoon);

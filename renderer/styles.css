@@ -242,7 +242,10 @@ textarea.field { height: auto; min-height: 104px; padding: 10px 12px; line-heigh
 .setup-hero { display: flex; align-items: center; gap: 22px; }
 .setup-hero-3d .setup-hero-3d-stage { width: 150px; height: 150px; flex-shrink: 0; }
 .setup-hero-3d .setup-hero-3d-stage canvas.char { width: 100% !important; height: 100% !important; display: block; }
-.setup-pack { align-items: center; text-align: center; } .setup-pack img { width: 64px; height: 64px; border-radius: 50%; image-rendering: pixelated; }
+.setup-pack { align-items: center; text-align: center; } .setup-pack img { width: 64px; height: 64px; border-radius: 50%; image-rendering: auto; }
+.setup-pack.coming-soon { cursor: default; opacity: .55; position: relative; }
+.setup-pack.coming-soon .n { color: var(--muted); }
+.coming-badge { position: absolute; top: -8px; right: 10px; font-size: 10px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: var(--accent-fg); background: var(--accent); border-radius: 999px; padding: 2px 8px; }
 .tag-scripts { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; margin-left: 8px; border-radius: var(--radius-pill); background: var(--accent-dim); color: var(--accent); font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; vertical-align: middle; }
 
 /* toasts */
