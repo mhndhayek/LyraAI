@@ -40,7 +40,7 @@
     "test:coverage": "node scripts/run-tests.js --experimental-test-coverage"
   },
   "dependencies": {
-    "marked": "^18.0.12",
+    "marked": "^18.1.0",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
