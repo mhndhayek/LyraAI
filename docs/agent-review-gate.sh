@@ -12,6 +12,17 @@ REPO="mhndhayek/LyraAI"
 export PATH="/opt/homebrew/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
+# The agent's own GitHub identity (docs/agent-review.md, "Who posts as whom").
+# A cron job starts with a bare environment, where gh and git fall back to the
+# owner's login. <agent>-gh-env.sh in the profile's scripts folder sets
+# GH_CONFIG_DIR, the git author and LYRA_GH_LOGIN; when it names a login, the
+# gate refuses to run as anyone else, so nothing is posted under the wrong name.
+[ -f "$HERE/$ME-gh-env.sh" ] && . "$HERE/$ME-gh-env.sh"
+if [ -n "${LYRA_GH_LOGIN:-}" ]; then
+  WHO="$(gh api user --jq .login 2>/dev/null)"
+  [ "$WHO" = "$LYRA_GH_LOGIN" ] || { echo "gh is logged in as '${WHO:-nobody}', not $LYRA_GH_LOGIN; refusing to run the review"; exit 1; }
+fi
+
 # The newest copy of the router on main wins; the installed copy covers the
 # time before this loop is merged, and the case where GitHub is unreachable.
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
