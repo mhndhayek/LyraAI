@@ -51,7 +51,12 @@ if (engineData) {
     let pid = null; try { pid = Number(fs.readFileSync(engineCheck.seeded.pidFile(), 'utf8')); } catch {}
     if (!pid) { if (n < 40) setTimeout(() => look(n + 1), 250); return; }
     engineCheck.pid = pid;
-    try { engineCheck.listening = require('child_process').execFileSync('lsof', ['-nP', '-a', '-p', String(pid), '-iTCP', '-sTCP:LISTEN'], { encoding: 'utf8' }); } catch (e) { engineCheck.listening = e.code === 'ENOENT' ? 'no lsof' : ''; }
+    // The pid file is written at spawn, before the server has bound its port; on a
+    // slow runner lsof can look in between. Ask again until it is listening (~20 s).
+    let l = '';
+    try { l = require('child_process').execFileSync('lsof', ['-nP', '-a', '-p', String(pid), '-iTCP', '-sTCP:LISTEN'], { encoding: 'utf8' }); } catch (e) { if (e.code === 'ENOENT') l = 'no lsof'; }
+    engineCheck.listening = l;
+    if (!l && n < 80) setTimeout(() => look(n + 1), 250);
   }, 3000);
 }
 
@@ -84,7 +89,8 @@ run([`--screenshot=${shot}`, '--delay=8000'], { timeoutMs: 180000, onLine, userD
       const l = engineCheck.listening;
       if (!engineCheck.pid) fail('the local engine did not start with the app');
       else if (l === 'no lsof') console.log('– lsof is not installed: skipped the listening-address check');
-      else if (!/127\.0\.0\.1:\d+ \(LISTEN\)/.test(l || '') || /(\*|0\.0\.0\.0|\[::\]):\d+ \(LISTEN\)/.test(l)) fail(`the local engine is not listening on 127.0.0.1 only:\n${l}`);
+      else if (!l) fail(`the local engine (pid ${engineCheck.pid}) never opened a listening port`);
+      else if (!/127\.0\.0\.1:\d+ \(LISTEN\)/.test(l) || /(\*|0\.0\.0\.0|\[::\]):\d+ \(LISTEN\)/.test(l)) fail(`the local engine is not listening on 127.0.0.1 only:\n${l}`);
       else console.log('✓ the local engine started with the app and listens on 127.0.0.1 only');
       let left = '';
       try { left = require('child_process').execFileSync('pgrep', ['-f', engineCheck.seeded.root], { encoding: 'utf8' }).trim(); } catch {}
