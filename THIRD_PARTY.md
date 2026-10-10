@@ -13,6 +13,7 @@ Lyra AI Agent stands on these projects. Each keeps its own license.
 | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | speech to text in the voice sidecar | MIT |
 | [three.js](https://threejs.org/) | 3D rendering for the VRM character (bundled in `renderer/vendor/three-vrm.min.js`) | MIT |
 | [@pixiv/three-vrm](https://github.com/pixiv/three-vrm) | loads and animates VRM avatars (same bundle) | MIT |
+| [@pixiv/three-vrm-animation](https://github.com/pixiv/three-vrm-animation) | retargets VRMA clips onto the VRM humanoid rig (same bundle) | MIT |
 | [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans) | the Pixel theme's font | SIL Open Font License 1.1 |
 | [Tailscale](https://tailscale.com/) | private network and HTTPS certificate for phone access (installed separately) | BSD-3-Clause client |
 
@@ -29,3 +30,5 @@ The generic "OpenAI-compatible" plug is drawn for Lyra and is not anyone's mark.
 
 The two built-in characters were generated with [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI) and the Z-Image-Turbo model, then cut and animated by `scripts/make_character.py`.
 Lyra's 3D model (`renderer/character/vrm/lyra.vrm`) is a recolour of AvatarSample_B by the [VRoid Project](https://vroid.com/) (pixiv), used under its VRoid Hub conditions, which allow modification, redistribution and commercial use without credit. The conditions stay embedded in the file and apply to it rather than this repository's license.
+
+The ten animation clips in `renderer/character/anims/` are each documented in `renderer/character/anims/README.md`: the five from the MIT-licensed [vrm-viewer](https://github.com/tk256ailab/vrm-viewer) (redistributable) and the five authored in Blender under this repository's own licence.

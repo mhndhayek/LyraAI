@@ -1,39 +1,20 @@
-// The live character: a GIF pack (idle/thinking/writing/speaking.gif in a folder) for 2D,
-// or a VRM model for 3D.
+// The live character: a VRM model in 3D.
 (function () {
   const STATES = ['idle', 'thinking', 'writing', 'speaking'];
 
   class Character {
-    constructor(el) { this.el = el; this.state = 'idle'; this.cfg = { source: 'gif', gifFolder: 'builtin:catgirl' }; this.timers = []; this.audio = null; this.vrm = null; this.mount(); }
+    constructor(el) { this.el = el; this.state = 'idle'; this.cfg = { source: 'vrm', vrmModel: 'builtin:lyra' }; this.timers = []; this.audio = null; this.vrm = null; this.mount(); }
     dispose() { this.mountSeq = (this.mountSeq || 0) + 1; this.clearTimers(); this.destroyVrm(); this.detachAudio(); this.el.innerHTML = ''; }
-    clearTimers() { this.timers.forEach(clearInterval); this.timers = []; if (this.raf) cancelAnimationFrame(this.raf); this.raf = null; }
+    clearTimers() { this.timers.forEach(clearInterval); this.timers = []; if (this.raf) cancelAnimationFrame(this.raf); }
     configure(cfg) { const changed = JSON.stringify(cfg) !== JSON.stringify(this.cfg); this.cfg = { ...this.cfg, ...cfg }; if (changed) this.mount(); }
-    setState(state) { if (!STATES.includes(state)) state = 'idle'; if (state !== 'idle') this.idleVariant = null; this.state = state; this.el.dataset.state = state; this.render(); }
+    setState(state) { if (!STATES.includes(state)) state = 'idle'; if (state !== 'idle') this.idleVariant = null; this.state = state; this.el.dataset.state = state; this.render(); if (this.anim) this.anim.setState(state); }
 
-    // Two sources: a GIF pack (2D) or a VRM model (3D). Anything else, including the
-    // sources that were retired (built-in SVG, Hermes pet, Live2D), shows the GIF pack.
     mount() {
       this.mountSeq = (this.mountSeq || 0) + 1; this.clearTimers(); this.destroyVrm(); this.el.innerHTML = ''; delete this.el.dataset.vrmError;
-      if (this.cfg.source === 'vrm') { this.el.innerHTML = '<div class="char-missing">Loading 3D…</div>'; this.mountVrm().catch((e) => { console.warn('VRM failed:', e.message); this.el.dataset.vrmError = e.message; this.el.innerHTML = `<div class="char-missing">Could not load the 3D model:<br>${String(e.message).replace(/</g, '&lt;')}</div>`; }); }
-      else this.mountGif();
+      this.el.innerHTML = '<div class="char-missing">Loading 3D…</div>'; this.mountVrm().catch((e) => { console.warn('VRM failed:', e.message); this.el.dataset.vrmError = e.message; this.el.innerHTML = `<div class="char-missing">Could not load the 3D model:<br>${String(e.message).replace(/</g, '&lt;')}</div>`; });
     }
     render() {
-      if (this.mode === 'vrm') return; // the render loop reads this.state every frame
-      if (this.mode === 'gif') { const img = this.el.querySelector('img'); if (!img) return; let file = `${this.state}.gif`; if (this.state === 'idle' && this.idleVariant) file = this.idleVariant; if (img.dataset.want !== file) { img.dataset.want = file; img.src = this.gifUrl(file) + `?t=${Date.now()}`; } }
-    }
-
-    /* --- GIF pack --- */
-    toFileUrl(p) { if (p.startsWith('builtin:')) return 'character/' + p.slice(8).replace(/\/$/, '') + '/'; return p.startsWith('file://') ? p : 'file://' + encodeURI(p); }
-    gifUrl(file) { const f = this.cfg.gifFolder || 'builtin:catgirl'; return f.startsWith('builtin:') ? this.toFileUrl(f) + file : this.toFileUrl(`${f}/${file}`); }
-    mountGif() {
-      this.mode = 'gif';
-      const img = document.createElement('img'); img.className = 'char gif'; img.alt = '';
-      img.onerror = () => { if (!(img.dataset.want || '').startsWith('idle.gif')) { img.dataset.want = 'idle.gif'; img.src = this.gifUrl('idle.gif'); } else { this.el.innerHTML = `<div class="char-missing">No idle.gif in<br>${this.cfg.gifFolder || 'builtin:catgirl'}</div>`; } };
-      this.el.appendChild(img); this.idleVariant = null; this.idleVariants = ['idle.gif'];
-      // Idle variations: idle-2.gif … idle-6.gif play now and then instead of idle.gif.
-      for (let i = 2; i <= 6; i++) { const probe = new Image(); const name = `idle-${i}.gif`; probe.onload = () => this.idleVariants.push(name); probe.src = this.gifUrl(name); }
-      this.timers.push(setInterval(() => { if (this.state !== 'idle' || this.idleVariants.length < 2) return; const pick = Math.random() < 0.55 ? 'idle.gif' : this.idleVariants[1 + Math.floor(Math.random() * (this.idleVariants.length - 1))]; this.idleVariant = pick === 'idle.gif' ? null : pick; this.render(); }, 7000));
-      this.render();
+      if (this.mode !== 'vrm') return; // the render loop reads this.state every frame
     }
 
     /* --- script loading (the 3D bundle is loaded on first use) --- */
@@ -51,13 +32,16 @@
        builtin:lyra is the shipped mascot; any other value is a path to a .vrm file.
        Idle breathing, blinking, glances and spring-bone hair run every frame; the
        states lean, tilt and gesture; lip sync drives the "aa" expression. */
+    toFileUrl(p) { return p.startsWith('file://') ? p : 'file://' + encodeURI(p); }
     vrmUrl(p) { if (!p || p === 'builtin:lyra') return 'character/vrm/lyra.vrm'; return this.toFileUrl(p); }
+    // Base URL for the story-09 animation assets (.vrma clips + anims.json).
+    animUrl(p) { return 'character/anims/' + p; }
     async mountVrm() {
       const seq = this.mountSeq; this.mode = 'vrm';
       await this.loadScript('vendor/three-vrm.min.js');
       const L = window.LyraVRM; if (!L) throw new Error('three-vrm did not load');
-      const { THREE, GLTFLoader, VRMLoaderPlugin, VRMUtils } = L;
-      const loader = new GLTFLoader(); loader.register((parser) => new VRMLoaderPlugin(parser));
+      const { THREE, GLTFLoader, VRMLoaderPlugin, VRMUtils, VRMAnimationLoaderPlugin, createVRMAnimationClip } = L;
+      const loader = new GLTFLoader(); loader.register((parser) => new VRMLoaderPlugin(parser)); loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
       const gltf = await loader.loadAsync(this.vrmUrl(this.cfg.vrmModel));
       if (seq !== this.mountSeq) return;
       const vrm = gltf.userData.vrm; if (!vrm) throw new Error('not a VRM file');
@@ -131,34 +115,68 @@
       const ex = vrm.expressionManager;
       const clock = new THREE.Clock(); let t = 0; let nextBlink = 2 + Math.random() * 3; let blinkT = -1; let glance = { x: 0, y: 0, until: 0 };
       const ease = (a, b, k) => a + (b - a) * k;
-      const cur = { lean: 0, tilt: 0, nod: 0, wave: 0, happy: 0 };
+      const cur = { happy: 0 };
+      // Story 09: the animation state machine owns the body. A THREE.AnimationMixer
+      // drives the active .vrma clip (breathing / think / lean-type / talk),
+      // crossfading between them as the state changes. Everything procedural below
+      // is a thin *additive* overlay on top of the mixer so the model still feels
+      // alive without fighting the clip: the arms-down rest correction (the clips
+      // are authored in a T-pose, so without this Lyra's arms stay up), a subtle
+      // chest-breath, the look-target wander, blinks, blush and lip-sync.
+      const anim = (window.LyraAnimation && window.LyraAnimation.AnimationState) ? new window.LyraAnimation.AnimationState({ THREE, loader, vrm, baseClipFactory: createVRMAnimationClip }, null, this.animUrl('')) : null;
+      if (anim) this.anim = anim;
+      if (anim) anim.manifest = await (await fetch(this.animUrl('anims.json'))).json();
+      // Arms-down rest correction, applied as a local-frame rotation ON TOP of the
+      // mixer pose each frame (multiply, not assign) so a clip's arm motion survives
+      // the correction. Matches the pre-story-09 look: left +1.22 / right -1.22.
+      const AD = { lUA: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 1.22)), rUA: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -1.22)), lLA: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.12)), rLA: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.12)) };
+      // Where the mixer left the arm bones this frame, so the correction can be
+      // undone after render (see the restore at the bottom of the loop).
+      const AD_BASE = { lUA: new THREE.Quaternion(), rUA: new THREE.Quaternion(), lLA: new THREE.Quaternion(), rLA: new THREE.Quaternion() };
+      if (anim) { await anim.loadAll(); anim.setState(this.state); if (anim.currentAction) console.log(`[char] 3D animation active: ${anim.current} (${anim.currentAction.isRunning() ? 'playing' : 'ready'})`); }
       const loop = () => {
         if (!this.vrm || this.vrm.vrm !== vrm) return;
         const dt = Math.min(0.05, clock.getDelta()); t += dt;
-        const s = this.state; const want = { lean: s === 'thinking' ? 0.06 : s === 'writing' ? 0.1 : 0, tilt: s === 'thinking' ? 0.16 : 0, nod: s === 'writing' ? 0.06 : 0, wave: s === 'speaking' ? 1 : 0, happy: s === 'speaking' ? 0.35 : s === 'idle' ? 0.15 : 0 };
-        for (const k of Object.keys(cur)) cur[k] = ease(cur[k], want[k], Math.min(1, dt * 4));
+        const s = this.state;
+        // 1) Mixer drives the whole body from the active clip (crossfades handled inside).
+        if (anim) anim.update(dt);
+        // 2) Additive overlay on top of the mixer pose.
         const br = Math.sin(t * 1.6);
-        if (pose.lUA) pose.lUA.rotation.z = 1.22 + br * 0.015; if (pose.rUA) pose.rUA.rotation.z = -1.22 - br * 0.015 - cur.wave * 0.12 * (0.5 + 0.5 * Math.sin(t * 3));
-        if (pose.lLA) pose.lLA.rotation.z = 0.12; if (pose.rLA) pose.rLA.rotation.z = -0.12 - cur.wave * 0.25;
-        if (pose.spine) { pose.spine.rotation.x = cur.lean + br * 0.012; pose.spine.rotation.y = Math.sin(t * 0.5) * 0.03; }
-        if (pose.chest) pose.chest.rotation.x = br * 0.015;
-        if (pose.neck) pose.neck.rotation.z = cur.tilt * 0.4;
-        if (pose.head) { pose.head.rotation.z = cur.tilt * 0.6 + Math.sin(t * 0.7) * 0.02; pose.head.rotation.x = cur.nod * Math.sin(t * 5) + Math.sin(t * 0.9) * 0.015; pose.head.rotation.y = Math.sin(t * 0.43) * 0.05; }
-        // Eyes: wander a little; while thinking look up and aside.
+        // The correction must be UNDO before the next frame: three's mixer only
+        // writes a track when its value changed, so a clip that keeps the arms
+        // constant would compound the multiply every frame (70° → 140° → …) and
+        // her arms would spin in writing/speaking. Snapshot the mixer pose, apply
+        // the correction for this frame's render, then restore it (step 5).
+        if (pose.lUA) { AD_BASE.lUA.copy(pose.lUA.quaternion); pose.lUA.quaternion.multiply(AD.lUA); }
+        if (pose.rUA) { AD_BASE.rUA.copy(pose.rUA.quaternion); pose.rUA.quaternion.multiply(AD.rUA); }
+        if (pose.lLA) { AD_BASE.lLA.copy(pose.lLA.quaternion); pose.lLA.quaternion.multiply(AD.lLA); }
+        if (pose.rLA) { AD_BASE.rLA.copy(pose.rLA.quaternion); pose.rLA.quaternion.multiply(AD.rLA); }
+        const breath = 1 + br * 0.006;
+        if (pose.chest) pose.chest.scale.set(breath, 1, breath);
+        // 3) Eyes wander a little; while thinking look up and aside.
         if (t > glance.until) glance = { x: (Math.random() - 0.5) * 0.25, y: (Math.random() - 0.5) * 0.12, until: t + 1.5 + Math.random() * 2.5 };
         const gx = s === 'thinking' ? 0.35 : glance.x, gy = s === 'thinking' ? 0.3 : s === 'writing' ? -0.25 : glance.y;
         lookTarget.position.set(ease(lookTarget.position.x, gx, dt * 3), ease(lookTarget.position.y, gy, dt * 3), -1);
+        // 4) Expressions: blink, happy→blush, lip-sync.
+        cur.happy = ease(cur.happy, s === 'speaking' ? 0.35 : s === 'idle' ? 0.15 : 0, Math.min(1, dt * 4));
         if (ex) {
           if (blinkT < 0 && t > nextBlink) blinkT = 0;
           let bl = 0; if (blinkT >= 0) { blinkT += dt; bl = blinkT < 0.07 ? blinkT / 0.07 : blinkT < 0.16 ? 1 - (blinkT - 0.07) / 0.09 : 0; if (blinkT >= 0.16) { blinkT = -1; nextBlink = t + 2.2 + Math.random() * 3.5; } }
           ex.setValue('blink', bl); ex.setValue('happy', cur.happy * (1 - bl));
-          // Blush overlay follows the happy expression (0 at rest, ~3x the base at full happy).
           const blushA = blushOpacity(ex.getValue('happy'));
           for (const bm of blushMats) bm.opacity = blushA;
           if (!this.audio) ex.setValue('aa', s === 'speaking' ? (0.25 + 0.25 * Math.sin(t * 14)) * (Math.sin(t * 3.1) > -0.6 ? 1 : 0) : 0);
         }
         vrm.update(dt);
         renderer.render(scene, camera);
+        // 5) Undo this frame's arms-down correction so the next frame's mixer
+        //    writes onto the clip's own pose, not the corrected one. (The mixer
+        //    skips writing unchanged tracks — see step 2 — so without this the
+        //    correction compounds on clips that hold the arms still.)
+        if (pose.lUA) pose.lUA.quaternion.copy(AD_BASE.lUA);
+        if (pose.rUA) pose.rUA.quaternion.copy(AD_BASE.rUA);
+        if (pose.lLA) pose.lLA.quaternion.copy(AD_BASE.lLA);
+        if (pose.rLA) pose.rLA.quaternion.copy(AD_BASE.rLA);
         this.raf3d = requestAnimationFrame(loop);
       };
       const ro = new ResizeObserver(() => { renderer.setSize(W(), H()); camera.aspect = W() / H(); camera.updateProjectionMatrix(); }); ro.observe(this.el);
@@ -167,6 +185,7 @@
     }
     destroyVrm() {
       if (this.raf3d) cancelAnimationFrame(this.raf3d); this.raf3d = null;
+      if (this.anim) { try { this.anim.dispose(); } catch {} this.anim = null; }
       if (!this.vrm) return; const { vrm, renderer, ro } = this.vrm; this.vrm = null;
       try { ro.disconnect(); } catch {}
       try { window.LyraVRM.VRMUtils.deepDispose(vrm.scene); } catch {}

@@ -20,7 +20,7 @@ fs.mkdirSync(stateDir, { recursive: true });
 fs.writeFileSync(path.join(stateDir, 'settings.json'), JSON.stringify({
   ui: { setupDone: true },
   appearance: { source: 'vrm', vrmModel: 'builtin:lyra', liveCharacter: true, placement: 'panel' },
-  persona: { name: 'Lyra', avatar: 'builtin:catgirl' },
+  persona: { name: 'Lyra', avatar: 'builtin:lyra' },
 }, null, 2));
 
 const bin = require(path.join(ROOT, 'node_modules', 'electron'));

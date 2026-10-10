@@ -10,16 +10,20 @@
 | Eyes | gold |
 | Skin | warm tan (#e1bda2), with a subtle painted blush on the cheeks |
 | Outfit | varsity bomber, crop top, pink pleated skirt, star ribbon bows |
-| File | `lyra.vrm`, 16.7 MB, sha256 `a22f069b47871bf77945cdc1686d2b1f8c2952eee335fa046b37d768f964d5c5` |
+| File | `lyra.vrm`, 16.7 MB, sha256 `a22f069b47871bf77945cdc1686d2b1f8c2952eee335fa046b37d768f964d5c5` · `avatar.png`, the bust preview rendered from this file |
 
-The app shows her when the live panel is switched to **3D** (or *Appearance › Live character › Source › 3D*). The renderer is `renderer/character.js` (`mountVrm`), using three.js and @pixiv/three-vrm from `renderer/vendor/three-vrm.min.js`. That bundle is built from `renderer/vendor/three-vrm.entry.js` with esbuild (three 0.180, @pixiv/three-vrm 3.5.5):
+The app shows her on the welcome page, in the live panel and on the phone. The renderer is `renderer/character.js` (`mountVrm`), using three.js and @pixiv/three-vrm from `renderer/vendor/three-vrm.min.js`. That bundle is built from `renderer/vendor/three-vrm.entry.js` with esbuild (three 0.180, @pixiv/three-vrm 3.5.5, @pixiv/three-vrm-animation 3.5.5):
 
 ```sh
-npm i three@0.180 @pixiv/three-vrm@3.5.5 esbuild
+npm i three@0.180 @pixiv/three-vrm@3.5.5 @pixiv/three-vrm-animation@3.5.5 esbuild
 npx esbuild renderer/vendor/three-vrm.entry.js --bundle --minify --format=iife --legal-comments=eof --target=chrome120 --outfile=renderer/vendor/three-vrm.min.js
 ```
 
 In the app she breathes, blinks, glances around, leans in while writing, tilts her head and looks aside while thinking, and opens her mouth with the voice level when speaking. The hair and skirt use the model's own spring bones.
+
+## Motion (story 09)
+
+On top of that procedural layer, her body now plays real animation clips. `renderer/character/anim.js` is a state machine: a `THREE.AnimationMixer` drives the active `.vrma` clip and crossfades (0.35 s) between them as the state changes — `idle_breathe`/`idle_shift` while idle, `think_chin` while thinking, `lean_type` while writing, `talk_idle` while speaking — with one-shots (`wave`, `nod`, `happy_bounce`) that play once and ease back. The procedural layer (breathing, blink, glance, blush, lip-sync) stays an **additive** overlay on top of the mixer, and an arms-down rest correction is multiplied onto the clip pose each frame because the clips are authored in a T-pose. The ten clips, their provenance and licences, live in [`anims/`](../anims/) with an `anims.json` manifest and its own README. `node scripts/validate-vrma.mjs` retargets every clip onto Lyra and confirms each is a non-empty animation.
 
 ## Where she comes from, and the licence
 

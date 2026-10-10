@@ -66,6 +66,9 @@ function createWindow() {
     const sendText = argOf('send'); if (sendText) setTimeout(() => k.emit(null, 'debug', { send: sendText, browser: !!argOf('browser') }), 2000);
     const send2 = argOf('send2'); if (send2) setTimeout(() => k.emit(null, 'debug', { send: send2 }), Number(argOf('send2delay')) || 10000);
     const shot = argOf('screenshot'); if (shot && !k.shotTimer) k.shotTimer = setTimeout(async () => { try { const img = await win.webContents.capturePage(); fs.writeFileSync(shot, img.toPNG()); } catch (e) { console.error(e); } app.quit(); }, Number(argOf('delay')) || 4000);
+    // 2D was retired in story 01 (lyr-01): the live panel is 3D-only now, so this
+    // flag is kept as a harmless no-op for the smoke-3d script and old QA notes.
+    if (flag('3d')) setTimeout(() => k.emit(null, 'debug', { dim: '3d' }), 1200);
   });
 }
 
@@ -175,7 +178,6 @@ app.whenReady().then(async () => {
   h('ext:call', async (p) => { try { return { ok: true, result: await k.extensions.call(p.id, p.tool, p.args) }; } catch (e) { return { ok: false, error: e.message }; } });
   h('ext:panels', () => k.extensions.panels().map((x) => ({ ...x, url: pathToFileURL(x.file).href })));
   h('ext:openFolder', () => eshell.openPath(k.paths.extensions));
-  h('packs:list', () => { const dir = path.join(k.paths.organsRenderer, 'character'); if (!fs.existsSync(dir)) return []; return fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory() && fs.existsSync(path.join(dir, e.name, 'idle.gif'))).map((e) => { let meta = {}; try { meta = JSON.parse(fs.readFileSync(path.join(dir, e.name, 'pack.json'), 'utf8')); } catch {} return { id: e.name, name: meta.name || e.name, description: meta.description || '', avatar: fs.existsSync(path.join(dir, e.name, 'avatar.png')) }; }); });
   // Drawn in the kernel: organs live outside the bundle and cannot load npm packages.
   h('mobile:qr', async (p) => {
     const QR = require('qrcode');

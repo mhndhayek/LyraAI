@@ -1,0 +1,81 @@
+{
+  "crossfade": 0.35,
+  "states": {
+    "idle": { "clips": ["idle_breathe", "idle_shift"] },
+    "thinking": { "clips": ["think_chin"] },
+    "writing": { "clips": ["lean_type"] },
+    "speaking": { "clips": ["talk_idle"] }
+  },
+  "clips": {
+    "idle_breathe": {
+      "id": "idle_breathe", "file": "idle_breathe.vrma", "loop": true,
+      "states": ["idle"], "weight": 1,
+      "source": "tk256ailab/vrm-viewer (Relax)",
+      "licence": "MIT",
+      "url": "https://github.com/tk256ailab/vrm-viewer"
+    },
+    "idle_shift": {
+      "id": "idle_shift", "file": "idle_shift.vrma", "loop": true,
+      "states": ["idle"], "weight": 1,
+      "source": "tk256ailab/vrm-viewer (LookAround)",
+      "licence": "MIT",
+      "url": "https://github.com/tk256ailab/vrm-viewer"
+    },
+    "think_chin": {
+      "id": "think_chin", "file": "think_chin.vrma", "loop": true,
+      "states": ["thinking"], "weight": 1,
+      "source": "tk256ailab/vrm-viewer (Thinking)",
+      "licence": "MIT",
+      "url": "https://github.com/tk256ailab/vrm-viewer"
+    },
+    "lean_type": {
+      "id": "lean_type", "file": "lean_type.vrma", "loop": true,
+      "states": ["writing"], "weight": 1,
+      "source": "authored in Blender 5.2, VRM add-on 4.7",
+      "licence": "MIT (this repository)",
+      "url": "https://github.com/mhndhayek/LyraAI"
+    },
+    "talk_idle": {
+      "id": "talk_idle", "file": "talk_idle.vrma", "loop": true,
+      "states": ["speaking"], "weight": 1,
+      "source": "authored in Blender 5.2, VRM add-on 4.7",
+      "licence": "MIT (this repository)",
+      "url": "https://github.com/mhndhayek/LyraAI"
+    },
+    "wave": {
+      "id": "wave", "file": "wave.vrma", "loop": false,
+      "states": ["greet"], "weight": 1,
+      "source": "tk256ailab/vrm-viewer (Goodbye)",
+      "licence": "MIT",
+      "url": "https://github.com/tk256ailab/vrm-viewer"
+    },
+    "nod": {
+      "id": "nod", "file": "nod.vrma", "loop": false,
+      "states": ["one-shot"], "weight": 1,
+      "source": "authored in Blender 5.2, VRM add-on 4.7",
+      "licence": "MIT (this repository)",
+      "url": "https://github.com/mhndhayek/LyraAI"
+    },
+    "happy_bounce": {
+      "id": "happy_bounce", "file": "happy_bounce.vrma", "loop": false,
+      "states": ["clicked"], "weight": 1,
+      "source": "tk256ailab/vrm-viewer (Jump)",
+      "licence": "MIT",
+      "url": "https://github.com/tk256ailab/vrm-viewer"
+    },
+    "walk": {
+      "id": "walk", "file": "walk.vrma", "loop": true,
+      "states": ["walking"], "weight": 1,
+      "source": "authored in Blender 5.2, VRM add-on 4.7",
+      "licence": "MIT (this repository)",
+      "url": "https://github.com/mhndhayek/LyraAI"
+    },
+    "turn": {
+      "id": "turn", "file": "turn.vrma", "loop": false,
+      "states": ["turn"], "weight": 1,
+      "source": "authored in Blender 5.2, VRM add-on 4.7",
+      "licence": "MIT (this repository)",
+      "url": "https://github.com/mhndhayek/LyraAI"
+    }
+  }
+}
