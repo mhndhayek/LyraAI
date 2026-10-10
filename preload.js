@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld('lyra', {
   chat: { send: call('chat:send'), stop: call('chat:stop'), context: call('chat:context') },
   approvals: { respond: call('approval:respond') },
   browser: { bounds: call('browser:bounds'), show: call('browser:show'), takeOver: call('browser:takeover'), stop: call('browser:stop'), navigate: call('browser:navigate'), back: call('browser:back'), reload: call('browser:reload'), status: call('browser:status'), clear: call('browser:clear') },
-  voice: { transcribe: call('voice:transcribe'), speak: call('voice:speak'), voices: call('voice:voices'), available: call('voice:available'), status: call('voice:status'), setup: call('voice:setup'), warm: call('voice:warm') },
+  voice: { transcribe: call('voice:transcribe'), speak: call('voice:speak'), voices: call('voice:voices'), available: call('voice:available'), status: call('voice:status'), setup: call('voice:setup'), warm: call('voice:warm'), playing: call('voice:playing') },
   state: { set: call('state:set') },
   memory: { list: call('memory:list'), delete: call('memory:delete'), clear: call('memory:clear') },
   goals: { list: call('goals:list'), archive: call('goals:archive'), reflect: call('goals:reflect'), run: call('goals:run'), usage: call('goals:usage') },

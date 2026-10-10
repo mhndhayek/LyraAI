@@ -8,6 +8,7 @@
     "llm.js": "OpenAI-compatible client: model listing (LM Studio, Ollama, generic), streaming with reasoning-tag filtering.",
     "browser.js": "The agent's browser (WebContentsView / hidden window) and its primitives.",
     "voice.js": "KittenTTS + Whisper sidecar bridge, custom TTS, say fallback.",
+    "speech-queue.js": "Speak while writing: cuts the streamed reply into sentences, synthesises at most two at a time through voice.tts(), hands the audio back in reading order, and joins the pieces into one WAV.",
     "goals.js": "Reflection after sessions and autonomous goal work.",
     "companion.js": "The phone companion: an HTTPS server bound to the tailnet that serves the mobile web app and its chat API, with paired device tokens.",
     "compression.js": "Context estimation and summarisation.",

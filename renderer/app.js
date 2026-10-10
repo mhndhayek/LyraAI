@@ -14,7 +14,9 @@
   window.avatarUrl = avatarUrl;
   const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const hostOf = (u) => { try { return new URL(u).host; } catch { return u; } };
-  const toast = (text, kind = '') => { const t = el(`<div class="toast ${kind}">${esc(text)}</div>`); $('#toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'error' ? 7000 : 4000); };
+  // The same notice twice within a few seconds shows once: a reply spoken sentence by sentence would otherwise repeat a voice warning per sentence.
+  const recentToasts = new Map();
+  const toast = (text, kind = '') => { const key = kind + '|' + text; const now = Date.now(); if (now - (recentToasts.get(key) || 0) < 8000) return; recentToasts.set(key, now); const t = el(`<div class="toast ${kind}">${esc(text)}</div>`); $('#toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'error' ? 7000 : 4000); };
   window.LyraApp = { settings: () => state.settings, set: (patch) => setSettings(patch), toast, lastContext: () => state.lastContext, char: () => state.char, browserVisible: (on) => syncBrowserView(on), chatId: () => state.chatId, models: () => state.models, playFile: playFile };
 
   async function setSettings(patch) { state.settings = await lyra.settings.set(patch); applyAll(); return state.settings; }
@@ -51,7 +53,8 @@
     const chip = $('#state-chip'); chip.dataset.state = s; $('#state-label').textContent = s[0].toUpperCase() + s.slice(1);
     $('#persona-avatar').dataset.state = s; renderPills(); const fs = $('#float-state'); fs.dataset.state = s; fs.textContent = s === 'idle' ? '' : { thinking: 'thinking…', writing: 'writing…', speaking: 'speaking' }[s];
     const busy = s === 'thinking' || s === 'writing';
-    $('#btn-stop').hidden = !busy; $('#input').placeholder = busy ? (state.settings.chat.followUp === 'steer' ? `Steer ${state.settings.persona.name} while it works…` : `Message ${state.settings.persona.name} (cancels the current reply)`) : `Message ${state.settings.persona.name}`;
+    // Stop stays available while she speaks: it ends the turn and silences her.
+    $('#btn-stop').hidden = !(busy || s === 'speaking'); $('#input').placeholder = busy ? (state.settings.chat.followUp === 'steer' ? `Steer ${state.settings.persona.name} while it works…` : `Message ${state.settings.persona.name} (cancels the current reply)`) : `Message ${state.settings.persona.name}`;
     state.busy = busy;
     setStatus();
   }
@@ -115,17 +118,19 @@
     for (const m of state.messages) { const d = new Date(m.created_at).toDateString(); if (d !== lastDay) { lastDay = d; t.appendChild(el(`<div class="divider-line">${d === new Date().toDateString() ? 'Today' : esc(new Date(m.created_at).toLocaleDateString())}</div>`)); } t.appendChild(renderMessage(m)); }
     scrollBottom(true);
   }
+  // src is one file, or a list of pieces (a spoken reply that could not be joined) played back to back.
   function audioPill(src, duration, cls = '') {
     const bars = [6, 10, 16, 12, 20, 14, 8, 18, 22, 12, 6, 14, 18, 10, 16, 20, 8, 12, 16, 6, 10, 14].map((h) => `<i style="height:${h}px"></i>`).join('');
     const p = el(`<div class="audio-pill ${cls}"><button class="play">${icon('play', 11)}</button><span class="wave">${bars}</span><span class="dur">${fmtDur(duration)}</span></div>`);
-    const a = new Audio(src); p._audio = a;
-    a.addEventListener('loadedmetadata', () => { if (isFinite(a.duration)) p.querySelector('.dur').textContent = fmtDur(a.duration); });
-    a.addEventListener('timeupdate', () => { const f = a.duration ? a.currentTime / a.duration : 0; $$('.wave i', p).forEach((b, i, arr) => b.classList.toggle('on', i / arr.length <= f)); });
-    a.addEventListener('ended', () => { p.querySelector('.play').innerHTML = icon('play', 11); });
+    const srcs = Array.isArray(src) ? src : [src]; let part = 0;
+    const a = new Audio(srcs[0]); p._audio = a;
+    a.addEventListener('loadedmetadata', () => { if (isFinite(a.duration) && srcs.length === 1) p.querySelector('.dur').textContent = fmtDur(a.duration); });
+    a.addEventListener('timeupdate', () => { const f = a.duration ? (part + a.currentTime / a.duration) / srcs.length : 0; $$('.wave i', p).forEach((b, i, arr) => b.classList.toggle('on', i / arr.length <= f)); });
+    a.addEventListener('ended', () => { if (part < srcs.length - 1) { a.src = srcs[++part]; a.play().catch(() => {}); return; } if (srcs.length > 1) { part = 0; a.src = srcs[0]; } p.querySelector('.play').innerHTML = icon('play', 11); });
     p.querySelector('.play').addEventListener('click', () => { if (a.paused) { stopCurrentAudio(); state.currentAudio = a; a.play(); p.querySelector('.play').innerHTML = icon('pause', 11); } else { a.pause(); p.querySelector('.play').innerHTML = icon('play', 11); } });
     return p;
   }
-  function stopCurrentAudio() { if (state.currentAudio) { try { state.currentAudio.pause(); state.currentAudio.currentTime = 0; } catch {} } state.currentAudio = null; }
+  function stopCurrentAudio() { stopSpeech(); if (state.currentAudio) { try { state.currentAudio.pause(); state.currentAudio.currentTime = 0; } catch {} } state.currentAudio = null; }
   function renderMessage(m) {
     const c = m.content || {};
     if (m.role === 'user') {
@@ -141,7 +146,7 @@
     if (c.reasoning) { const r = w.querySelector('.reasoning'); r.hidden = false; r.querySelector('.body').textContent = c.reasoning; }
     for (const s of c.steps || []) w.querySelector('.steps').appendChild(stepEl(s));
     const mdEl = w.querySelector('.md'); mdEl.innerHTML = md(c.text || (c.error ? '' : '…')); if (c.error) { mdEl.classList.add('error'); mdEl.innerHTML = md(c.text || c.error); }
-    if (c.audio) w.querySelector('.audio-slot').appendChild(audioPill(fileUrl(c.audio.path)));
+    if (c.audio) w.querySelector('.audio-slot').appendChild(audioPill(c.audioParts && c.audioParts.length ? c.audioParts.map(fileUrl) : fileUrl(c.audio.path)));
     return w;
   }
   function stepEl(s) {
@@ -180,13 +185,60 @@
   function currentAssistantEl() { const all = $$('.msg-ai'); return all[all.length - 1]; }
 
   /* ---------- playback ---------- */
-  function playFile(path, onEnd) {
-    stopCurrentAudio(); const a = new Audio(fileUrl(path)); state.currentAudio = a;
-    a.addEventListener('ended', () => { state.char.detachAudio(); onEnd && onEnd(); });
-    a.addEventListener('error', () => { onEnd && onEnd(); });
-    a.play().then(() => state.char.attachAudio(a)).catch(() => onEnd && onEnd());
+  // Tells the main process when sound really starts and stops: Lyra is only
+  // "speaking" (and her mouth only moves) while audio is actually playing.
+  const reportPlaying = (playing, id = null) => { try { lyra.voice.playing({ chatId: state.chatId, id, playing }); } catch {} };
+  function playFile(path, onEnd, id = null) {
+    stopCurrentAudio(); const a = new Audio(fileUrl(path)); state.currentAudio = a; let done = false;
+    const end = () => { if (done) return; done = true; state.char.detachAudio(); if (state.currentAudio === a) state.currentAudio = null; reportPlaying(false, id); onEnd && onEnd(); };
+    a.addEventListener('ended', end);
+    a.addEventListener('error', end);
+    a.play().then(() => { state.char.attachAudio(a); reportPlaying(true, id); }).catch(end);
     return a;
   }
+
+  // Speak while writing (story 05): tts:chunk events arrive with a seq, possibly
+  // out of order. They play strictly in seq order; each chunk's audio is loaded
+  // as soon as it arrives, so the next one starts without a gap.
+  let speech = null; const silenced = new Set(); // replies stopped here: their late chunks are dropped
+  function speechFor(id) {
+    if (speech && speech.id === id) return speech;
+    if (silenced.has(id)) return { ended: true };
+    stopCurrentAudio();
+    speech = { id, chatId: state.chatId, chunks: new Map(), next: 1, audio: null, started: false, ended: false };
+    return speech;
+  }
+  function onSpeechChunk(e) {
+    const sp = speechFor(e.id); if (sp.ended) return;
+    const a = e.path ? new Audio(fileUrl(e.path)) : null; if (a) a.preload = 'auto';
+    sp.chunks.set(e.seq, { audio: a, final: !!e.final });
+    if (!sp.audio) playNextChunk(sp);
+  }
+  function playNextChunk(sp) {
+    if (speech !== sp || sp.ended) return;
+    const c = sp.chunks.get(sp.next); if (!c) return; // the next sentence is still being synthesised
+    sp.chunks.delete(sp.next); sp.next++;
+    if (c.final) sp.final = true;
+    if (!c.audio) { if (c.final) finishSpeech(sp); else playNextChunk(sp); return; }
+    sp.audio = c.audio; let done = false;
+    const after = () => { if (done) return; done = true; state.char.detachAudio(); sp.audio = null; if (c.final) finishSpeech(sp); else playNextChunk(sp); };
+    c.audio.addEventListener('ended', after); c.audio.addEventListener('error', after);
+    c.audio.play().then(() => {
+      if (speech !== sp || sp.ended) { c.audio.pause(); return; }
+      state.char.attachAudio(c.audio);
+      if (!sp.started) { sp.started = true; reportPlaying(true, sp.id); }
+    }).catch(after);
+  }
+  function finishSpeech(sp) {
+    if (sp.ended) return; sp.ended = true;
+    const playedToEnd = sp.final && !sp.chunks.size && !sp.audio;
+    if (!playedToEnd) silenced.add(sp.id);
+    if (sp.audio) { try { sp.audio.pause(); } catch {} sp.audio = null; }
+    sp.chunks.clear(); state.char.detachAudio();
+    if (sp.started) reportPlaying(false, sp.id);
+    if (speech === sp) speech = null;
+  }
+  function stopSpeech() { if (speech) finishSpeech(speech); }
 
   /* ---------- context meter ---------- */
   const kfmt = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n));
@@ -223,7 +275,19 @@
       case 'approval': if (mine) { const m = currentAssistantEl(); const card = approvalCard(e); (m ? m.querySelector('.steps') : $('#thread')).appendChild(card); scrollBottom(true); } break;
       case 'approval:resolved': resolveApproval(e); break;
       case 'assistant:done': { refreshContext(300); state.progress = null; setStatus(); renderNow(); streams.delete(e.id); const m = msgEl(e.id); if (m) { const mdEl = m.querySelector('.md'); mdEl.classList.remove('cursor'); mdEl.innerHTML = md(e.message.content.text); const r = m.querySelector('.reasoning'); if (!r.hidden) r.querySelector('.rl').textContent = 'Thought'; } const i = state.messages.findIndex((x) => x.id === e.id); if (i >= 0) state.messages[i] = e.message; break; }
-      case 'tts': { const m = msgEl(e.id); if (m) { const slot = m.querySelector('.audio-slot'); slot.innerHTML = ''; const pill = audioPill(fileUrl(e.path)); slot.appendChild(pill); if (mine) { playFile(e.path, () => { lyra.state.set({ state: 'idle' }); pill.querySelector('.play').innerHTML = icon('play', 11); }); pill.querySelector('.play').innerHTML = icon('pause', 11); } } else if (mine) playFile(e.path, () => lyra.state.set({ state: 'idle' })); break; }
+      case 'tts:chunk': if (mine) onSpeechChunk(e); break;
+      case 'tts:stop': if (mine) stopSpeech(); break;
+      case 'tts': {
+        // A streamed reply was already spoken sentence by sentence: this only leaves the single pill on the message.
+        const m = msgEl(e.id); const i = state.messages.findIndex((x) => x.id === e.id);
+        if (i >= 0 && state.messages[i].content) { state.messages[i].content.audio = { path: e.path }; if (e.parts) state.messages[i].content.audioParts = e.parts; }
+        let pill = null;
+        if (m) { const slot = m.querySelector('.audio-slot'); slot.innerHTML = ''; pill = audioPill(e.parts && e.parts.length ? e.parts.map(fileUrl) : fileUrl(e.path)); slot.appendChild(pill); }
+        if (e.streamed || !mine) break;
+        playFile(e.path, () => { if (pill) pill.querySelector('.play').innerHTML = icon('play', 11); }, e.id);
+        if (pill) pill.querySelector('.play').innerHTML = icon('pause', 11);
+        break;
+      }
       case 'state': setCharState(e.state); if (e.step) setStatus(e.step); break;
       case 'error': { toast(e.message, 'error'); const m = e.id && msgEl(e.id); if (m) { const mdEl = m.querySelector('.md'); mdEl.classList.remove('cursor'); mdEl.classList.add('error'); if (!mdEl.textContent.trim() || mdEl.textContent.trim() === '…') mdEl.innerHTML = md(e.message); } streams.delete(e.id); break; }
       case 'notice': if (mine) toast(e.text); break;
@@ -270,7 +334,7 @@
     const r = await lyra.chat.send(payload); if (!r.ok) toast(r.error || 'Could not send', 'error'); refreshContext(400);
   }
   $('#btn-send').addEventListener('click', send);
-  $('#btn-stop').addEventListener('click', () => lyra.chat.stop({ chatId: state.chatId }));
+  $('#btn-stop').addEventListener('click', () => { stopCurrentAudio(); lyra.chat.stop({ chatId: state.chatId }); });
 
   // voice recording
   async function toggleRecording() {

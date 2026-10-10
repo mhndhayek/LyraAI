@@ -8,6 +8,7 @@ const ws = require('./workspace');
 const { enabledTools, schemaFor, byName } = require('./tools');
 const { maybeCompress, messagesTokens } = require('./compression');
 const { estimateTokens, clampText, id } = require('./util');
+const { SpeechQueue, joinWavs } = require('./speech-queue');
 
 // How far a single turn may go before it stops on its own. Both are settings
 // (Model › How far Lyra goes), these are only the floor and ceiling.
@@ -20,14 +21,80 @@ class Agent {
     this.ctx = ctx; // settings, store, approvals, browser, voice, notify, emit, root(), runShell, mediaDir
     this.runs = new Map(); this.models = { at: 0, byProvider: {} }; this.repoCache = { at: 0, list: [] };
     this.state = 'idle';
+    // Speak while writing (story 05): one speech queue per chat, and the reply
+    // whose audio the window reports as playing right now.
+    this.speech = new Map(); this.playing = null;
   }
   isBusy() { return this.runs.size > 0; }
   setState(state, extra = {}) { this.state = state; this.ctx.emit(null, 'state', { state, ...extra }); }
-  stopAll() { for (const id of [...this.runs.keys()]) this.stop(id); }
+  // What the turn is doing (thinking, writing, idle). While her voice is
+  // playing she shows "speaking" instead, and goes back to this when it stops.
+  turnState(state, extra = {}) { this.runState = { state, extra }; if (!this.playing) this.setState(state, extra); }
+  stopAll() { for (const id of [...this.runs.keys()]) this.stop(id); for (const id of [...this.speech.keys()]) this.cancelSpeech(id); }
   stop(chatId) {
     const r = this.runs.get(chatId);
     if (r) { r.stopped = true; r.abort.abort(); }
     this.ctx.approvals.cancelAll(chatId); this.ctx.browser.stop();
+    // Stop also silences her: no more sentences are synthesised, and the window drops what it queued.
+    this.cancelSpeech(chatId);
+    this.ctx.emit(chatId, 'tts:stop', {});
+    if (this.playing && this.playing.chatId === chatId) { this.playing = null; if (!r) this.setState('idle'); }
+  }
+
+  // The reply is cut into sentences as it streams, and each one is spoken as
+  // soon as it is synthesised. The window plays the chunks in seq order.
+  startSpeech(chatId, msgId) {
+    this.cancelSpeech(chatId);
+    const { voice, emit } = this.ctx; const logs = this.ctx.kernel.logs; let failures = 0;
+    const q = new SpeechQueue({
+      tts: (text) => voice.tts(text),
+      onChunk: (c) => emit(chatId, 'tts:chunk', { id: msgId, seq: c.seq, path: c.path, ...(c.final ? { final: true } : {}) }),
+      onError: (e, job) => { logs.warn('voice', `Could not speak sentence ${job.seq}: ${e.message}`); if (!failures++) emit(chatId, 'notice', { text: `Voice failed: ${e.message}` }); },
+      onLimit: (chars) => { logs.warn('voice', `Reply too long to speak in full: stopped after ${chars} characters`); emit(chatId, 'notice', { text: 'That reply was too long to read out in full.' }); },
+    });
+    q.chatId = chatId; q.msgId = msgId;
+    this.speech.set(chatId, q);
+    q.done.then(() => { if (this.speech.get(chatId) === q) this.speech.delete(chatId); });
+    return q;
+  }
+  cancelSpeech(chatId) { const q = this.speech.get(chatId); if (q) { q.cancel(); this.speech.delete(chatId); } }
+  // Once every sentence is out, the pieces are joined into one file so the
+  // message keeps a single audio pill after a reload.
+  async saveSpeech(q, asst, content) {
+    const r = await q.done;
+    if (r.cancelled || !r.chunks.length) return;
+    const parts = r.chunks.map((c) => c.path);
+    let file = parts[0];
+    if (parts.length > 1) {
+      const out = this.ctx.voice.outPath('wav');
+      if (joinWavs(parts, out)) {
+        file = out;
+        // The window may still be playing the pieces, so they go a little later.
+        const t = setTimeout(() => { for (const p of parts) fs.rm(p, { force: true }, () => {}); }, 10 * 60000); if (t.unref) t.unref();
+      } else content.audioParts = parts;
+    }
+    content.audio = { path: file, engine: r.chunks[0].engine, chunks: parts.length };
+    this.ctx.store.updateMessage(asst.id, content);
+    this.ctx.emit(q.chatId, 'tts', { id: asst.id, path: file, parts: content.audioParts || null, streamed: true });
+  }
+  // The window reports when sound really starts and stops. Only then is she
+  // "speaking", so the mouth never moves over silence.
+  voicePlaying({ chatId = null, id: msgId = null, playing } = {}) {
+    if (playing) {
+      const first = !this.playing || this.playing.id !== msgId;
+      this.playing = { chatId, id: msgId };
+      if (first && this.timing && this.timing.id === msgId) {
+        const t = this.timing; const now = Date.now();
+        t.firstAudioMs = now - t.firstToken; t.afterSentenceMs = t.firstSentence ? now - t.firstSentence : null;
+        this.ctx.kernel.logs.info('voice', `First audio ${t.firstAudioMs} ms after the reply started${t.afterSentenceMs != null ? `, ${t.afterSentenceMs} ms after its first sentence` : ''} (${t.streamed ? 'speak while writing' : 'whole reply'})`);
+      }
+      this.setState('speaking');
+    } else {
+      if (this.playing && msgId && this.playing.id !== msgId) return true;
+      this.playing = null;
+      if (this.state === 'speaking') { const r = this.runs.size && this.runState ? this.runState : { state: 'idle', extra: {} }; this.setState(r.state, r.extra); }
+    }
+    return true;
   }
 
   providers() { return this.ctx.settings.get().providers.list; }
@@ -188,16 +255,18 @@ class Agent {
         return { ok: true, steered: true };
       }
     }
+    // A new message ends whatever she was still saying.
+    if (this.speech.has(chatId) || (this.playing && this.playing.chatId === chatId)) { this.cancelSpeech(chatId); this.ctx.emit(chatId, 'tts:stop', {}); this.playing = null; }
     const run = { abort: new AbortController(), stopped: false, started: Date.now(), queue: [], origin };
     let resolveDone; run.promise = new Promise((r) => { resolveDone = r; });
     this.runs.set(chatId, run);
     const chat = store.getChat(chatId); if (!chat) { this.runs.delete(chatId); throw new Error('Chat not found'); }
-    let userMsg = null, asst = null;
+    let userMsg = null, asst = null, speech = null;
     try {
       // 1. The user's message (transcribe audio first).
       let transcript = null;
       if (audio && s.voice.stt) {
-        this.setState('thinking', { step: 'Transcribing' });
+        this.turnState('thinking', { step: 'Transcribing' });
         try { transcript = (await voice.stt(audio.path)).text; } catch (e) { transcript = null; emit(chatId, 'notice', { text: `Could not transcribe: ${e.message}` }); }
       }
       const userText = text.trim() || transcript || '';
@@ -206,7 +275,7 @@ class Agent {
       if (!userText && !images.length) throw new Error('Nothing to send.');
 
       // 2. Context.
-      this.setState('thinking', { step: 'Thinking' });
+      this.turnState('thinking', { step: 'Thinking' });
       browser.beginTurn(chatId);
       const model = await this.pickModel(images.length > 0);
       const system = this.systemPrompt(chatId, model);
@@ -227,6 +296,9 @@ class Agent {
       asst = store.addMessage(chatId, 'assistant', { text: '', steps: [], model: model.id });
       emit(chatId, 'assistant:start', { message: asst });
       const content = asst.content; const visited = new Set();
+      const readAloud = s.voice.readAloud && !internal;
+      if (readAloud && s.voice.streamSpeech !== false) speech = this.startSpeech(chatId, asst.id);
+      const timing = this.timing = { id: asst.id, streamed: !!speech, firstToken: null, firstSentence: null };
       const toolCtx = { settings: s, store, chatId, root: this.ctx.root(), abs: (p) => ws.resolvePath(this.ctx.root(), p), runShell: this.ctx.runShell, browser, browserMode: () => (s.browser.mode === 'headless' ? 'headless' : 'visible'), describeImage: (f, q) => this.describeImage(f, q), emit, notify, tools: byName, kernel: this.ctx.kernel };
       const maxSteps = clamp(s.model.maxSteps, STEP_RANGE, 30);
       const runMinutes = clamp(s.model.runMinutes, MINUTE_RANGE, 30);
@@ -240,16 +312,20 @@ class Agent {
         toolDefs = enabledTools(s, this.extraTools()); toolSchema = schemaFor(toolDefs);
         const res = await llm.chatStream({
           endpoint: model.endpoint, apiKey: model.apiKey, model: model.id, messages, tools: model.tools === false ? undefined : toolSchema, temperature: s.model.temperature, reasoning: s.model.reasoning, signal: run.abort.signal,
-          onDelta: (d) => { if (firstToken) { firstToken = false; this.setState('writing'); } content.text += d; emit(chatId, 'delta', { id: asst.id, text: d }); },
-          onReasoning: (d) => { content.reasoning = (content.reasoning || '') + d; this.setState('thinking', { step: 'Thinking' }); emit(chatId, 'reasoning', { id: asst.id, text: d }); },
+          onDelta: (d) => {
+            if (firstToken) { firstToken = false; timing.firstToken = Date.now(); this.turnState('writing'); }
+            content.text += d; emit(chatId, 'delta', { id: asst.id, text: d });
+            if (speech) { speech.push(d); if (!timing.firstSentence && speech.firstChunkAt) timing.firstSentence = speech.firstChunkAt; }
+          },
+          onReasoning: (d) => { content.reasoning = (content.reasoning || '') + d; this.turnState('thinking', { step: 'Thinking' }); emit(chatId, 'reasoning', { id: asst.id, text: d }); },
         });
         if (!res.toolCalls.length) {
           // A steering message arrived while the model was answering: keep going in the same turn.
-          if (run.queue.length && !run.stopped) { messages.push({ role: 'assistant', content: res.text || '' }); content.text += '\n\n'; emit(chatId, 'delta', { id: asst.id, text: '\n\n' }); continue; }
+          if (run.queue.length && !run.stopped) { messages.push({ role: 'assistant', content: res.text || '' }); content.text += '\n\n'; emit(chatId, 'delta', { id: asst.id, text: '\n\n' }); if (speech) speech.push('\n\n'); continue; }
           break;
         }
         // Text the model wrote before calling tools was already streamed; separate it from what follows.
-        if (res.text) { content.text += '\n\n'; emit(chatId, 'delta', { id: asst.id, text: '\n\n' }); }
+        if (res.text) { content.text += '\n\n'; emit(chatId, 'delta', { id: asst.id, text: '\n\n' }); if (speech) speech.push('\n\n'); }
         messages.push({ role: 'assistant', content: res.text || '', tool_calls: res.toolCalls });
         for (const tc of res.toolCalls) {
           if (run.stopped) break;
@@ -262,7 +338,7 @@ class Agent {
           else {
             const risk = safe(() => tool.risk(args, toolCtx), 'high');
             if (tool.name === 'browser_open') { const h = new URL(/^https?:/.test(args.url || '') ? args.url : 'https://' + args.url).host; if (!visited.has(h)) { visited.add(h); } }
-            this.setState('thinking', { step: step.summary });
+            this.turnState('thinking', { step: step.summary });
             const ap = await approvals.request({ chatId, tool: tool.name, summary: step.summary, detail: step.args, risk, reason: args.reason, origin: run.origin });
             if (ap.decision !== 'approved') { result = `The user ${ap.timedOut ? 'did not answer in time; the action was' : ''} denied: ${step.summary}. Do not retry it; ask or choose another way.`; step.status = 'denied'; }
             else {
@@ -276,7 +352,7 @@ class Agent {
           messages.push({ role: 'tool', tool_call_id: tc.id, content: String(result) });
           store.updateMessage(asst.id, content);
         }
-        this.setState('thinking', { step: 'Thinking' });
+        this.turnState('thinking', { step: 'Thinking' });
       }
       const ranOut = steps > maxSteps && !run.stopped;
       if (ranOut) { content.stoppedAt = maxSteps; emit(chatId, 'notice', { text: `Stopped after ${maxSteps} tool steps. Say “carry on” to continue, or raise the limit under Settings › Model.` }); this.ctx.kernel.logs.info('agent', `Turn reached the ${maxSteps}-step limit`); }
@@ -285,12 +361,16 @@ class Agent {
       store.updateMessage(asst.id, content);
       emit(chatId, 'assistant:done', { id: asst.id, message: { ...asst, content } });
 
-      // 4. Voice, title, notifications.
-      if (s.voice.readAloud && content.text && !run.stopped && !internal) {
-        this.setState('speaking');
-        try { const a = await voice.tts(content.text); if (a) { content.audio = { path: a.path, engine: a.engine }; store.updateMessage(asst.id, content); emit(chatId, 'tts', { id: asst.id, path: a.path }); } else this.setState('idle'); }
-        catch (e) { emit(chatId, 'notice', { text: `Voice failed: ${e.message}` }); this.setState('idle'); }
-      } else this.setState('idle');
+      // 4. Voice, title, notifications. She is only "speaking" once the window
+      // reports that sound is playing (voicePlaying), never before.
+      this.turnState('idle');
+      if (speech) {
+        if (run.stopped) this.cancelSpeech(chatId);
+        else { speech.finish(); this.saveSpeech(speech, asst, content).catch((e) => this.ctx.kernel.logs.error('voice', `Could not save the spoken reply: ${e.message}`)); }
+      } else if (readAloud && content.text && !run.stopped) {
+        try { const a = await voice.tts(content.text); if (a) { content.audio = { path: a.path, engine: a.engine }; store.updateMessage(asst.id, content); emit(chatId, 'tts', { id: asst.id, path: a.path }); } }
+        catch (e) { emit(chatId, 'notice', { text: `Voice failed: ${e.message}` }); }
+      }
       if (store.countMessages(chatId) === 2 && !internal) this.title(chatId, userText, content.text).catch(() => {});
       if (Date.now() - run.started > 20000) notify('longTask', `${s.persona.name} finished`, clampText(content.text, 120));
       return { ok: true, id: asst.id };
@@ -299,7 +379,8 @@ class Agent {
       if (!run.abort.signal.aborted) this.ctx.kernel.logs.error('agent', `The turn failed: ${e.message}`, e.detail || e.stack || String(e));
       if (asst) { asst.content.text = asst.content.text || msg; asst.content.error = run.abort.signal.aborted ? null : msg; store.updateMessage(asst.id, asst.content); }
       emit(chatId, 'error', { id: asst ? asst.id : null, message: msg });
-      this.setState('idle');
+      if (speech) this.cancelSpeech(chatId);
+      this.turnState('idle');
       return { ok: false, error: msg };
     } finally { clearTimeout(run.cap); this.runs.delete(chatId); resolveDone(); this.ctx.kernel.afterRun(chatId).catch((e) => console.error('afterRun', e)); }
   }
