@@ -18,6 +18,9 @@ const EXPECTED = [
   /ECONNREFUSED/i, /fetch failed/i, /voice/i, /sidecar/i, /tailscale/i, /tailnet/i,
   /model/i, /lmstudio/i, /ollama/i, /notification/i, /MESA|GL|GPU|dbus|gbm|libva|vaapi/i,
   /Autofill/i, /DevTools/i, /sandbox/i, /XDG_RUNTIME_DIR/i,
+  // three-vrm's VRMA loader logs this once per clip when the VRMA omits its spec
+  // version; it then assumes 1.0 (which is correct for our clips), so it is noise.
+  /VRMAnimationLoaderPlugin: specVersion/i,
 ];
 const problems = [];
 const onLine = (line) => {
