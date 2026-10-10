@@ -4,7 +4,7 @@
 > smooth: the frames come out clean, the motion between them still needs a hand. Say so
 > before starting, and expect to redo a pack or two.
 
-This is how the built-in characters (the original cat girl and the succubus) were made, so you can make more, or a new one for the user. Six earlier packs (fox girl, cowboy, agent, butter robot and the two businessmen) were retired; the recipe still covers how they were made, and the fox-girl example below is kept as a worked spec.
+This is how the original cat girl character was made, so you can make more, or a new one for the user. The recipe still covers how the retired packs were made.
 
 ## What it needs (tell the user before starting)
 

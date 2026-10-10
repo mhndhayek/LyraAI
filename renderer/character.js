@@ -1,14 +1,13 @@
-// The live character: a GIF pack (idle/thinking/writing/speaking.gif in a folder) for 2D,
-// or a VRM model for 3D.
+// The live character: a VRM model in 3D.
 (function () {
   const STATES = ['idle', 'thinking', 'writing', 'speaking'];
 
   class Character {
-    constructor(el) { this.el = el; this.state = 'idle'; this.cfg = { source: 'gif', gifFolder: 'builtin:catgirl' }; this.timers = []; this.audio = null; this.vrm = null; this.mount(); }
+    constructor(el) { this.el = el; this.state = 'idle'; this.cfg = { source: 'vrm', vrmModel: 'builtin:lyra' }; this.timers = []; this.audio = null; this.vrm = null; this.mount(); }
     dispose() { this.mountSeq = (this.mountSeq || 0) + 1; this.clearTimers(); this.destroyVrm(); this.detachAudio(); this.el.innerHTML = ''; }
-    clearTimers() { this.timers.forEach(clearInterval); this.timers = []; if (this.raf) cancelAnimationFrame(this.raf); this.raf = null; }
+    clearTimers() { this.timers.forEach(clearInterval); this.timers = []; if (this.raf) cancelAnimationFrame(this.raf); }
     configure(cfg) { const changed = JSON.stringify(cfg) !== JSON.stringify(this.cfg); this.cfg = { ...this.cfg, ...cfg }; if (changed) this.mount(); }
-    setState(state) { if (!STATES.includes(state)) state = 'idle'; if (state !== 'idle') this.idleVariant = null; this.state = state; this.el.dataset.state = state; this.render(); }
+    setState(state) { if (!STATES.includes(state)) state = 'idle'; if (state !== 'idle') this.idleVariant = null; this.state = state; this.el.dataset.state = state; }
 
     // Two sources: a GIF pack (2D) or a VRM model (3D). Anything else, including the
     // sources that were retired (built-in SVG, Hermes pet, Live2D), shows the GIF pack.

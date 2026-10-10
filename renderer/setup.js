@@ -35,9 +35,8 @@
 
   async function welcome() {
     const s = S();
-    const hero = el(`<div class="setup-hero"><img src="character/${esc(packOf(s) || 'catgirl')}/avatar.png" alt=""><div><div class="s-title">Hi, I’m ${esc(s.persona.name)}.</div><div class="s-sub">I live on this computer: I talk to a model you run, keep my memory on your disk, and use real tools. Let’s set up the essentials. It takes a couple of minutes, every page can be skipped, and all of it is under Settings later.</div></div></div>`);
-    const plan = el('<div class="card"><div class="d" style="font-size:13px;color:var(--text);line-height:1.8"><b>1.</b> The model I think with<br><b>2.</b> My name and my look<br><b>3.</b> My voice<br><b>4.</b> Image generation, if you run it<br><b>5.</b> What I may do on my own<br><b>6.</b> Tools and scripts</div></div>');
-    return [hero, plan];
+    const hero = el(`<div class="setup-hero setup-hero-3d"><div class="setup-hero-3d-stage" id="setup-3d-stage"></div><div><div class="s-title">Hi, I’m ${esc(s.persona.name)}.</div><div class="s-sub">Chat, build and grow.</div></div></div>`);
+    return [hero];
   }
 
   async function model() {
@@ -82,26 +81,26 @@
   }
 
   async function look() {
-    const s = S(); const { title, row, field } = ui(); const a = s.appearance; const p = s.persona;
-    const packs = await lyra.packs.list(); const themes = await lyra.themes.list(); const cur = packOf(s);
-    const grid = el('<div class="theme-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>');
-    packs.forEach((k) => {
-      const c = el(`<div class="theme-card setup-pack ${k.id === cur ? 'on' : ''}"><img src="character/${esc(k.id)}/avatar.png" alt=""><div class="n">${esc(k.name)}</div>${k.description ? `<div class="k">${esc(k.description)}</div>` : ''}</div>`);
-      c.addEventListener('click', () => { const patch = { appearance: { source: 'gif', gifFolder: `builtin:${k.id}` } }; if (!p.avatar || p.avatar.startsWith('builtin:')) patch.persona = { avatar: `builtin:${k.id}` }; set(patch).then(render); });
-      grid.appendChild(c);
-    });
+    const s = S(); const { title, row, field } = ui(); const p = s.persona;
+    const themes = await lyra.themes.list();
+    // 3D-first: Lyra (3D) is always selected; the "More characters" card is greyed.
+    const lyraCard = el(`<div class="theme-card setup-pack on"><img src="character/vrm/avatar.png" alt=""><div class="n">Lyra (3D)</div><div class="k">Selected</div></div>`);
+    const comingSoon = el(`<div class="theme-card setup-pack coming-soon"><div class="n">More characters</div><div class="k">Coming soon</div></div>`);
+    const grid = el('<div class="theme-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"></div>');
+    grid.appendChild(lyraCard);
+    grid.appendChild(comingSoon);
     const tgrid = el('<div class="theme-grid"></div>');
     themes.forEach((t) => {
-      const c = el(`<div class="theme-card ${t.id === a.theme ? 'on' : ''}"><div class="sw"><i style="background:${esc(t.vars.bg || '#000')}"></i><i style="background:${esc(t.vars.side || '#222')}"></i><i style="background:${esc(t.vars.accent || '#4fc8b4')}"></i><i style="background:${esc(t.vars.text || '#fff')}"></i></div><div class="n">${esc(t.name)}</div><div class="k">${t.scheme}</div></div>`);
+      const c = el(`<div class="theme-card ${t.id === s.appearance.theme ? 'on' : ''}"><div class="sw"><i style="background:${esc(t.vars.bg || '#000')}"></i><i style="background:${esc(t.vars.side || '#222')}"></i><i style="background:${esc(t.vars.accent || '#4fc8b4')}"></i><i style="background:${esc(t.vars.text || '#fff')}"></i></div><div class="n">${esc(t.name)}</div><div class="k">${t.scheme}</div></div>`);
       c.addEventListener('click', () => set({ appearance: { theme: t.id } }).then(render));
       tgrid.appendChild(c);
     });
     return [
-      title('What do I look like?', 'Pick a character and a theme. I animate while I think, write and speak.'),
+      title('What do I look like?', 'Lyra comes as a 3D character. More characters will be added later. Pick a theme now; you can change it any time under Settings.'),
       row('My name', 'What you call me. Locked for the agent: only you can change it.', field(p.name, (v) => v.trim() && set({ persona: { name: v.trim() } }).then(render), { w: 220 })),
       el('<div class="group-label">Character</div>'), grid,
       el('<div class="group-label">Theme</div>'), tgrid,
-      el('<div class="d" style="font-size:12px;color:var(--muted)">Your own GIF pack, a Live2D model, Hermes pets and the floating character are under Settings › Appearance.</div>'),
+      el('<div class="d" style="font-size:12px;color:var(--muted)">Your own 3D model, custom skins and the floating character are under Settings › Appearance.</div>'),
     ];
   }
 

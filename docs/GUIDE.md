@@ -90,7 +90,7 @@ Text to speech uses KittenTTS through the Python sidecar in `voice/`. In the pac
 
 ## Live character: 2D or 3D
 
-The live panel shows Lyra as a 2D GIF pack or a 3D VRM model; the **2D / 3D** switch at the top of the panel flips between them. Under *Appearance › Live character* pick the GIF pack (the cat girl, the succubus, or your own folder with idle/thinking/writing/speaking.gif) and the 3D model (Lyra's own, or any `.vrm` file such as a VRoid Studio export). In 3D she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice.
+The live panel shows Lyra as a 3D VRM model; she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice.
 
 ## AI goals
 

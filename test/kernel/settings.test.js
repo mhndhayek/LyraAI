@@ -37,9 +37,9 @@ test('a fresh install gets the documented defaults', () => {
   assert.equal(d.tools.web_search, false);
 });
 
-test('the 3D character defaults to the shipped Lyra model and the 2D side is the pixel pack', () => {
+test('the 3D character defaults to the shipped Lyra model', () => {
   const d = new Settings(file()).get();
-  assert.equal(d.appearance.source, 'gif');
+  assert.equal(d.appearance.source, 'vrm', 'default source is 3D VRM');
   assert.equal(d.appearance.vrmModel, 'builtin:lyra');
   const shipped = path.join(__dirname, '..', '..', 'renderer', 'character', 'vrm', 'lyra.vrm');
   const head = Buffer.alloc(4); const fd = fs.openSync(shipped, 'r'); fs.readSync(fd, head, 0, 4, 0); fs.closeSync(fd);
@@ -291,11 +291,140 @@ test('a fresh install has not been through the setup guide, and finishing it sti
   assert.equal(new Settings(s.file).get().ui.setupDone, true, 'finishing or skipping must survive a restart, or the guide nags every start');
 });
 
-test('an install from before the setup guide is not walked through it', () => {
+// Task 01: 3D-first identity — migration and defaults
+
+test('a profile using the old catgirl GIF pack migrates to 3D Lyra', () => {
   const f = file(); fs.mkdirSync(path.dirname(f), { recursive: true });
-  fs.writeFileSync(f, JSON.stringify({ persona: { name: 'Lyra' }, ui: { livePanel: false } }));
+  fs.writeFileSync(f, JSON.stringify({
+    appearance: { source: 'gif', gifFolder: 'builtin:catgirl' },
+    persona: { name: 'Lyra', avatar: 'builtin:catgirl' }
+  }));
   const s = new Settings(f);
-  assert.equal(s.get().ui.setupDone, true, 'someone who set the app up by hand must not be walked through it again');
-  assert.equal(s.get().ui.livePanel, false, 'the rest of the section is kept');
-  assert.equal(JSON.parse(fs.readFileSync(f, 'utf8')).ui.setupDone, true, 'and that decision is written back');
+  const d = s.get();
+  assert.equal(d.appearance.source, 'vrm', 'old gif source must migrate to vrm');
+  assert.equal(d.appearance.vrmModel, 'builtin:lyra', 'migrated profile gets the shipped VRM');
+  assert.equal(d.persona.avatar, 'builtin:lyra', 'migrated avatar points to the bust render');
+});
+
+test('the succubus GIF pack also migrates to 3D Lyra', () => {
+  const f = file(); fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, JSON.stringify({
+    appearance: { source: 'gif', gifFolder: 'builtin:succubus' },
+    persona: { avatar: 'builtin:succubus' }
+  }));
+  const s = new Settings(f);
+  assert.equal(s.get().appearance.source, 'vrm');
+  assert.equal(s.get().appearance.vrmModel, 'builtin:lyra');
+  assert.equal(s.get().persona.avatar, 'builtin:lyra');
+});
+
+test('fresh install defaults to 3D VRM Lyra', () => {
+  const s = new Settings(file());
+  const d = s.get();
+  assert.equal(d.appearance.source, 'vrm', 'default character source must be 3D VRM');
+  assert.equal(d.appearance.vrmModel, 'builtin:lyra', 'default model is the shipped Lyra VRM');
+  assert.equal(d.persona.avatar, 'builtin:lyra', 'default avatar is the Lyra bust render');
+});
+
+test('a profile using the old catgirl GIF pack migrates to 3D Lyra', () => {
+  const f = file(); fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, JSON.stringify({
+    appearance: { source: 'gif', gifFolder: 'builtin:catgirl' },
+    persona: { name: 'Lyra', avatar: 'builtin:catgirl' }
+  }, null, 2));
+  const s = new Settings(f);
+  const cfg = s.get();
+  assert.equal(cfg.appearance.source, 'vrm', 'should switch to vrm');
+  assert.equal(cfg.appearance.vrmModel, 'builtin:lyra', 'should use Lyra model');
+  assert.equal(cfg.persona.avatar, 'builtin:lyra', 'avatar should be 3D Lyra');
+  fs.unlinkSync(f);
+});
+
+test('a profile using the old succubus GIF pack migrates to 3D Lyra', () => {
+  const f = file(); fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, JSON.stringify({
+    appearance: { source: 'gif', gifFolder: 'builtin:succubus' },
+    persona: { avatar: 'builtin:succubus' }
+  }, null, 2));
+  const s = new Settings(f);
+  const cfg = s.get();
+  assert.equal(cfg.appearance.source, 'vrm', 'should switch to vrm');
+  assert.equal(cfg.appearance.vrmModel, 'builtin:lyra', 'should use Lyra model');
+  fs.unlinkSync(f);
+});
+
+test('the default settings use 3D VRM Lyra', () => {
+  const f = file();
+  const s = new Settings(f);
+  const cfg = s.get();
+  assert.equal(cfg.appearance.source, 'vrm', 'default source should be vrm');
+  assert.equal(cfg.appearance.vrmModel, 'builtin:lyra', 'default model should be Lyra');
+  assert.equal(cfg.persona.avatar, 'builtin:lyra', 'default avatar should be Lyra');
+  if (fs.existsSync(f)) fs.unlinkSync(f);
+});
+
+test('a profile using the old catgirl GIF pack migrates to 3D Lyra', () => {
+  const f = file(); fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, JSON.stringify({
+    appearance: { source: 'gif', gifFolder: 'builtin:catgirl' },
+    persona: { name: 'Lyra', avatar: 'builtin:catgirl' }
+  }));
+  const s = new Settings(f);
+  const d = s.get();
+  assert.equal(d.appearance.source, 'vrm', 'old gif source must migrate to vrm');
+  assert.equal(d.appearance.vrmModel, 'builtin:lyra', 'migrated profile gets the shipped VRM');
+  assert.equal(d.persona.avatar, 'builtin:lyra', 'migrated avatar points to the bust render');
+});
+
+test('the succubus GIF pack also migrates to 3D Lyra', () => {
+  const f = file(); fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, JSON.stringify({
+    appearance: { source: 'gif', gifFolder: 'builtin:succubus' },
+    persona: { avatar: 'builtin:succubus' }
+  }));
+  const s = new Settings(f);
+  assert.equal(s.get().appearance.source, 'vrm');
+  assert.equal(s.get().appearance.vrmModel, 'builtin:lyra');
+  assert.equal(s.get().persona.avatar, 'builtin:lyra');
+});
+
+test('fresh install defaults to 3D VRM Lyra', () => {
+  const s = new Settings(file());
+  const d = s.get();
+  assert.equal(d.appearance.source, 'vrm', 'default character source must be 3D VRM');
+  assert.equal(d.appearance.vrmModel, 'builtin:lyra', 'default model is the shipped Lyra VRM');
+  assert.equal(d.persona.avatar, 'builtin:lyra', 'default avatar is the Lyra bust render');
+});
+
+test('a profile using the old catgirl GIF pack migrates to 3D Lyra', () => {
+  const f = file(); fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, JSON.stringify({
+    appearance: { source: 'gif', gifFolder: 'builtin:catgirl' },
+    persona: { name: 'Lyra', avatar: 'builtin:catgirl' }
+  }));
+  const s = new Settings(f);
+  const d = s.get();
+  assert.equal(d.appearance.source, 'vrm', 'old gif source must migrate to vrm');
+  assert.equal(d.appearance.vrmModel, 'builtin:lyra', 'migrated profile gets the shipped VRM');
+  assert.equal(d.persona.avatar, 'builtin:lyra', 'migrated avatar points to the bust render');
+});
+
+test('the succubus GIF pack also migrates to 3D Lyra', () => {
+  const f = file(); fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, JSON.stringify({
+    appearance: { source: 'gif', gifFolder: 'builtin:succubus' },
+    persona: { avatar: 'builtin:succubus' }
+  }));
+  const s = new Settings(f);
+  assert.equal(s.get().appearance.source, 'vrm');
+  assert.equal(s.get().appearance.vrmModel, 'builtin:lyra');
+  assert.equal(s.get().persona.avatar, 'builtin:lyra');
+});
+
+test('fresh install defaults to 3D VRM Lyra', () => {
+  const s = new Settings(file());
+  const d = s.get();
+  assert.equal(d.appearance.source, 'vrm', 'default character source must be 3D VRM');
+  assert.equal(d.appearance.vrmModel, 'builtin:lyra', 'default model is the shipped Lyra VRM');
+  assert.equal(d.persona.avatar, 'builtin:lyra', 'default avatar is the Lyra bust render');
 });
