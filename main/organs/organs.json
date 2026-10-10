@@ -17,6 +17,8 @@
     "notify.js": "Desktop notifications with the AppleScript fallback.",
     "shell.js": "Persistent zsh and one-shot runner.",
     "workspace.js": "Workspace folder helpers and repo discovery.",
-    "util.js": "Small shared helpers."
+    "util.js": "Small shared helpers.",
+    "hardware.js": "Help me choose: reads this computer (OS, memory, free disk, GPU), finds AI servers already running on localhost, and picks a tested model from docs/recommendations.json.",
+    "localEngine.js": "The in-app llama.cpp engine: downloads the pinned llama-server build and model, verifies their SHA-256, runs the server on 127.0.0.1 with a per-launch key while Lyra is open, and registers it as the provider Local (llama.cpp)."
   }
 }

@@ -24,5 +24,6 @@ contextBridge.exposeInMainWorld('lyra', {
   profiles: { list: call('profiles:list'), create: call('profiles:create'), use: call('profiles:use'), rename: call('profiles:rename'), delete: call('profiles:delete') },
   tools: { list: call('tools:list') },
   mcp: { status: call('mcp:status'), reconnect: call('mcp:reconnect'), test: call('mcp:test') },
+  engine: { hardware: call('engine:hardware'), recommend: call('engine:recommend'), plan: call('engine:plan'), install: call('engine:install'), pause: call('engine:pause'), cancel: call('engine:cancel'), status: call('engine:status'), start: call('engine:start'), stop: call('engine:stop'), update: call('engine:update'), remove: call('engine:remove'), openLog: call('engine:openLog') },
   onEvent: (cb) => { const h = (_, e) => cb(e); ipcRenderer.on('lyra:event', h); return () => ipcRenderer.removeListener('lyra:event', h); },
 });

@@ -48,7 +48,19 @@
     return [hero];
   }
 
+  // "Help me choose" takes over the Model page until it finishes or is skipped.
+  const chooseDone = async (result) => {
+    if (result && result.endpoint) {
+      const s = S(); const provs = s.providers.list; const prov = provs.find((p) => p.id === s.model.chat.provider) || provs[0];
+      await set({ providers: { list: provs.map((p) => (p.id === prov.id ? { ...p, endpoint: result.endpoint } : p)) } });
+    }
+    models = null; modelChecked = false;
+    if (result === 'installed') { try { models = await lyra.models.detect(); } catch {} }
+    render();
+  };
+
   async function model() {
+    if (window.Choose && window.Choose.active()) return window.Choose.parts();
     const s = S(); const { title, row, field, btn, select } = ui();
     const provs = s.providers.list; const prov = provs.find((p) => p.id === s.model.chat.provider) || provs[0];
     const known = models || window.LyraApp.models(); const info = known && known.byProvider ? known.byProvider[prov.id] : null;
@@ -77,7 +89,10 @@
       st.innerHTML = `<span class="dot off"></span>Nothing answered at ${esc(info.endpoint)}: ${esc(info.error || 'unknown error')}. Check the address ends in /v1 and the server is running.`;
       if (local) st.appendChild(btn(`Get ${local.l}`, () => lyra.app.openExternal({ url: local.get }), { ic: 'globe' }));
     }
-    const parts = [title('Which model do I think with?', 'Paste the address of any OpenAI-compatible server, ending in /v1. LM Studio, Ollama, llama.cpp, vLLM and hosted APIs all work. I work out which one it is. Add a key if the server needs one.'), card];
+    // New to local AI: one button, and Lyra picks and sets up a tested model.
+    const help = el('<div class="card choose-cta"><div><div class="t">New to this?</div><div class="d">I can look at this computer, recommend a model we have tested, and set it up for you inside the app. No terminal, nothing hidden.</div></div></div>');
+    help.appendChild(btn('Help me choose', () => window.Choose.start(render, chooseDone), { primary: true, ic: 'sparkle', small: false }));
+    const parts = [title('Which model do I think with?', 'Paste the address of any OpenAI-compatible server, ending in /v1. LM Studio, Ollama, llama.cpp, vLLM and hosted APIs all work. I work out which one it is. Add a key if the server needs one.'), help, card];
     if (info && info.ok) {
       const usable = info.list.filter((x) => !x.id.includes('embed'));
       parts.push(row('Model', 'The one I use for conversation and tools. Auto takes one the server already has loaded.', select(window.Settings.modelOptions(usable, s.model.chat.model, 'Auto (a loaded model)'), s.model.chat.model, (v) => set({ model: { chat: { provider: prov.id, model: v } } }), 360)));
@@ -221,21 +236,23 @@
     const mine = ++seq; renderNav();
     heroDispose();
     const last = step === STEPS.length - 1;
-    $('#setup-back').hidden = step === 0; $('#setup-skip').hidden = last;
+    // Help me choose has its own Back and primary button; the guide's would compete.
+    const choosing = !!(window.Choose && window.Choose.active());
+    $('#setup-back').hidden = step === 0 || choosing; $('#setup-skip').hidden = last; $('#setup-next').hidden = choosing;
     $('#setup-next').textContent = step === 0 ? 'Let’s go' : last ? 'Start chatting' : 'Next';
     const c = $('#setup-content'); c.innerHTML = '<div class="settings-inner"></div>'; const inner = c.firstElementChild;
     try { const parts = await STEPS[step].render(); if (mine !== seq) return; parts.filter(Boolean).forEach((p) => inner.appendChild(p)); }
     catch (e) { if (mine !== seq) return; inner.appendChild(el(`<div class="md error">Could not load this page: ${esc(e.message)}</div>`)); inner.appendChild(ui().btn('Try again', () => render(), { ic: 'refresh' })); console.error(e); }
     c.scrollTop = 0;
   }
-  function go(i) { step = Math.max(0, Math.min(STEPS.length - 1, i)); render(); }
+  function go(i) { if (window.Choose) window.Choose.stop(); step = Math.max(0, Math.min(STEPS.length - 1, i)); render(); }
   async function finish(skipped) {
     await set({ ui: { setupDone: true } });
     window.Setup.close();
     if (skipped) toast('Skipped. The setup guide is under Settings › About whenever you want it.');
   }
   window.Setup = {
-    open(at = 0) { step = at; models = null; modelChecked = false; open = true; $('#setup').hidden = false; window.LyraApp.browserVisible(false); render(); },
+    open(at = 0) { step = at; models = null; modelChecked = false; if (window.Choose) window.Choose.stop(); open = true; $('#setup').hidden = false; window.LyraApp.browserVisible(false); render(); },
     close() {
       open = false; heroDispose(); $('#setup').hidden = true;
       // The settings page may be open underneath: it hides the browser too, and it shows what was changed here.
