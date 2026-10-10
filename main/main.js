@@ -66,6 +66,8 @@ function createWindow() {
     const sendText = argOf('send'); if (sendText) setTimeout(() => k.emit(null, 'debug', { send: sendText, browser: !!argOf('browser') }), 2000);
     const send2 = argOf('send2'); if (send2) setTimeout(() => k.emit(null, 'debug', { send: send2 }), Number(argOf('send2delay')) || 10000);
     const shot = argOf('screenshot'); if (shot && !k.shotTimer) k.shotTimer = setTimeout(async () => { try { const img = await win.webContents.capturePage(); fs.writeFileSync(shot, img.toPNG()); } catch (e) { console.error(e); } app.quit(); }, Number(argOf('delay')) || 4000);
+    // 2D was retired in story 01 (lyr-01): the live panel is 3D-only now, so this
+    // flag is kept as a harmless no-op for the smoke-3d script and old QA notes.
     if (flag('3d')) setTimeout(() => k.emit(null, 'debug', { dim: '3d' }), 1200);
   });
 }
