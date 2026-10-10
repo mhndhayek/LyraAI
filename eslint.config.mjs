@@ -28,7 +28,7 @@ const browserGlobals = {
   // Provided by the app itself: the preload bridge, vendored libraries, and the
   // globals the renderer scripts publish for one another.
   lyra: 'readonly', marked: 'readonly', LyraVRM: 'readonly',
-  icon: 'readonly', fillIcons: 'readonly', ICONS: 'readonly', Settings: 'readonly', Setup: 'readonly', LyraCharacter: 'readonly',
+  icon: 'readonly', fillIcons: 'readonly', ICONS: 'readonly', Settings: 'readonly', Setup: 'readonly', Choose: 'readonly', LyraCharacter: 'readonly',
 };
 
 const rules = {

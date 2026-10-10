@@ -92,6 +92,30 @@
       const ctxHint = s.model.contextMode === 'auto'
         ? (detected && detected.context ? `${detected.context.toLocaleString()} tokens, read from the server${detected.maxContext && detected.maxContext > detected.context ? ` (trained for ${detected.maxContext.toLocaleString()}, loaded with less)` : ''}` : 'this server does not report it, so 8,192 is assumed. Set it by hand to match how the model was loaded.')
         : `tokens. Auto would use ${detected && detected.context ? detected.context.toLocaleString() : '8,192'}. More than the server loaded causes errors or silent truncation.`;
+      // The in-app llama.cpp engine, when Help me choose has set one up.
+      const eng = await lyra.engine.status().catch(() => null);
+      const engineGroup = (() => {
+        if (!eng || (!eng.engineInstalled && !eng.model)) return null;
+        const mb = (n) => (n >= 1024 ? `${(n / 1024).toFixed(1)} GB` : `${n} MB`);
+        const busy = (e) => { e.currentTarget.disabled = true; };
+        const state = eng.running ? `<span class="dot"></span><span style="color:var(--bright)">Running on 127.0.0.1:${eng.port}</span>` : eng.lastError ? `<span class="dot off"></span>${esc(eng.lastError)}` : '<span class="dot off"></span>Stopped';
+        const home = (p) => String(p || '').replace(/^\/Users\/[^/]+|^\/home\/[^/]+|^[A-Z]:\\Users\\[^\\]+/, '~');
+        const ctl = [
+          eng.running ? btn('Stop', async (e) => { busy(e); await lyra.engine.stop(); await lyra.models.detect(); refresh(); }, { ic: 'stop' }) : btn('Start', async (e) => { busy(e); const r = await lyra.engine.start(); if (!r.ok) toast(r.error, 'error'); refresh(); }, { ic: 'play', primary: true }),
+          btn(eng.tag && eng.tag !== eng.pinnedTag ? `Update engine to ${eng.pinnedTag}` : 'Update engine', async (e) => { busy(e); const r = await lyra.engine.update(); toast(r.ok ? (r.updated ? `Engine updated to ${r.tag}.` : `Already on ${r.tag}, the tested build.`) : r.error, r.ok ? '' : 'error'); refresh(); }, { ic: 'download' }),
+          btn('Log', () => lyra.engine.openLog(), { ic: 'file' }),
+          el('<span style="flex:1;min-width:16px"></span>'),
+        ];
+        const rm = btn('Remove engine and models', async (e) => { if (!confirm('Remove the local engine and every model it downloaded?')) return; busy(e); const r = await lyra.engine.remove(); toast(`Removed. ${mb(Math.round(r.freedBytes / 1048576))} freed.`); refresh(); }, { danger: true, ic: 'trash' });
+        return group('Local engine', [
+          row('Status', 'llama.cpp, set up with “Help me choose”. It runs only while Lyra is open and only on 127.0.0.1, so nothing on your network can reach it.', el(`<span class="status-line">${state}</span>`)),
+          row('Engine', eng.tag === eng.pinnedTag ? 'llama-server, checked by SHA-256. This is the build Lyra was tested with.' : `llama-server, checked by SHA-256. Lyra was tested with ${esc(eng.pinnedTag || '')}; Update engine moves to it.`, el(`<span style="font-size:13px">${esc(eng.tag || 'not installed')}</span>`)),
+          row('Model', eng.model ? `${eng.model.context ? `${Math.round(eng.model.context / 1024)}k context` : ''}${eng.model.vision ? ' · sees pictures' : ''}` : '', el(`<span style="font-size:13px">${esc(eng.model ? `${eng.model.label} · ${eng.model.quant}` : 'none')}</span>`)),
+          row('Memory in use', 'What llama-server holds right now, the model included.', el(`<span style="font-size:13px">${eng.memoryMB ? mb(eng.memoryMB) : '—'}</span>`)),
+          row('On disk', `<span class="mono">${esc(home(eng.folders.engine))}</span><br><span class="mono">${esc(home(eng.folders.models))}</span>`, el(`<span style="font-size:13px">${mb(Math.round(eng.diskBytes / 1048576))}</span>`)),
+          row('', '', [...ctl, rm]),
+        ]);
+      })();
       const toolsRow = el('<div style="display:flex;gap:8px"></div>');
       toolsRow.appendChild(btn('Detect models on all presets', async (e) => { e.target.disabled = true; try { await lyra.models.detect(); } finally { refresh(); } }, { ic: 'refresh' }));
       toolsRow.appendChild(btn('Manage presets', () => { current = 'provider'; render(); }, { ic: 'server' }));
@@ -100,6 +124,7 @@
         toolsRow,
         roleBlock('chat', s.persona.name, 'Used for conversation, tools, summaries and goals.', (x) => !x.id.includes('embed')),
         roleBlock('vision', 'Vision model', `Used when you send a picture or ${esc(s.persona.name)} looks at one. Falls back to ${esc(s.persona.name)}’s own model if it can see.`, (x) => x.vision),
+        engineGroup,
         group('Context', [row('Context length', ctxHint, [ctxSel, ctxField])]),
         group('Behavior', [
           row('Reasoning', 'How long Lyra thinks before answering (sent as reasoning effort; “Off” adds /no_think for Qwen-style models).', seg([{ v: 'off', l: 'Off' }, { v: 'low', l: 'Low' }, { v: 'medium', l: 'Medium' }, { v: 'high', l: 'High' }], s.model.reasoning, (v) => set({ model: { reasoning: v } }))),

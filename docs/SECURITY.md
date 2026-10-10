@@ -243,6 +243,42 @@ Owner, any time
 - [ ] Settings → Code security: Dependabot alerts, Secret scanning, Push protection,
       Private vulnerability reporting on; code scanning default setup off
 
+## The local engine (Help me choose)
+
+Lyra can download and run llama.cpp for people who are new to local AI
+(`main/organs/localEngine.js`). Software an app downloads and runs on its own is
+exactly what malware does, so these rules are fixed, and the tests in
+`test/organs/localEngine.test.js` hold each one:
+
+- **Nothing downloads before the user has seen the list.** The last screen of
+  Help me choose shows every file: what it is, the URL, the size, and the folder
+  it goes to. Nothing is fetched until **Download and start** is pressed.
+- **Only pinned files.** The engine build (a llama.cpp release tag) and each
+  model are pinned in `docs/recommendations.json` with a SHA-256. A file with no
+  pinned hash is never downloaded, and a file whose hash differs is deleted
+  before anything is extracted or run. The engine tag only changes after
+  `scripts/fitness.js` has passed on it.
+- **The archive stays in its folder.** Before extracting, every tar entry must
+  sit inside the release folder, with no absolute paths, no `..` and no symlink
+  pointing out. The quarantine attribute is removed only from those verified
+  files.
+- **Loopback only, with a key.** `llama-server` listens on `127.0.0.1` and a
+  random free port, and never on all interfaces. Every launch gets a fresh
+  random API key, written to a file only the user can read (`0600`) and passed
+  with `--api-key-file`, so it is not on the command line for `ps` to show.
+  A request without the key gets a 401.
+- **It runs only while Lyra is open.** It starts with Lyra and stops when Lyra
+  quits. A small watchdog follows Lyra's process and stops the server if Lyra
+  crashes. A server left over from a crash is found by its pid file and stopped
+  on the next start, but only if its command line points into Lyra's own
+  runtime folder.
+- **Removal is complete.** Settings › Model › Local engine › Remove deletes
+  `<userData>/runtime/llama.cpp` and `<userData>/models`, shows the space freed,
+  and removes the provider.
+- **No other machines.** The flow looks for a server that is already running
+  only on `127.0.0.1` ports 8080, 1234 and 11434, and reads hardware facts
+  locally. None of it is sent anywhere.
+
 ## Reporting a vulnerability
 
 Use GitHub's private vulnerability reporting: the repository's **Security** tab, then

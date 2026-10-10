@@ -1,0 +1,240 @@
+{
+  "note": "The tested matrix behind \"Help me choose\". A row only gets in after scripts/fitness.js passes on the machine named in testedOn; fitness and tokPerSec are written by that script (node scripts/fitness.js --write). The engine tag is pinned and only bumped after the fitness test passes on the new tag. Rows are matched in order: the first row for this memory band that lists the chosen speed wins. A Qwen3.5 27B row for 32+ GB Macs was tried and left out: the test Mac (24 GB) cannot load it, so it is untested; add it after it passes on a 32+ GB Mac.",
+  "engine": {
+    "tag": "b11541",
+    "source": "https://github.com/ggml-org/llama.cpp/releases/tag/b11541",
+    "assets": {
+      "darwin-arm64": {
+        "file": "llama-b11541-bin-macos-arm64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11541/llama-b11541-bin-macos-arm64.tar.gz",
+        "sha256": "226929037cfcb956f50ae1d54bac13d3d9446d8d819c439580e1e2c00197da5e",
+        "sizeMB": 11.5
+      }
+    },
+    "comingSoon": [
+      "darwin-x64",
+      "win32-x64",
+      "linux-x64"
+    ]
+  },
+  "models": [
+    {
+      "id": "mac-8-snappy",
+      "label": "Qwen3.5 2B",
+      "quant": "Q4_K_M",
+      "when": {
+        "os": "darwin",
+        "arch": "arm64",
+        "minMemGB": 8,
+        "maxMemGB": 15
+      },
+      "goal": [
+        "chat",
+        "coding",
+        "both"
+      ],
+      "speed": [
+        "snappy"
+      ],
+      "hf": "unsloth/Qwen3.5-2B-GGUF",
+      "file": "Qwen3.5-2B-Q4_K_M.gguf",
+      "sha256": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+      "sizeGB": 1.28,
+      "context": 16384,
+      "vision": false,
+      "license": "Apache-2.0",
+      "fitness": "4/4",
+      "tokPerSec": 131,
+      "testedWith": "0.9.12",
+      "testedOn": "MacBook Pro (Apple M5 Pro, 24 GB)",
+      "testedAt": "2026-10-10",
+      "engineTag": "b11541"
+    },
+    {
+      "id": "mac-8-balanced",
+      "label": "Qwen3.5 4B",
+      "quant": "Q4_K_M",
+      "when": {
+        "os": "darwin",
+        "arch": "arm64",
+        "minMemGB": 8,
+        "maxMemGB": 15
+      },
+      "goal": [
+        "chat",
+        "coding",
+        "both"
+      ],
+      "speed": [
+        "balanced",
+        "smartest"
+      ],
+      "hf": "unsloth/Qwen3.5-4B-GGUF",
+      "file": "Qwen3.5-4B-Q4_K_M.gguf",
+      "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
+      "sizeGB": 2.74,
+      "mmproj": {
+        "file": "mmproj-F16.gguf",
+        "sha256": "cd88edcf8d031894960bb0c9c5b9b7e1fea6ebee02b9f7ce925a00d12891f864",
+        "sizeGB": 0.67
+      },
+      "context": 16384,
+      "vision": true,
+      "license": "Apache-2.0",
+      "fitness": "5/5",
+      "tokPerSec": 66,
+      "testedWith": "0.9.12",
+      "testedOn": "MacBook Pro (Apple M5 Pro, 24 GB)",
+      "testedAt": "2026-10-10",
+      "engineTag": "b11541"
+    },
+    {
+      "id": "mac-16-snappy",
+      "label": "Qwen3.5 4B",
+      "quant": "Q4_K_M",
+      "when": {
+        "os": "darwin",
+        "arch": "arm64",
+        "minMemGB": 16,
+        "maxMemGB": 31
+      },
+      "goal": [
+        "chat",
+        "coding",
+        "both"
+      ],
+      "speed": [
+        "snappy"
+      ],
+      "hf": "unsloth/Qwen3.5-4B-GGUF",
+      "file": "Qwen3.5-4B-Q4_K_M.gguf",
+      "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
+      "sizeGB": 2.74,
+      "mmproj": {
+        "file": "mmproj-F16.gguf",
+        "sha256": "cd88edcf8d031894960bb0c9c5b9b7e1fea6ebee02b9f7ce925a00d12891f864",
+        "sizeGB": 0.67
+      },
+      "context": 32768,
+      "vision": true,
+      "license": "Apache-2.0",
+      "fitness": "5/5",
+      "tokPerSec": 66,
+      "testedWith": "0.9.12",
+      "testedOn": "MacBook Pro (Apple M5 Pro, 24 GB)",
+      "testedAt": "2026-10-10",
+      "engineTag": "b11541"
+    },
+    {
+      "id": "mac-16-balanced",
+      "label": "Qwen3.5 9B",
+      "quant": "Q4_K_M",
+      "when": {
+        "os": "darwin",
+        "arch": "arm64",
+        "minMemGB": 16,
+        "maxMemGB": 31
+      },
+      "goal": [
+        "chat",
+        "coding",
+        "both"
+      ],
+      "speed": [
+        "balanced",
+        "smartest"
+      ],
+      "hf": "unsloth/Qwen3.5-9B-GGUF",
+      "file": "Qwen3.5-9B-Q4_K_M.gguf",
+      "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8",
+      "sizeGB": 5.68,
+      "mmproj": {
+        "file": "mmproj-F16.gguf",
+        "sha256": "f70dc3509053962b0d0d3ee8a7eacebf5d60aa560cad78254ae8698516ae029f",
+        "sizeGB": 0.92
+      },
+      "context": 32768,
+      "vision": true,
+      "license": "Apache-2.0",
+      "fitness": "5/5",
+      "tokPerSec": 41,
+      "testedWith": "0.9.12",
+      "testedOn": "MacBook Pro (Apple M5 Pro, 24 GB)",
+      "testedAt": "2026-10-10",
+      "engineTag": "b11541"
+    },
+    {
+      "id": "mac-32-snappy",
+      "label": "Qwen3.5 9B",
+      "quant": "Q4_K_M",
+      "when": {
+        "os": "darwin",
+        "arch": "arm64",
+        "minMemGB": 32
+      },
+      "goal": [
+        "chat",
+        "coding",
+        "both"
+      ],
+      "speed": [
+        "snappy"
+      ],
+      "hf": "unsloth/Qwen3.5-9B-GGUF",
+      "file": "Qwen3.5-9B-Q4_K_M.gguf",
+      "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8",
+      "sizeGB": 5.68,
+      "mmproj": {
+        "file": "mmproj-F16.gguf",
+        "sha256": "f70dc3509053962b0d0d3ee8a7eacebf5d60aa560cad78254ae8698516ae029f",
+        "sizeGB": 0.92
+      },
+      "context": 32768,
+      "vision": true,
+      "license": "Apache-2.0",
+      "fitness": "5/5",
+      "tokPerSec": 41,
+      "testedWith": "0.9.12",
+      "testedOn": "MacBook Pro (Apple M5 Pro, 24 GB)",
+      "testedAt": "2026-10-10",
+      "engineTag": "b11541"
+    },
+    {
+      "id": "mac-32-balanced",
+      "label": "Qwen3.5 9B",
+      "quant": "Q8_0",
+      "when": {
+        "os": "darwin",
+        "arch": "arm64",
+        "minMemGB": 32
+      },
+      "goal": [
+        "chat",
+        "coding",
+        "both"
+      ],
+      "speed": [
+        "balanced",
+        "smartest"
+      ],
+      "hf": "unsloth/Qwen3.5-9B-GGUF",
+      "file": "Qwen3.5-9B-Q8_0.gguf",
+      "sha256": "809626574d0cb43d4becfa56169980da2bb448f2299270f7be443cb89d0a6ae4",
+      "sizeGB": 9.53,
+      "mmproj": {
+        "file": "mmproj-F16.gguf",
+        "sha256": "f70dc3509053962b0d0d3ee8a7eacebf5d60aa560cad78254ae8698516ae029f",
+        "sizeGB": 0.92
+      },
+      "context": 32768,
+      "vision": true,
+      "license": "Apache-2.0",
+      "fitness": "5/5",
+      "tokPerSec": 27,
+      "testedWith": "0.9.12",
+      "testedOn": "MacBook Pro (Apple M5 Pro, 24 GB)",
+      "testedAt": "2026-10-10",
+      "engineTag": "b11541"
+    }
+  ]
+}
