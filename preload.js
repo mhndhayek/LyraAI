@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld('lyra', {
   chat: { send: call('chat:send'), stop: call('chat:stop'), context: call('chat:context') },
   approvals: { respond: call('approval:respond') },
   browser: { bounds: call('browser:bounds'), show: call('browser:show'), takeOver: call('browser:takeover'), stop: call('browser:stop'), navigate: call('browser:navigate'), back: call('browser:back'), reload: call('browser:reload'), status: call('browser:status'), clear: call('browser:clear') },
-  voice: { transcribe: call('voice:transcribe'), speak: call('voice:speak'), voices: call('voice:voices'), available: call('voice:available'), status: call('voice:status'), setup: call('voice:setup'), warm: call('voice:warm') },
+  voice: { transcribe: call('voice:transcribe'), speak: call('voice:speak'), voices: call('voice:voices'), available: call('voice:available'), status: call('voice:status'), setup: call('voice:setup'), warm: call('voice:warm'), playing: call('voice:playing') },
   state: { set: call('state:set') },
   memory: { list: call('memory:list'), delete: call('memory:delete'), clear: call('memory:clear') },
   goals: { list: call('goals:list'), archive: call('goals:archive'), reflect: call('goals:reflect'), run: call('goals:run'), usage: call('goals:usage') },
@@ -24,5 +24,6 @@ contextBridge.exposeInMainWorld('lyra', {
   profiles: { list: call('profiles:list'), create: call('profiles:create'), use: call('profiles:use'), rename: call('profiles:rename'), delete: call('profiles:delete') },
   tools: { list: call('tools:list') },
   mcp: { status: call('mcp:status'), reconnect: call('mcp:reconnect'), test: call('mcp:test') },
+  engine: { hardware: call('engine:hardware'), recommend: call('engine:recommend'), plan: call('engine:plan'), install: call('engine:install'), pause: call('engine:pause'), cancel: call('engine:cancel'), status: call('engine:status'), start: call('engine:start'), stop: call('engine:stop'), update: call('engine:update'), remove: call('engine:remove'), openLog: call('engine:openLog') },
   onEvent: (cb) => { const h = (_, e) => cb(e); ipcRenderer.on('lyra:event', h); return () => ipcRenderer.removeListener('lyra:event', h); },
 });

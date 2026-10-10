@@ -197,7 +197,7 @@ test('character.js runs the mixer every frame and keeps the procedural layer add
   // The procedural layer survives: blink, glance, happy→blush and lip-sync keep
   // running every frame on top of the mixer.
   assert.match(js, /ex\.setValue\('blink', bl\)/, 'blinking keeps running over the clips');
-  assert.match(js, /ex\.setValue\('aa', s === 'speaking'/, 'lip-sync keeps running over the clips');
+  assert.match(js, /if \(!this\.audio\) ex\.setValue\('aa', 0\)/, 'without audio the mouth stays closed (story 05); attachAudio drives lip-sync');
   assert.match(js, /bm\.opacity = blushA/, 'blush keeps tracking happy');
 });
 

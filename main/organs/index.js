@@ -2,7 +2,7 @@
 // returned object holds every service and a dispose() that tears them down again.
 const path = require('path');
 const fs = require('fs');
-const { dialog, shell: eshell } = require('electron');
+const { app, dialog, shell: eshell } = require('electron');
 const ws = require('./workspace');
 const { PersistentShell, runOnce } = require('./shell');
 const { Approvals } = require('./approvals');
@@ -16,6 +16,8 @@ const llm = require('./llm');
 const imagegen = require('./imagegen');
 const tools = require('./tools');
 const { McpManager } = require('./mcp');
+const hardware = require('./hardware');
+const { LocalEngine } = require('./localEngine');
 const { id } = require('./util');
 
 function saveDataUrl(dir, name, dataUrl) {
@@ -45,6 +47,15 @@ function create(k) {
   goals.start();
   const companion = new Companion({ settings, get store() { return k.store; }, kernel: k, emit, agent, approvals, send: (p) => sendMessage(p) });
   const mobileTimer = setTimeout(() => { const m = settings.get().mobile; if (m.enabled && m.autoStart) companion.start().catch(() => {}); }, 3000);
+  // The in-app llama.cpp engine (Help me choose): runs only while Lyra is open.
+  const matrix = hardware.loadMatrix(path.join(k.paths.docs, 'recommendations.json'));
+  const engineLogs = { info: (m, d) => { try { k.logs.info('engine', m, d); } catch {} }, warn: (m, d) => { try { k.logs.warn('engine', m, d); } catch {} }, error: (m, d) => { try { k.logs.error('engine', m, d); } catch {} } };
+  const engine = new LocalEngine({ userData: k.paths.userData, settings, matrix, emit, logs: engineLogs });
+  const engineTimer = setTimeout(() => {
+    const st = engine.status();
+    if (st.engineInstalled && st.model && st.model.installed && st.autoStart) engine.start().then(() => agent.detectModels(true)).catch((e) => engineLogs.error(`The local engine did not start: ${e.message}`));
+    else if (!st.engineInstalled) engine.unregister().catch(() => {});
+  }, 1000);
 
   const onSettings = (data, before, patch) => {
     if (patch.workspace && patch.workspace.folder && before && patch.workspace.folder !== before.workspace.folder) { shellInst.kill(); shellInst = new PersistentShell(root()); agent.repoCache.at = 0; }
@@ -92,6 +103,8 @@ function create(k) {
   h('voice:speak', async (p) => voice.tts(p.text));
   h('voice:transcribe', async (p) => { const f = saveDataUrl(path.join(k.paths.media, 'stt'), 'voice.webm', p.dataUrl); return voice.stt(f); });
   h('state:set', (p) => { agent.setState(p.state); return true; });
+  // The window reports when spoken audio really starts and stops (story 05).
+  h('voice:playing', (p) => agent.voicePlaying(p || {}));
   h('memory:list', (p) => k.store.listMemories(p.scope, p.chatId));
   h('memory:delete', (p) => { k.store.deleteMemory(p.id); return true; });
   h('memory:clear', (p) => { k.store.clearMemories(p.scope, p.chatId); return true; });
@@ -123,12 +136,29 @@ function create(k) {
   h('mcp:status', () => mcp.status());
   h('mcp:reconnect', () => mcp.sync({ force: true }));
   h('mcp:test', (p) => mcp.test(p || {}));
+  h('engine:hardware', async () => {
+    const [hw, running] = await Promise.all([hardware.detect({ getGPUInfo: (x) => app.getGPUInfo(x), dir: k.paths.userData }), hardware.probeRunning()]);
+    return { hw, running, supported: engine.supported(), tag: matrix.engine.tag };
+  });
+  h('engine:recommend', (p) => hardware.recommend(p.hw, p.answers || {}, matrix));
+  h('engine:plan', (p) => engine.plan(p.id));
+  h('engine:install', async (p) => { try { return { ok: true, status: await engine.install(p.id) }; } catch (e) { return { ok: false, paused: !!e.paused, error: e.message, status: engine.status() }; } });
+  h('engine:pause', () => engine.pause());
+  h('engine:cancel', () => engine.cancel());
+  h('engine:status', async () => ({ ...engine.status(), memoryMB: await engine.memoryMB() }));
+  h('engine:start', async () => { try { engine.writeState({ autoStart: true }); const st = await engine.start(); await agent.detectModels(true); return { ok: true, status: st }; } catch (e) { return { ok: false, error: e.message, status: engine.status() }; } });
+  h('engine:stop', async () => { engine.writeState({ autoStart: false }); return engine.stop(); });
+  h('engine:update', async () => { try { return { ok: true, ...(await engine.update()), status: engine.status() }; } catch (e) { return { ok: false, error: e.message, status: engine.status() }; } });
+  h('engine:remove', async () => { const r = await engine.remove(); await agent.detectModels(true); return r; });
+  h('engine:openLog', () => eshell.openPath(engine.logFile));
   h('tools:list', () => { const s = settings.get(); const all = tools.enabledTools(s, k.extensions.tools().concat(mcp.tools())); return tools.TOOLS.map((t) => ({ name: t.name, key: t.key, description: t.description, enabled: all.includes(t) })).concat(k.extensions.tools().map((t) => ({ name: t.name, key: 'ext', extension: t.extension, description: t.description, enabled: all.includes(t) }))).concat(mcp.tools().map((t) => ({ name: t.name, key: 'mcp', server: t.mcpServer, description: t.description, enabled: all.includes(t) }))); });
 
   return {
-    agent, browser, voice, goals, approvals, notifier, tools, llm, runShell, companion, mcp,
+    agent, browser, voice, goals, approvals, notifier, tools, llm, runShell, companion, mcp, engine,
     dispose() {
-      clearTimeout(warmTimer); clearTimeout(mobileTimer); clearTimeout(mcpTimer);
+      clearTimeout(warmTimer); clearTimeout(mobileTimer); clearTimeout(mcpTimer); clearTimeout(engineTimer);
+      // Quitting Lyra (and a hot swap) stops the local engine: it never runs on its own.
+      try { engine.stopSync(); } catch {}
       try { mcp.dispose(); } catch {}
       try { companion.stop(); } catch {}
       settings.off('change', onSettings);

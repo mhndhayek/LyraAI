@@ -165,7 +165,8 @@
           ex.setValue('blink', bl); ex.setValue('happy', cur.happy * (1 - bl));
           const blushA = blushOpacity(ex.getValue('happy'));
           for (const bm of blushMats) bm.opacity = blushA;
-          if (!this.audio) ex.setValue('aa', s === 'speaking' ? (0.25 + 0.25 * Math.sin(t * 14)) * (Math.sin(t * 3.1) > -0.6 ? 1 : 0) : 0);
+          // The mouth only moves with real sound (attachAudio drives it); with no audio it stays closed.
+          if (!this.audio) ex.setValue('aa', 0);
         }
         vrm.update(dt);
         renderer.render(scene, camera);

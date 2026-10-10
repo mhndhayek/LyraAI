@@ -92,6 +92,19 @@ test('a fresh install is walked through the setup guide, and can skip it', () =>
   assert.match(settingsUi, /toolItems: \(\) => TOOL_ITEMS/, 'the guide and the tools page must describe the same tools');
 });
 
+test('Help me choose is offered on the Model step, and the local engine can be managed from Settings', () => {
+  const setup = read('renderer', 'setup.js'); const settingsUi = read('renderer', 'settings.js'); const html = read('renderer', 'index.html');
+  assert.match(html, /<script src="choose\.js"><\/script>[\s\S]*<script src="setup\.js"><\/script>/, 'choose.js loads before the guide that uses it');
+  const model = setup.slice(setup.indexOf('async function model()'), setup.indexOf('async function look()'));
+  assert.match(model, /Help me choose/, 'the button lives inside model(), not welcome() or look()');
+  assert.match(model, /Choose\.start\(/);
+  const section = settingsUi.slice(settingsUi.indexOf('async model()'), settingsUi.indexOf('async imagegen()'));
+  assert.match(section, /Local engine/, 'Settings › Model › Local engine');
+  for (const action of ['engine.stop', 'engine.start', 'engine.update', 'engine.remove']) assert.match(section, new RegExp(action.replace('.', '\\.')), `no ${action} control`);
+  const choose = read('renderer', 'choose.js');
+  for (const promise of ['stays on your computer', '127.0.0.1', 'only while Lyra is open', 'SHA-256', 'Skip, I’ll choose myself']) assert.ok(choose.includes(promise), `the flow no longer says: ${promise}`);
+});
+
 test('the settings pages call the assistant by name, not "the brain"', () => {
   const ui = read('renderer', 'settings.js');
   const jargon = [...ui.matchAll(/.{0,60}\bbrains?\b.{0,60}/gi)].map((m) => m[0].trim());
