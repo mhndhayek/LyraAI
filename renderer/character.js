@@ -148,6 +148,9 @@
       // mixer pose each frame (multiply, not assign) so a clip's arm motion survives
       // the correction. Matches the pre-story-09 look: left +1.22 / right -1.22.
       const AD = { lUA: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 1.22)), rUA: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -1.22)), lLA: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.12)), rLA: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.12)) };
+      // Where the mixer left the arm bones this frame, so the correction can be
+      // undone after render (see the restore at the bottom of the loop).
+      const AD_BASE = { lUA: new THREE.Quaternion(), rUA: new THREE.Quaternion(), lLA: new THREE.Quaternion(), rLA: new THREE.Quaternion() };
       if (anim) { await anim.loadAll(); anim.setState(this.state); if (anim.currentAction) console.log(`[char] 3D animation active: ${anim.current} (${anim.currentAction.isRunning() ? 'playing' : 'ready'})`); }
       const loop = () => {
         if (!this.vrm || this.vrm.vrm !== vrm) return;
@@ -157,10 +160,15 @@
         if (anim) anim.update(dt);
         // 2) Additive overlay on top of the mixer pose.
         const br = Math.sin(t * 1.6);
-        if (pose.lUA) pose.lUA.quaternion.multiply(AD.lUA);
-        if (pose.rUA) pose.rUA.quaternion.multiply(AD.rUA);
-        if (pose.lLA) pose.lLA.quaternion.multiply(AD.lLA);
-        if (pose.rLA) pose.rLA.quaternion.multiply(AD.rLA);
+        // The correction must be UNDO before the next frame: three's mixer only
+        // writes a track when its value changed, so a clip that keeps the arms
+        // constant would compound the multiply every frame (70° → 140° → …) and
+        // her arms would spin in writing/speaking. Snapshot the mixer pose, apply
+        // the correction for this frame's render, then restore it (step 5).
+        if (pose.lUA) { AD_BASE.lUA.copy(pose.lUA.quaternion); pose.lUA.quaternion.multiply(AD.lUA); }
+        if (pose.rUA) { AD_BASE.rUA.copy(pose.rUA.quaternion); pose.rUA.quaternion.multiply(AD.rUA); }
+        if (pose.lLA) { AD_BASE.lLA.copy(pose.lLA.quaternion); pose.lLA.quaternion.multiply(AD.lLA); }
+        if (pose.rLA) { AD_BASE.rLA.copy(pose.rLA.quaternion); pose.rLA.quaternion.multiply(AD.rLA); }
         const breath = 1 + br * 0.006;
         if (pose.chest) pose.chest.scale.set(breath, 1, breath);
         // 3) Eyes wander a little; while thinking look up and aside.
@@ -179,6 +187,14 @@
         }
         vrm.update(dt);
         renderer.render(scene, camera);
+        // 5) Undo this frame's arms-down correction so the next frame's mixer
+        //    writes onto the clip's own pose, not the corrected one. (The mixer
+        //    skips writing unchanged tracks — see step 2 — so without this the
+        //    correction compounds on clips that hold the arms still.)
+        if (pose.lUA) pose.lUA.quaternion.copy(AD_BASE.lUA);
+        if (pose.rUA) pose.rUA.quaternion.copy(AD_BASE.rUA);
+        if (pose.lLA) pose.lLA.quaternion.copy(AD_BASE.lLA);
+        if (pose.rLA) pose.rLA.quaternion.copy(AD_BASE.rLA);
         this.raf3d = requestAnimationFrame(loop);
       };
       const ro = new ResizeObserver(() => { renderer.setSize(W(), H()); camera.aspect = W() / H(); camera.updateProjectionMatrix(); }); ro.observe(this.el);

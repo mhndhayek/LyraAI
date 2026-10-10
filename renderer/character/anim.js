@@ -116,16 +116,27 @@
     // when it finishes. Non-blocking: returns immediately with the action.
     playOnce(name, returnTo) {
       const action = this.playClip(name);
-      if (action) this.oneShotReturn = returnTo || clipForState(this.manifest, 'idle');
+      if (action) {
+        this.oneShotReturn = returnTo || clipForState(this.manifest, 'idle');
+        // Hold the last pose instead of snapping to the rest pose while the return
+        // clip crossfades in — otherwise the body jumps the moment the one-shot
+        // ends and before the fade is even visible.
+        if (action.clampWhenFinished !== undefined) action.clampWhenFinished = true;
+      }
       return action;
     }
 
     _onFinished = (e) => {
-      // A one-shot just ended — ease back to its return state.
+      // A one-shot just ended — ease back to its return state. The return clip has
+      // to go through playClip: a bare crossFadeTo fades it IN but never plays it,
+      // so on the real mixer every action ends up at weight 0 and the body freezes
+      // (and the additive overlay in character.js has nothing to ride on). playClip
+      // also refreshes current/currentAction so the next setState crossfades from
+      // the clip that is actually playing.
       if (this.oneShotReturn && e.action && e.action === this.currentAction) {
-        const back = this.actions.get(this.oneShotReturn);
-        if (back) this.currentAction.crossFadeTo(back, this.crossfade, false);
+        const backName = this.oneShotReturn;
         this.oneShotReturn = null;
+        this.playClip(backName);
       }
     };
 
