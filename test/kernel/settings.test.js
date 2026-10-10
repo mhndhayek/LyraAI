@@ -37,13 +37,40 @@ test('a fresh install gets the documented defaults', () => {
   assert.equal(d.tools.web_search, false);
 });
 
-test('the 3D character defaults to the shipped Lyra model and the 2D side is the pixel pack', () => {
+test('a fresh install defaults to the 3D Lyra model', () => {
   const d = new Settings(file()).get();
   assert.equal(d.appearance.source, 'vrm', 'default source is 3D VRM');
   assert.equal(d.appearance.vrmModel, 'builtin:lyra');
+  assert.equal(d.persona.avatar, 'builtin:lyra', 'the avatar is the shipped bust render');
   const shipped = path.join(__dirname, '..', '..', 'renderer', 'character', 'vrm', 'lyra.vrm');
   const head = Buffer.alloc(4); const fd = fs.openSync(shipped, 'r'); fs.readSync(fd, head, 0, 4, 0); fs.closeSync(fd);
   assert.equal(head.toString('latin1'), 'glTF', 'builtin:lyra points at a real VRM (binary glTF)');
+});
+
+test('a retired 2D profile migrates to the 3D Lyra model', () => {
+  const f = file();
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, JSON.stringify({
+    persona: { avatar: 'builtin:catgirl' },
+    appearance: { source: 'gif', gifFolder: 'builtin:catgirl' },
+  }));
+  const d = new Settings(f).get();
+  assert.equal(d.appearance.source, 'vrm', 'the retired GIF source becomes the VRM');
+  assert.equal(d.appearance.vrmModel, 'builtin:lyra');
+  assert.equal(d.persona.avatar, 'builtin:lyra', 'the retired pixel avatar becomes the bust render');
+  assert.equal(d.appearance.gifFolder, undefined, 'the old pack folder is removed, not kept pointing at a deleted pack');
+});
+
+test('every retired pack migrates to the 3D Lyra model', () => {
+  for (const pack of ['catgirl', 'succubus', 'agent', 'butterbot', 'cowboy', 'dapper', 'foxgirl', 'silver']) {
+    const f = file() + `-${pack}.json`;
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    fs.writeFileSync(f, JSON.stringify({ persona: { avatar: `builtin:${pack}` }, appearance: { gifFolder: `builtin:${pack}` } }));
+    const d = new Settings(f).get();
+    assert.equal(d.appearance.source, 'vrm', `${pack}: source migrates to vrm`);
+    assert.equal(d.persona.avatar, 'builtin:lyra', `${pack}: the avatar migrates to the bust render`);
+    fs.rmSync(f);
+  }
 });
 
 test('every default section survives a save and reload untouched', () => {

@@ -21,7 +21,7 @@ Lyra talks to any OpenAI-compatible local runtime. LM Studio on `http://localhos
 ## What is where
 
 - **Chat** – text, pictures (attach, paste or drop), and voice messages (tap the mic, tap again to send; the transcript shows under the bubble). Replies stream, tool steps show as activity lines, and anything that needs approval shows a card with a countdown.
-- **Live panel** – the character (built-in vector or pixel version depending on the theme, a GIF pack, or a Live2D model), its state, and what Lyra is doing right now.
+- **Live panel** – the 3D character, its state, and what Lyra is doing right now.
 - **Lyra's browser** – when Lyra browses in *visible* mode the panel opens inside the app with the page it is driving; *Take over* lets you use it yourself, *Stop* halts the agent's browsing for the turn. In *headless* mode you only see a status line in the chat.
 - **Profiles** (*Settings › Profiles*) – keep more than one assistant. Each profile has its own soul, appearance, voice, animation, goals and model, and its own chats and memory; switching swaps all of it at once. Safety, the workspace, the browser and phone access are yours and shared by every profile.
 - **Setup guide** – the first start opens a short guide: the model, her name and look, voice, image generation, safety, and tools. Skip it whenever you like; everything in it is under Settings, and the guide itself is under *Settings › About*.
@@ -88,9 +88,9 @@ A theme is a folder with `theme.json` and `theme.css`. The base UI is built on C
 
 Text to speech uses KittenTTS through the Python sidecar in `voice/`. In the packaged app, press **Install voice engine** under *Settings › Voice* once: it builds the environment under Lyra's data folder (needs uv or python3, and `brew install espeak-ng`). Without it, replies fall back to the macOS voice, which ignores the voice choice, and the Voice page says so. Emoji, code blocks and markdown marks are never read aloud. Replies longer than about 450 characters are split into sentences and joined, because KittenTTS synthesises one pass at a time. Text to speech otherwise (friendly names such as Rosie map to KittenTTS voices in `voice/server.py`); if the sidecar is missing, macOS `say` is used. *Your own* points at any OpenAI-compatible `/v1/audio/speech` endpoint. Speech to text uses faster-whisper in the same sidecar.
 
-## Live character: 2D or 3D
+## Live character
 
-The live panel shows Lyra as a 3D VRM model; she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice.
+The live panel shows Lyra as a 3D VRM model; she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice. Any other `.vrm` file works too (*Appearance › Live character*).
 
 ## AI goals
 

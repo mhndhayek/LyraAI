@@ -161,10 +161,9 @@ class Settings extends EventEmitter {
     this.save();
     return { removed: p, profiles: this.profiles() };
   }
-  // The built-in cast was cut to the original cat girl and the succubus.
-  // A profile that used one of the retired packs would otherwise show
-  // "No idle.gif", because organ sync replaces the renderer folder.
-  // The same pass retires the old live-character sources (see below).
+  // The built-in cast was cut to the 3D Lyra. A profile on a retired 2D pack
+  // (or an old live-character source) would otherwise show nothing, because
+  // organ sync replaces the renderer folder.
   migrateRetiredPacks() {
     let changed = false;
     const fix = (v) => { if (typeof v === 'string' && RETIRED_PACKS.includes(v.replace(/^builtin:/, '').replace(/\/$/, '')) && v.startsWith('builtin:')) { changed = true; return 'builtin:lyra'; } return v; };

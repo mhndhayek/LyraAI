@@ -137,7 +137,7 @@ test('deleting a profile leaves the others alone', () => {
   app.close();
 });
 
-test('a profile on a retired built-in pack falls back to the cat girl', () => {
+test('a profile on a retired built-in pack falls back to the 3D Lyra model', () => {
   const userData = tmpdir();
   const paths = layout(userData, path.join(__dirname, '..', '..'));
   migrate(paths);
@@ -151,18 +151,20 @@ test('a profile on a retired built-in pack falls back to the cat girl', () => {
     ] },
   }));
   const settings = new Settings(paths.settingsFile);
-  assert.equal(settings.get().appearance.gifFolder, 'builtin:catgirl', 'a retired pack is swapped for the original');
-  assert.equal(settings.get().persona.avatar, 'builtin:catgirl');
+  assert.equal(settings.get().appearance.source, 'vrm', 'a retired pack becomes the 3D model');
+  assert.equal(settings.get().appearance.vrmModel, 'builtin:lyra');
+  assert.equal(settings.get().persona.avatar, 'builtin:lyra');
   settings.switchProfile('sue');
-  assert.equal(settings.get().appearance.gifFolder, 'builtin:succubus', 'a pack that still ships is left alone');
+  assert.equal(settings.get().appearance.source, 'vrm', 'the succubus pack is retired too');
+  assert.equal(settings.get().persona.avatar, 'builtin:lyra');
   settings.switchProfile('own');
-  assert.equal(settings.get().appearance.gifFolder, '/Users/me/packs/foxgirl', 'a pack outside the app is left alone');
-  assert.equal(settings.get().persona.avatar, '/Users/me/fox.png');
+  assert.equal(settings.get().appearance.source, 'vrm', 'a GIF folder outside the app is retired as well');
+  assert.equal(settings.get().persona.avatar, '/Users/me/fox.png', 'a personal avatar file is left alone');
   const saved = JSON.parse(fs.readFileSync(paths.settingsFile, 'utf8'));
-  assert.equal(saved.profiles.list[0].appearance.gifFolder, 'builtin:catgirl', 'the fix is written back to disk');
+  assert.equal(saved.profiles.list[0].appearance.source, 'vrm', 'the fix is written back to disk');
 });
 
-test('the retired live-character sources fall back to the GIF pack, 3D is kept', () => {
+test('the retired live-character sources fall back to the 3D Lyra model', () => {
   const userData = tmpdir();
   const paths = layout(userData, path.join(__dirname, '..', '..'));
   migrate(paths);
@@ -177,16 +179,16 @@ test('the retired live-character sources fall back to the GIF pack, 3D is kept',
     ] },
   }));
   const settings = new Settings(paths.settingsFile);
-  assert.equal(settings.get().appearance.source, 'gif', 'built-in SVG becomes the GIF pack');
-  assert.equal(settings.get().appearance.gifFolder, 'builtin:succubus', 'and keeps the pack it had');
+  assert.equal(settings.get().appearance.source, 'vrm', 'built-in SVG becomes the 3D model');
+  assert.equal(settings.get().appearance.vrmModel, 'builtin:lyra');
   settings.switchProfile('pet');
-  assert.equal(settings.get().appearance.source, 'gif');
-  assert.equal(settings.get().appearance.gifFolder, 'builtin:catgirl', 'a pet with no pack gets the cat girl');
+  assert.equal(settings.get().appearance.source, 'vrm', 'a pet with no pack gets the 3D Lyra');
+  assert.equal(settings.get().appearance.vrmModel, 'builtin:lyra');
   settings.switchProfile('l2d');
-  assert.equal(settings.get().appearance.source, 'gif');
+  assert.equal(settings.get().appearance.source, 'vrm');
   settings.switchProfile('vrm');
   assert.equal(settings.get().appearance.source, 'vrm', '3D stays 3D');
-  assert.equal(settings.get().appearance.vrmModel, '/Users/me/me.vrm');
+  assert.equal(settings.get().appearance.vrmModel, '/Users/me/me.vrm', 'a chosen model is left alone');
   const saved = JSON.parse(fs.readFileSync(paths.settingsFile, 'utf8'));
   for (const p of saved.profiles.list) {
     for (const k of ['petFolder', 'live2dModel', 'last2d']) assert.ok(!(k in (p.appearance || {})), `${p.id}: ${k} is gone`);

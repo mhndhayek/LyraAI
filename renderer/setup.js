@@ -19,7 +19,6 @@
     { kind: 'llama.cpp', l: 'llama.cpp', ep: 'http://localhost:8080/v1', get: 'https://github.com/ggml-org/llama.cpp' },
   ];
   const normalize = (v) => { let s = String(v || '').trim(); if (!s) return ''; if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(s)) s = `http://${s}`; s = s.replace(/\/+$/, ''); return /\/v\d+$/.test(s) ? s : `${s}/v1`; };
-  const packOf = (s) => (s.appearance.source === 'gif' && s.appearance.gifFolder.startsWith('builtin:') ? s.appearance.gifFolder.slice(8) : null);
   let open = false, step = 0, seq = 0, models = null, modelChecked = false, imageTest = null;
 
   const STEPS = [
@@ -33,9 +32,19 @@
     { id: 'done', name: 'Done', render: done },
   ];
 
+  // The live 3D Lyra in the welcome hero: one instance, disposed when the page
+  // re-renders or the guide closes, so the idle loop never keeps running.
+  let heroChar = null;
+  const heroDispose = () => { if (heroChar) { heroChar.dispose(); heroChar = null; } };
+
   async function welcome() {
     const s = S();
     const hero = el(`<div class="setup-hero setup-hero-3d"><div class="setup-hero-3d-stage" id="setup-3d-stage"></div><div><div class="s-title">Hi, I’m ${esc(s.persona.name)}.</div><div class="s-sub">Chat, build and grow.</div></div></div>`);
+    setTimeout(() => {
+      if (heroChar) heroChar.dispose();
+      const stage = document.getElementById('setup-3d-stage');
+      if (stage && window.LyraCharacter) { heroChar = new window.LyraCharacter(stage); heroChar.setState('idle'); }
+    }, 0);
     return [hero];
   }
 
@@ -183,13 +192,13 @@
     const s = S(); const { title } = ui();
     const provs = s.providers.list; const prov = provs.find((p) => p.id === s.model.chat.provider) || provs[0];
     const known = models || window.LyraApp.models(); const info = known && known.byProvider ? known.byProvider[prov.id] : null;
-    const packs = await lyra.packs.list(); const pack = packs.find((k) => k.id === packOf(s));
     const theme = (await lyra.themes.list()).find((t) => t.id === s.appearance.theme);
     const on = Object.keys(s.tools).filter((k) => k !== 'enabled' && s.tools[k]).length;
     const ig = s.imagegen;
+    const model = (!s.appearance.vrmModel || s.appearance.vrmModel === 'builtin:lyra') ? 'Lyra (3D)' : `3D · ${s.appearance.vrmModel.split('/').pop()}`;
     const rows = [
       ['Model', info && info.ok ? `${prov.name} · ${s.model.chat.model || 'auto'}` : `${prov.name} · not reachable yet, so I cannot answer until it is`],
-      ['Look', `${s.persona.name} · ${pack ? pack.name : s.appearance.source === 'gif' ? 'your own GIF pack' : s.appearance.source} · ${theme ? theme.name : s.appearance.theme}`],
+      ['Look', `${s.persona.name} · ${model} · ${theme ? theme.name : s.appearance.theme}`],
       ['Voice', `${s.voice.readAloud ? `reads aloud as ${s.voice.voice}` : 'does not read aloud'} · ${s.voice.stt ? 'listens to the mic' : 'mic off'}`],
       ['Images', ig.enabled ? `${ig.backend === 'comfyui' ? 'ComfyUI' : 'SwarmUI'} at ${ig.backend === 'comfyui' ? ig.comfyEndpoint : ig.swarmEndpoint}` : 'off'],
       ['Safety', { ask: 'asks first', auto: 'approves her own actions', none: 'no restrictions' }[s.safety.approvalMode] + (s.model.smartApprovals ? ', smart approvals on' : '')],
@@ -210,6 +219,7 @@
   async function render() {
     if (!open) return;
     const mine = ++seq; renderNav();
+    heroDispose();
     const last = step === STEPS.length - 1;
     $('#setup-back').hidden = step === 0; $('#setup-skip').hidden = last;
     $('#setup-next').textContent = step === 0 ? 'Let’s go' : last ? 'Start chatting' : 'Next';
@@ -227,7 +237,7 @@
   window.Setup = {
     open(at = 0) { step = at; models = null; modelChecked = false; open = true; $('#setup').hidden = false; window.LyraApp.browserVisible(false); render(); },
     close() {
-      open = false; $('#setup').hidden = true;
+      open = false; heroDispose(); $('#setup').hidden = true;
       // The settings page may be open underneath: it hides the browser too, and it shows what was changed here.
       const settingsOpen = !!(window.Settings && window.Settings.isOpen());
       window.LyraApp.browserVisible(!settingsOpen);

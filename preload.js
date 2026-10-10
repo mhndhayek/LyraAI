@@ -16,7 +16,6 @@ contextBridge.exposeInMainWorld('lyra', {
   files: { pickImages: call('files:pickImages'), pickFolder: call('files:pickFolder'), pickFile: call('files:pickFile') },
   themes: { list: call('themes:list'), openFolder: call('themes:openFolder') },
   logs: { list: call('logs:list'), text: call('logs:text'), counts: call('logs:counts'), clear: call('logs:clear'), write: call('logs:write'), open: call('logs:open') },
-  packs: { list: call('packs:list') },
   mobile: { state: call('mobile:state'), start: call('mobile:start'), stop: call('mobile:stop'), tailnet: call('mobile:tailnet'), newCode: call('mobile:newCode'), revoke: call('mobile:revoke'), renewCert: call('mobile:renewCert'), qr: call('mobile:qr') },
   imagegen: { test: call('imagegen:test') },
   app: { notifyTest: call('app:notifyTest'), notifyStatus: call('app:notifyStatus'), openNotificationSettings: call('app:openNotificationSettings'), openExternal: call('app:openExternal'), paths: call('app:paths'), testConnection: call('app:testConnection') },
