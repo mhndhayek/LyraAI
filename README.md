@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/media/lyra.gif" width="220" alt="Lyra, a pixel-art cat girl, looking at you">
+  <img src="docs/media/lyra-bust.png" width="220" alt="Lyra, the 3D character, looking at you">
 </p>
 
 <h1 align="center">Lyra AI Agent</h1>
@@ -40,24 +40,20 @@ She is also built to change herself. Ask for an orange theme, a new tool, or a p
 | 🎨 **Image generation** | SwarmUI or ComfyUI on your machine or your network. She picks the model and size when you let her. |
 | 🗣️ **Voice** | KittenTTS voices and Whisper transcription run in a local sidecar. Send voice notes, hear replies. |
 | 👥 **More than one of her** | Profiles: each with her own soul, look, voice, animation, goals and model, and her own chats and memory. Switch and the whole app becomes her. |
-| 🎭 **A face** | Two built-in pixel-art characters that blink, think, type and talk, and a 3D Lyra (VRM) one click away on the 2D / 3D switch. Or bring your own GIF pack or `.vrm` avatar. |
+| 🎭 **A face** | Lyra in 3D: a VRM character that breathes, blinks, thinks, types and talks. Bring your own `.vrm` avatar if you like (VRoid Studio exports, VRoid Hub, BOOTH). |
 | 🎯 **Goals** | After a chat, she reflects and writes goals for herself. Let her work on them in her own time, or archive them. |
 | 📱 **On your phone** *(beta)* | Scan a QR code and Safari opens the same chats over HTTPS on your Tailscale network. No account, no cloud. |
 | 🧬 **Self-extending** | Themes, UI changes, new tools and panels, applied live with git checkpoints and automatic rollback. |
 | 🧩 **Themes** | Not just colors: a theme can change fonts and shapes. The Pixel theme turns the whole app into pixel art. |
 | 🪵 **Honest logs** | Every failure is logged. Lyra can read her own log, so you can ask her why something broke. |
 
-## Meet the cast
+## Meet Lyra
 
 <p align="center">
-  <img src="docs/media/cast.png" width="420" alt="The two built-in characters: Lyra the cat girl and the succubus">
+  <img src="docs/media/lyra-bust.png" width="300" alt="Lyra: pink hair fading to blue, gold eyes, star ribbon bows">
 </p>
 
-<p align="center">
-  Lyra, the original &nbsp;·&nbsp; Succubus
-</p>
-
-The cast is down to two: Lyra, the original pixel-art cat girl, and the succubus. The other six packs (fox girl, cowboy, agent, butterbot, dapper, silver) were retired; a profile that used one of them switches back to Lyra on its own when it updates. Your own GIF packs and Live2D models are not touched.
+Lyra is a 3D character: she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice. More characters are coming; until then she is the only face, and every install — new or upgraded — shows her in 3D.
 
 ### Lyra in 3D
 
@@ -65,7 +61,7 @@ The cast is down to two: Lyra, the original pixel-art cat girl, and the succubus
   <img src="docs/media/lyra-vrm.png" width="300" alt="Lyra's 3D model: pink hair fading to blue, gold eyes, star ribbon bows">
 </p>
 
-Lyra has a 3D body: [`lyra.vrm`](renderer/character/vrm/), a VRM avatar with pink-to-blue hair, gold eyes, a full rig, hair physics and lip-sync expressions. Flip the **2D / 3D** switch on the live panel and she appears in 3D: she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice. *Appearance › Live character › 3D* also takes any other `.vrm` file (VRoid Studio exports, VRoid Hub, BOOTH; check the model's licence). She is a recolour of the VRoid Project's AvatarSample_B, whose licence allows modification and redistribution, so she ships with the app and anyone may use her. Details, credit and the scripts that made her are in [renderer/character/vrm/README.md](renderer/character/vrm/README.md).
+Lyra is a 3D character: [`lyra.vrm`](renderer/character/vrm/), a VRM avatar with pink-to-blue hair, gold eyes, a full rig, hair physics and lip-sync expressions. She is the live character on the welcome page, the live panel and the phone. *Appearance › Live character* also takes any other `.vrm` file (VRoid Studio exports, VRoid Hub, BOOTH; check the model's licence). She is a recolour of the VRoid Project's AvatarSample_B, whose licence allows modification and redistribution, so she ships with the app and anyone may use her. Details, credit and the scripts that made her are in [renderer/character/vrm/README.md](renderer/character/vrm/README.md).
 
 The 3D face is lit with a 3-point setup (key, fill, rim) instead of a single flat light, and her skin sits ~10 % darker at a warm tan with a subtle baked cheek blush that deepens as she gets happy — the difference, side by side:
 
@@ -73,7 +69,7 @@ The 3D face is lit with a 3-point setup (key, fill, rim) instead of a single fla
   <img src="docs/media/lyra-08-demo.png" width="720" alt="Before and after: the flat single-light face on the left, the 3-point lit face with warm shade and a speaking blush on the right">
 </p>
 
-The two pixel-art characters have idle variations and a thinking, writing and speaking animation. They were drawn with SwarmUI and animated with the pipeline in [`scripts/make_character.py`](scripts/make_character.py). The full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md), and Lyra can read it herself and draw a new character for you — that part is **beta**: the frames come out clean, but the animation is not always smooth yet.
+The earlier pixel-art characters (the original cat girl, the succubus and the six packs before them) were retired in the 3D-first release: a profile that used one of them moves to the 3D Lyra on its own when it updates. The drawing pipeline that made them is kept for reference in [`scripts/make_character.py`](scripts/make_character.py), and the full recipe, prompts included, is in [docs/AVATARS.md](docs/AVATARS.md).
 
 ## Quick start
 
@@ -122,7 +118,7 @@ The builds are not signed with an Apple or Microsoft certificate yet. Those cost
 
 ## Talk to her from your phone *(beta)*
 
-<img src="docs/media/lyra-thinking.gif" width="120" align="right" alt="Lyra thinking">
+<img src="docs/media/lyra-bust.png" width="120" align="right" alt="Lyra">
 
 Lyra can serve the same chats to your phone without any cloud in between.
 

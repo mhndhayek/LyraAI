@@ -4,7 +4,7 @@
 > smooth: the frames come out clean, the motion between them still needs a hand. Say so
 > before starting, and expect to redo a pack or two.
 
-This is how the built-in characters (the original cat girl and the succubus) were made, so you can make more, or a new one for the user. Six earlier packs (fox girl, cowboy, agent, butter robot and the two businessmen) were retired; the recipe still covers how they were made, and the fox-girl example below is kept as a worked spec.
+This is how the original cat girl character was made, so you can make more, or a new one for the user. The recipe still covers how the retired packs were made.
 
 ## What it needs (tell the user before starting)
 
@@ -86,7 +86,7 @@ Idle variations idle-2 … idle-6 play at random while idle; the app looks for t
 
 ## Step 4: make it available in the app
 
-Built-in packs live in the UI organ under `character/<id>/`; the folder name is the id. The picker under Settings › Appearance › GIF pack lists every folder there that has an `idle.gif`. To use one: `configure_app({appearance:{source:"gif", gifFolder:"builtin:<id>"}, persona:{avatar:"builtin:<id>"}})`. A pack outside the app works too: pass the folder path instead of `builtin:<id>`.
+The live character is 3D, so a finished pack needs to become a `.vrm` file (bake the frames into a VRM with the user's tools; the app loads any `.vrm`). To use it: `configure_app({appearance:{vrmModel:"<path>.vrm"}, persona:{avatar:"<png path>"}})`. `vrmModel` is the 3D body; `avatar` is the flat picture used in headers and on the phone. A `.vrm` outside the app works the same as a path inside it. The old Settings › Appearance › GIF pack picker is gone: a retired `gifFolder` migrates to the 3D Lyra on boot and is dropped from the settings.
 
 ## Style rules that kept the cast consistent
 

@@ -109,6 +109,15 @@ test('the lockfile is present and in sync with the manifest', () => {
 
 // The 3D mascot is a binary asset: if the file changes, the README hash must
 // change with it, or nobody notices the model was rebuilt (or swapped).
+test('the retired 2D packs are not shipped', () => {
+  for (const pack of ['catgirl', 'succubus']) {
+    for (const file of ['pack.json', 'idle.gif', 'avatar.png']) {
+      assert.ok(!has(`renderer/character/${pack}/${file}`), `${pack} is retired; renderer/character/${pack}/${file} must not ship`);
+    }
+  }
+  assert.ok(has('renderer/character/vrm/avatar.png'), 'the 3D bust avatar must ship');
+});
+
 test('the VRM file matches the hash in its README', () => {
   const crypto = require('crypto');
   const vrm = path.join(ROOT, 'renderer', 'character', 'vrm', 'lyra.vrm');

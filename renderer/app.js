@@ -10,12 +10,12 @@
   const fmtTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const fmtDur = (s) => `${Math.floor((s || 0) / 60)}:${String(Math.floor((s || 0) % 60)).padStart(2, '0')}`;
   const fileUrl = (p) => (p && p.startsWith('file://') ? p : 'file://' + encodeURI(p || ''));
-  const avatarUrl = (a) => (a && a.startsWith('builtin:') ? `character/${a.slice(8)}/avatar.png` : a ? fileUrl(a) : null);
+  const avatarUrl = (a) => (a && a.startsWith('builtin:') ? (a === 'builtin:lyra' ? 'character/vrm/avatar.png' : `character/${a.slice(8)}/avatar.png`) : a ? fileUrl(a) : null);
   window.avatarUrl = avatarUrl;
   const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const hostOf = (u) => { try { return new URL(u).host; } catch { return u; } };
   const toast = (text, kind = '') => { const t = el(`<div class="toast ${kind}">${esc(text)}</div>`); $('#toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'error' ? 7000 : 4000); };
-  window.LyraApp = { settings: () => state.settings, set: (patch) => setSettings(patch), setDim: (d) => setDim(d), toast, lastContext: () => state.lastContext, char: () => state.char, browserVisible: (on) => syncBrowserView(on), chatId: () => state.chatId, models: () => state.models, playFile: playFile };
+  window.LyraApp = { settings: () => state.settings, set: (patch) => setSettings(patch), toast, lastContext: () => state.lastContext, char: () => state.char, browserVisible: (on) => syncBrowserView(on), chatId: () => state.chatId, models: () => state.models, playFile: playFile };
 
   async function setSettings(patch) { state.settings = await lyra.settings.set(patch); applyAll(); return state.settings; }
 
@@ -39,19 +39,9 @@
     const host = floating ? $('#float-stage') : $('#stage');
     if (state.char.el !== host) { state.char.dispose(); state.char = new LyraCharacter(host); state.char.setState(state.charState); }
     if (floating && a.floatPos) { $('#float-char').style.left = a.floatPos.x + 'px'; $('#float-char').style.top = a.floatPos.y + 'px'; $('#float-char').style.right = 'auto'; $('#float-char').style.bottom = 'auto'; }
-    state.char.configure({ source: a.source === 'vrm' ? 'vrm' : 'gif', gifFolder: a.gifFolder, vrmModel: a.vrmModel });
-    $('#stage-caption').textContent = a.source === 'vrm' ? `3D · ${!a.vrmModel || a.vrmModel === 'builtin:lyra' ? 'Lyra' : a.vrmModel.split('/').pop()}` : a.gifFolder && a.gifFolder.startsWith('builtin:') ? `Built-in pack · ${a.gifFolder.slice(8)}` : `GIF pack · ${a.gifFolder ? a.gifFolder.split('/').pop() : 'no folder chosen'}`;
-    renderPills(); renderDim(); requestAnimationFrame(sendBounds);
-  }
-  // 2D / 3D switch on the live panel: 3D shows the VRM model, 2D the GIF pack.
-  function renderDim() {
-    const a = state.settings.appearance; const is3d = a.source === 'vrm';
-    $$('.dim-toggle button').forEach((b) => b.classList.toggle('on', (b.dataset.dim === '3d') === is3d));
-  }
-  function setDim(dim) {
-    const is3d = state.settings.appearance.source === 'vrm';
-    if ((dim === '3d') === is3d) return;
-    return setSettings({ appearance: { source: dim === '3d' ? 'vrm' : 'gif' } });
+    state.char.configure({ vrmModel: a.vrmModel });
+    $('#stage-caption').textContent = `3D · ${!a.vrmModel || a.vrmModel === 'builtin:lyra' ? 'Lyra' : a.vrmModel.split('/').pop()}`;
+    renderPills(); requestAnimationFrame(sendBounds);
   }
 
   function applyAll() { applyTheme(); applyPersona(); renderNow(); if (window.Settings && Settings.isOpen()) Settings.refresh(); }
@@ -353,7 +343,6 @@
   /* ---------- header, keys ---------- */
   $('#btn-new-chat').addEventListener('click', newChat);
   $('#chat-search').addEventListener('input', renderChatList);
-  $$('#dim-toggle button').forEach((b) => b.addEventListener('click', () => setDim(b.dataset.dim)));
   $('#btn-live').addEventListener('click', () => { if (state.settings.appearance.placement === 'floating') setSettings({ appearance: { placement: 'panel' }, ui: { livePanel: true } }); else setSettings({ ui: { livePanel: !state.settings.ui.livePanel } }); });
   $('#btn-notify').addEventListener('click', () => Settings.open('notifications'));
   $('#btn-settings').addEventListener('click', () => Settings.open('model'));

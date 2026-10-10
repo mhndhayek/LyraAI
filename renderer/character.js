@@ -1,39 +1,20 @@
-// The live character: a GIF pack (idle/thinking/writing/speaking.gif in a folder) for 2D,
-// or a VRM model for 3D.
+// The live character: a VRM model in 3D.
 (function () {
   const STATES = ['idle', 'thinking', 'writing', 'speaking'];
 
   class Character {
-    constructor(el) { this.el = el; this.state = 'idle'; this.cfg = { source: 'gif', gifFolder: 'builtin:catgirl' }; this.timers = []; this.audio = null; this.vrm = null; this.mount(); }
+    constructor(el) { this.el = el; this.state = 'idle'; this.cfg = { source: 'vrm', vrmModel: 'builtin:lyra' }; this.timers = []; this.audio = null; this.vrm = null; this.mount(); }
     dispose() { this.mountSeq = (this.mountSeq || 0) + 1; this.clearTimers(); this.destroyVrm(); this.detachAudio(); this.el.innerHTML = ''; }
-    clearTimers() { this.timers.forEach(clearInterval); this.timers = []; if (this.raf) cancelAnimationFrame(this.raf); this.raf = null; }
+    clearTimers() { this.timers.forEach(clearInterval); this.timers = []; if (this.raf) cancelAnimationFrame(this.raf); }
     configure(cfg) { const changed = JSON.stringify(cfg) !== JSON.stringify(this.cfg); this.cfg = { ...this.cfg, ...cfg }; if (changed) this.mount(); }
-    setState(state) { if (!STATES.includes(state)) state = 'idle'; if (state !== 'idle') this.idleVariant = null; this.state = state; this.el.dataset.state = state; this.render(); }
+    setState(state) { if (!STATES.includes(state)) state = 'idle'; if (state !== 'idle') this.idleVariant = null; this.state = state; this.el.dataset.state = state; }
 
-    // Two sources: a GIF pack (2D) or a VRM model (3D). Anything else, including the
-    // sources that were retired (built-in SVG, Hermes pet, Live2D), shows the GIF pack.
     mount() {
       this.mountSeq = (this.mountSeq || 0) + 1; this.clearTimers(); this.destroyVrm(); this.el.innerHTML = ''; delete this.el.dataset.vrmError;
-      if (this.cfg.source === 'vrm') { this.el.innerHTML = '<div class="char-missing">Loading 3D…</div>'; this.mountVrm().catch((e) => { console.warn('VRM failed:', e.message); this.el.dataset.vrmError = e.message; this.el.innerHTML = `<div class="char-missing">Could not load the 3D model:<br>${String(e.message).replace(/</g, '&lt;')}</div>`; }); }
-      else this.mountGif();
+      this.el.innerHTML = '<div class="char-missing">Loading 3D…</div>'; this.mountVrm().catch((e) => { console.warn('VRM failed:', e.message); this.el.dataset.vrmError = e.message; this.el.innerHTML = `<div class="char-missing">Could not load the 3D model:<br>${String(e.message).replace(/</g, '&lt;')}</div>`; });
     }
     render() {
-      if (this.mode === 'vrm') return; // the render loop reads this.state every frame
-      if (this.mode === 'gif') { const img = this.el.querySelector('img'); if (!img) return; let file = `${this.state}.gif`; if (this.state === 'idle' && this.idleVariant) file = this.idleVariant; if (img.dataset.want !== file) { img.dataset.want = file; img.src = this.gifUrl(file) + `?t=${Date.now()}`; } }
-    }
-
-    /* --- GIF pack --- */
-    toFileUrl(p) { if (p.startsWith('builtin:')) return 'character/' + p.slice(8).replace(/\/$/, '') + '/'; return p.startsWith('file://') ? p : 'file://' + encodeURI(p); }
-    gifUrl(file) { const f = this.cfg.gifFolder || 'builtin:catgirl'; return f.startsWith('builtin:') ? this.toFileUrl(f) + file : this.toFileUrl(`${f}/${file}`); }
-    mountGif() {
-      this.mode = 'gif';
-      const img = document.createElement('img'); img.className = 'char gif'; img.alt = '';
-      img.onerror = () => { if (!(img.dataset.want || '').startsWith('idle.gif')) { img.dataset.want = 'idle.gif'; img.src = this.gifUrl('idle.gif'); } else { this.el.innerHTML = `<div class="char-missing">No idle.gif in<br>${this.cfg.gifFolder || 'builtin:catgirl'}</div>`; } };
-      this.el.appendChild(img); this.idleVariant = null; this.idleVariants = ['idle.gif'];
-      // Idle variations: idle-2.gif … idle-6.gif play now and then instead of idle.gif.
-      for (let i = 2; i <= 6; i++) { const probe = new Image(); const name = `idle-${i}.gif`; probe.onload = () => this.idleVariants.push(name); probe.src = this.gifUrl(name); }
-      this.timers.push(setInterval(() => { if (this.state !== 'idle' || this.idleVariants.length < 2) return; const pick = Math.random() < 0.55 ? 'idle.gif' : this.idleVariants[1 + Math.floor(Math.random() * (this.idleVariants.length - 1))]; this.idleVariant = pick === 'idle.gif' ? null : pick; this.render(); }, 7000));
-      this.render();
+      if (this.mode !== 'vrm') return; // the render loop reads this.state every frame
     }
 
     /* --- script loading (the 3D bundle is loaded on first use) --- */
@@ -51,6 +32,7 @@
        builtin:lyra is the shipped mascot; any other value is a path to a .vrm file.
        Idle breathing, blinking, glances and spring-bone hair run every frame; the
        states lean, tilt and gesture; lip sync drives the "aa" expression. */
+    toFileUrl(p) { return p.startsWith('file://') ? p : 'file://' + encodeURI(p); }
     vrmUrl(p) { if (!p || p === 'builtin:lyra') return 'character/vrm/lyra.vrm'; return this.toFileUrl(p); }
     async mountVrm() {
       const seq = this.mountSeq; this.mode = 'vrm';

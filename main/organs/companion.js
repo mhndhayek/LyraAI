@@ -238,7 +238,7 @@ class Companion {
     const file = p === '/' ? 'index.html' : p.replace(/^\//, '');
     const abs = path.join(this.webDir, path.normalize(file).replace(/^(\.\.[\\/])+/, ''));
     if (!abs.startsWith(this.webDir) || !fs.existsSync(abs) || fs.statSync(abs).isDirectory()) {
-      if (file.startsWith('avatar')) { const a = path.join(this.k.paths.organsRenderer, 'character', 'catgirl', 'avatar.png'); if (fs.existsSync(a)) { res.writeHead(200, { 'content-type': 'image/png' }); return fs.createReadStream(a).pipe(res); } }
+      if (file.startsWith('avatar')) { const a = path.join(this.k.paths.organsRenderer, 'character', 'vrm', 'avatar.png'); if (fs.existsSync(a)) { res.writeHead(200, { 'content-type': 'image/png' }); return fs.createReadStream(a).pipe(res); } }
       return this.send(res, 404, 'not found', { 'content-type': 'text/plain' });
     }
     const type = MIME[path.extname(abs).toLowerCase()] || 'application/octet-stream';
