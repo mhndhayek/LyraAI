@@ -12,9 +12,9 @@ REPO="${REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
 # The one required check. It only passes when every job in ci.yml passed, so new
 # jobs are covered automatically without touching this rule again.
 CHECK="QA Gate"
-# No approving review is required: the agents and the owner all push as the
-# same account, and GitHub never lets an account approve its own pull request,
-# so a required approval would make every merge impossible. The review is done
+# No approving review is required: Lucima and the owner share one account
+# (Claudia has her own, see docs/agent-review.md), and GitHub never lets an
+# account approve its own pull request, so a required approval would block merges. The review is done
 # by the other agent instead (docs/agent-review.md), and the owner merges.
 
 printf 'Protecting %s on %s so merges need "%s"...\n' "$BRANCH" "$REPO" "$CHECK"
