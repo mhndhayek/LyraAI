@@ -61,7 +61,8 @@ class Extensions {
         for (const t of tools) {
           if (!t.name || !t.description || typeof t.run !== 'function') throw new Error(`tool ${t.name || '?'} needs name, description and run()`);
           const run = t.run; const self = this;
-          entry.tools.push({ name: t.name, description: t.description, parameters: t.parameters || { type: 'object', properties: {} }, icon: 'tool', key: 'ext', extension: id, risk: () => (typeof t.risk === 'function' ? t.risk() : t.risk || (m.capabilities.some((c) => ['shell', 'files'].includes(c)) ? 'high' : 'low')), summary: (a) => (typeof t.summary === 'function' ? t.summary(a) : `${m.name}: ${t.name}`), run: async (args) => { try { const r = await run(args, entry.api); return typeof r === 'string' ? r : JSON.stringify(r); } catch (e) { self.recordFailure(id, e.message); throw e; } } });
+          const invoke = async (args) => { try { return plain(await run(args, entry.api)); } catch (e) { self.recordFailure(id, e.message); throw e; } };
+          entry.tools.push({ name: t.name, description: t.description, parameters: t.parameters || { type: 'object', properties: {} }, icon: 'tool', key: 'ext', extension: id, risk: () => (typeof t.risk === 'function' ? t.risk() : t.risk || (m.capabilities.some((c) => ['shell', 'files'].includes(c)) ? 'high' : 'low')), summary: (a) => (typeof t.summary === 'function' ? t.summary(a) : `${m.name}: ${t.name}`), invoke, run: async (args) => asText(await invoke(args)) });
         }
         if (typeof mod.activate === 'function') mod.activate(entry.api);
       } catch (e) { this.quarantine(id, `failed to load: ${e.message}`); return { ok: false, error: e.message }; }
@@ -75,6 +76,20 @@ class Extensions {
   unloadAll() { for (const id of [...this.loaded.keys()]) this.unload(id); }
   tools() { return [...this.loaded.values()].flatMap((e) => e.tools); }
   panels() { return [...this.loaded.values()].filter((e) => e.manifest.panel).map((e) => ({ id: e.manifest.id, name: e.manifest.name, file: path.join(this.dir(e.manifest.id), e.manifest.panel) })); }
-  async call(id, tool, args) { const e = this.loaded.get(id); if (!e) throw new Error(`extension ${id} is not active`); const t = e.tools.find((x) => x.name === tool); if (!t) throw new Error(`extension ${id} has no tool ${tool}`); return t.run(args || {}); }
+  // A panel's call: the tool's own value (object, number, string…), not the
+  // text the agent sees. Panels used to get JSON text and had to parse it,
+  // which nothing told them; a panel that read r.result.minutes got undefined.
+  async call(id, tool, args) { const e = this.loaded.get(id); if (!e) throw new Error(`extension ${id} is not active`); const t = e.tools.find((x) => x.name === tool); if (!t) throw new Error(`extension ${id} has no tool ${tool}`); return t.invoke(args || {}); }
 }
+
+// What a tool returns, made safe to send over IPC and postMessage: plain JSON
+// data only (functions, class instances and cycles can't be cloned).
+function plain(r) {
+  if (r === undefined || r === null) return null;
+  if (typeof r === 'string' || typeof r === 'number' || typeof r === 'boolean') return r;
+  return JSON.parse(JSON.stringify(r));
+}
+// What the agent reads: always text.
+const asText = (r) => (typeof r === 'string' ? r : r === null ? '' : JSON.stringify(r));
+
 module.exports = { Extensions, CAPABILITIES };
