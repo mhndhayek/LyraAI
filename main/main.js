@@ -13,6 +13,7 @@ const { Checkpoints } = require('./kernel/checkpoints');
 const { Loader } = require('./kernel/loader');
 const { Extensions } = require('./kernel/extensions');
 const { Guard } = require('./kernel/guard');
+const { Grants } = require('./kernel/grants');
 const { Docs } = require('./kernel/docs');
 const { Logs } = require('./kernel/logs');
 const watchdog = require('./kernel/watchdog');
@@ -94,6 +95,8 @@ app.whenReady().then(async () => {
   k.store = openStore(k.profileDir(), k.settings.get().persona.store);
   k.checkpoints = new Checkpoints(k.paths.state, log); if (k.settings.get().kernel.checkpoints) k.checkpoints.init();
   k.guard = new Guard(k); k.docs = new Docs(k); k.extensions = new Extensions(k); k.loader = new Loader(k);
+  // Approval grants (story 06): in memory only, so they outlive organ hot swaps and end when Lyra quits.
+  k.grants = new Grants({ onChange: () => k.emit(null, 'grants', {}) });
   k.root = () => require(path.join(k.paths.organsMain, 'workspace.js')).ensure(k.settings.get().workspace.folder);
   k.ipc = (ch, fn) => k.loader.ipc(ch, fn);
   k.beforeStateWrite = (label, chatId) => { if (!k.checkpoints.isDirty()) return; k.checkpoints.commit(`Before: ${label}`); };
@@ -143,6 +146,8 @@ app.whenReady().then(async () => {
     if (id === k.settings.profiles().active) return k.settings.profiles();
     if (k.organs && k.organs.agent.isBusy()) throw new Error('She is in the middle of something; stop her first.');
     if (k.organs) k.organs.approvals.cancelAll(null);
+    // Another profile is a different assistant: she doesn't inherit the rules made for this one.
+    k.grants.revokeAll();
     k.store.close();
     k.settings.switchProfile(id);
     // Each profile chooses its own store, so open the one she uses.

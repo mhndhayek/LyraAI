@@ -52,6 +52,26 @@
   const btn = (label, cb, { primary = false, ic = '', danger = false, small = true } = {}) => { const b = el(`<button class="btn ${small ? 'small' : ''} ${primary ? 'primary' : ''} ${danger ? 'danger' : ''}">${ic ? icon(ic, 14) : ''}${esc(label)}</button>`); b.addEventListener('click', cb); return b; };
   const title = (t, sub) => el(`<div><div class="s-title">${t}</div><div class="s-sub">${sub}</div></div>`);
 
+  // Safety › Allowed this session (story 06): the rules made from approval
+  // cards. They live only in memory, so the list is read fresh each render.
+  async function allowedThisSession() {
+    let list = []; try { list = await lyra.grants.list(); } catch {}
+    const scopeText = (g) => (g.scope === 'chat' ? 'this chat' : 'until Lyra restarts');
+    const what = (g) => (g.match.command ? 'Exact command' : g.match.pathPrefix ? `${esc(g.tool)} in this folder` : `Every ${esc(g.tool)} call`);
+    const value = (g) => esc(g.match.command || (g.match.pathPrefix ? g.label.replace(/^\S+ in /, '') : g.tool));
+    const rows = list.map((g) => {
+      const r = row(`${what(g)}${g.risk === 'high' ? ' <span style="color:var(--warn);font-weight:500">· high risk</span>' : ''}`, `<span class="grant-row"><code>${value(g)}</code></span> · ${scopeText(g)}`, btn('Revoke', async () => { await lyra.grants.revoke({ id: g.id }); refresh(); }));
+      r.dataset.grant = g.id; return r;
+    });
+    const empty = el('<div class="row"><div class="lbl"><div class="d">Nothing yet. Pick a rule from the ▾ next to Approve on an approval card.</div></div></div>');
+    const head = el(`<div style="display:flex;align-items:center;gap:8px"><div class="group-label" style="margin:0">Allowed this session</div><span class="spacer" style="flex:1"></span></div>`);
+    if (list.length) head.appendChild(btn('Revoke all', async () => { await lyra.grants.revokeAll(); refresh(); }, { danger: true }));
+    const g = el('<div id="allowed-session"></div>'); g.appendChild(head);
+    (list.length ? rows : [empty]).forEach((x) => g.appendChild(x));
+    g.appendChild(el('<div class="s-sub" style="margin-top:6px">These clear when Lyra restarts.</div>'));
+    return g;
+  }
+
   /* ---- sections ---- */
   const sections = {
     about: async () => {
@@ -298,6 +318,7 @@
           row('When it times out', '', seg([{ v: 'deny', l: 'Deny' }, { v: 'approve', l: 'Approve' }], sf.onTimeout, (v) => set({ safety: { onTimeout: v } }))),
           row('Smart approvals', 'Set under Model.', el(`<span style="font-size:13px;font-weight:500;color:${s.model.smartApprovals ? 'var(--accent)' : 'var(--muted)'}">${s.model.smartApprovals ? 'On' : 'Off'}</span>`)),
         ]),
+        await allowedThisSession(),
       ];
     },
     async browser() {

@@ -9,6 +9,7 @@ const { enabledTools, schemaFor, byName } = require('./tools');
 const { maybeCompress, messagesTokens } = require('./compression');
 const { estimateTokens, clampText, id } = require('./util');
 const { SpeechQueue, joinWavs } = require('./speech-queue');
+const { FILE_TOOLS, COMMAND_TOOLS } = require('./approvals');
 
 // How far a single turn may go before it stops on its own. Both are settings
 // (Model › How far Lyra goes), these are only the floor and ceiling.
@@ -339,10 +340,13 @@ class Agent {
             const risk = safe(() => tool.risk(args, toolCtx), 'high');
             if (tool.name === 'browser_open') { const h = new URL(/^https?:/.test(args.url || '') ? args.url : 'https://' + args.url).host; if (!visited.has(h)) { visited.add(h); } }
             this.turnState('thinking', { step: step.summary });
-            const ap = await approvals.request({ chatId, tool: tool.name, summary: step.summary, detail: step.args, risk, reason: args.reason, origin: run.origin });
+            // The exact command and the resolved path let a grant the user made match this call (story 06).
+            const target = FILE_TOOLS.has(tool.name) ? toolCtx.abs(args.path) : null;
+            const ap = await approvals.request({ chatId, tool: tool.name, summary: step.summary, detail: step.args, risk, reason: args.reason, origin: run.origin, command: COMMAND_TOOLS.has(tool.name) ? args.command : null, path: target });
             if (ap.decision !== 'approved') { result = `The user ${ap.timedOut ? 'did not answer in time; the action was' : ''} denied: ${step.summary}. Do not retry it; ask or choose another way.`; step.status = 'denied'; }
             else {
-              step.approval = ap.auto ? ap.why : 'approved by user';
+              step.approval = ap.why || (ap.auto ? 'approved' : 'approved by user');
+              if (ap.grant) step.grant = true;
               try { toolCtx.step = step; result = await tool.run(args, toolCtx); step.status = 'done'; }
               catch (e) { result = `Error: ${e.message}`; step.status = 'error'; this.ctx.kernel.logs.error('tools', `Tool ${tool.name} failed: ${e.message}`, `arguments: ${step.args}\n${e.stack || ''}`); }
             }
