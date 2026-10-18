@@ -14,7 +14,7 @@ class Extensions {
   dir(id) { return path.join(this.k.paths.extensions, id); }
   manifest(id) {
     const f = path.join(this.dir(id), 'manifest.json'); if (!fs.existsSync(f)) throw new Error('manifest.json missing');
-    let m; try { m = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { throw new Error(`manifest.json is not valid JSON: ${e.message}`); }
+    let m; try { m = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { throw new Error(`manifest.json is not valid JSON: ${e.message}`, { cause: e }); }
     if (m.id && m.id !== id) throw new Error(`manifest id "${m.id}" does not match folder "${id}"`);
     if (!m.name) throw new Error('manifest needs a name');
     m.id = id; m.capabilities = Array.isArray(m.capabilities) ? m.capabilities : [];

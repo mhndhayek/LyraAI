@@ -63,7 +63,7 @@ class Companion {
     try { await this.cli(['cert', '--cert-file', cert, '--key-file', key, host]); }
     catch (e) {
       const hint = /HTTPS|not enabled|feature/i.test(e.message) ? 'Enable HTTPS certificates for your tailnet in the Tailscale admin console (DNS tab), then try again.' : e.message;
-      throw new Error(`Could not get a certificate: ${hint}`);
+      throw new Error(`Could not get a certificate: ${hint}`, { cause: e });
     }
     const fresh = this.certExpiry();
     this.logs.info('mobile', `Certificate ready, valid for ${fresh ? fresh.days : '?'} days`);
