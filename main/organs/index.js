@@ -101,6 +101,20 @@ function create(k) {
   h('voice:warm', () => voice.warm());
   h('voice:voices', () => voice.voices());
   h('voice:speak', async (p) => voice.tts(p.text));
+  // Story 04: providers. Every call answers { ok, ... } rather than throwing, so
+  // the Voice page can say what went wrong in place.
+  const vcall = (fn) => async (p) => { try { return { ok: true, ...(await fn(p || {})) }; } catch (e) { return { ok: false, error: e.message }; } };
+  h('voice:connect', (p) => voice.connect(p || {}));
+  h('voice:onDevice', async (p) => { await voice.useOnDevice((p && p.role) || 'tts'); return voice.info((p && p.role) || 'tts'); });
+  h('voice:info', (p) => voice.info((p && p.role) || 'tts'));
+  h('voice:preview', vcall(async (p) => voice.speakWith(p.text || `Hi, I’m ${settings.get().persona.name}. This is how I sound.`, { voice: p.voice })));
+  h('voice:designPreview', vcall((p) => voice.designPreview(p)));
+  h('voice:designSave', vcall(async (p) => ({ voice: await voice.saveDesign(p) })));
+  h('voice:sample', vcall((p) => voice.saveSample({ dataUrl: p.dataUrl })));
+  h('voice:pickSample', vcall(async () => { const r = await dialog.showOpenDialog(k.win(), { properties: ['openFile'], filters: [{ name: 'Audio', extensions: ['wav', 'mp3', 'm4a', 'webm', 'ogg', 'flac'] }] }); if (r.canceled || !r.filePaths[0]) return { canceled: true }; return voice.saveSample({ path: r.filePaths[0] }); }));
+  h('voice:clonePreview', vcall((p) => voice.clonePreview(p)));
+  h('voice:cloneSave', vcall(async (p) => ({ voice: await voice.saveClone(p) })));
+  h('voice:deleteSaved', vcall(async (p) => ({ removed: await voice.deleteSaved(p.id) })));
   h('voice:transcribe', async (p) => { const f = saveDataUrl(path.join(k.paths.media, 'stt'), 'voice.webm', p.dataUrl); return voice.stt(f); });
   h('state:set', (p) => { agent.setState(p.state); return true; });
   // The window reports when spoken audio really starts and stops (story 05).

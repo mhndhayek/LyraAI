@@ -25,6 +25,8 @@ The runtime logos in `renderer/icons.js` (`window.BRANDS`) are the projects' own
 | LM Studio | [files.lmstudio.ai/lmstudio_icon2.svg](https://files.lmstudio.ai/lmstudio_icon2.svg), path as packaged by [Simple Icons](https://simpleicons.org/) 16.34.0 | trademark of Element Labs |
 | Ollama | [ollama/ollama](https://github.com/ollama/ollama), path as packaged by Simple Icons 16.34.0 | trademark of Ollama |
 | vLLM | [vllm-project/media-kit](https://github.com/vllm-project/media-kit), path as packaged by Simple Icons 16.34.0 | trademark of the vLLM project |
+| ElevenLabs | [elevenlabs.io/brand](https://elevenlabs.io/brand), path as packaged by Simple Icons 16.35.0 | trademark of ElevenLabs |
+| Fish Speech / Fish Audio | [docs.fish.audio/brand](https://docs.fish.audio/brand), path as packaged by Simple Icons 16.35.0 | trademark of Fish Audio |
 
 The generic "OpenAI-compatible" plug is drawn for Lyra and is not anyone's mark.
 

@@ -29,6 +29,9 @@ class Docs {
     const curFlat = Object.fromEntries(flatten(cur));
     // MCP entries carry tokens: the agent sees which servers exist, never the token.
     if (Array.isArray(curFlat['mcp.servers'])) curFlat['mcp.servers'] = curFlat['mcp.servers'].map((x) => ({ name: x.name, url: x.url, enabled: x.enabled !== false, token: x.token ? '[hidden]' : '' }));
+    // Voice server keys likewise, and the voice samples behind cloned voices.
+    for (const k of ['voice.apiKey', 'voice.sttApiKey']) if (curFlat[k]) curFlat[k] = '[hidden]';
+    if (Array.isArray(curFlat['voice.savedVoices'])) curFlat['voice.savedVoices'] = curFlat['voice.savedVoices'].map((x) => ({ name: x.name, kind: x.kind, provider: x.provider }));
     for (const [p, def] of flatten(DEFAULTS)) { const lock = LOCKED.find((l) => p === l || p.startsWith(l + '.')); lines.push(`- ${p} = ${JSON.stringify(curFlat[p])} (default ${JSON.stringify(def)})${lock ? ` LOCKED: ${REASONS[lock]}` : p.startsWith('model.') ? ' (queued until idle)' : ''}`); }
     // Locked settings that have no default to list, so the agent still learns
     // they exist and that they are refused. Their values are deliberately not

@@ -19,7 +19,9 @@ const DEFAULTS = {
   safety: { approvalMode: 'ask', timeoutSec: 300, onTimeout: 'deny' },
   browser: { enabled: true, mode: 'visible', autoOpen: true, startPage: 'about:blank', askBeforeDownloads: true },
   memory: { longTerm: true, memoryBudget: 8000, profileBudget: 2000, autoCompression: true, threshold: 0.8, target: 0.5 },
-  voice: { engine: 'kitten', kittenModel: 'KittenML/kitten-tts-nano-0.1', voice: 'Rosie', customEndpoint: 'http://localhost:8880/v1', customModel: 'tts-1', customVoice: 'alloy', readAloud: true, streamSpeech: true, stt: true, showTranscript: true, sttModel: 'small', sidecarPython: '' },
+  // Speaking: provider 'on-device' (KittenTTS) or a detected server at endpoint
+  // (story 04). Listening: the same for sttProvider, with Whisper on-device.
+  voice: { provider: 'on-device', endpoint: '', apiKey: '', model: '', remoteVoice: '', speed: 1, emotion: '', detected: null, kittenModel: 'KittenML/kitten-tts-nano-0.1', voice: 'Rosie', readAloud: true, streamSpeech: true, stt: true, showTranscript: true, sttProvider: 'on-device', sttEndpoint: '', sttApiKey: '', sttRemoteModel: '', sttDetected: null, sttModel: 'small', savedVoices: [], sidecarPython: '' },
   notifications: { desktop: true, approvals: true, longTask: true, goals: true, sound: true },
   tools: { enabled: true, read_file: true, write_file: true, shell: true, run_code: true, browser: true, web_search: false, vision: true, memory_write: true, repos: true, notify: true, image_gen: true, http: true, app: true, ext: true, mcp: true },
   goals: { autonomous: false, dailyMinutes: 30 },
@@ -65,6 +67,7 @@ class Settings extends EventEmitter {
     this.migrate();
     const adopted = this.migrateProfiles();
     if (this.migrateRetiredPacks()) this.renamed = true;
+    if (this.migrateVoice()) this.renamed = true;
     // The setup guide is for a fresh install. An install from before the guide
     // existed was set up by hand already, so it is not walked through it.
     const seasoned = !!raw && !(isObj(raw.ui) && 'setupDone' in raw.ui);
@@ -180,6 +183,25 @@ class Settings extends EventEmitter {
         for (const k of ['petFolder', 'live2dModel', 'last2d', 'gifFolder']) if (k in ap) { delete ap[k]; changed = true; }
       }
       if (isObj(h.persona) && 'avatar' in h.persona) h.persona.avatar = fix(h.persona.avatar);
+    }
+    return changed;
+  }
+  // 0.9.13 (story 04): the voice engine became a provider. `engine: 'custom'`
+  // with customEndpoint/Model/Voice is the OpenAI-compatible provider at the same
+  // URL with the same model and voice; `engine: 'kitten'` is the on-device one.
+  migrateVoice() {
+    let changed = false;
+    const holders = [this.data, ...(this.data.profiles && Array.isArray(this.data.profiles.list) ? this.data.profiles.list : [])];
+    for (const h of holders) {
+      const v = h.voice; if (!isObj(v) || !('engine' in v || 'customEndpoint' in v || 'customModel' in v || 'customVoice' in v)) continue;
+      if (v.engine === 'custom') {
+        v.provider = 'openai-compatible';
+        if (v.customEndpoint) v.endpoint = v.customEndpoint;
+        if (v.customModel) v.model = v.customModel;
+        if (v.customVoice) v.remoteVoice = v.customVoice;
+      } else if (!v.provider) v.provider = 'on-device';
+      for (const k of ['engine', 'customEndpoint', 'customModel', 'customVoice']) delete v[k];
+      changed = true;
     }
     return changed;
   }

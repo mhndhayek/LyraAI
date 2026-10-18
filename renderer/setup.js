@@ -147,7 +147,9 @@
       row('Read replies aloud', 'Every reply is spoken.', toggle(v.readAloud, (x) => set({ voice: { readAloud: x } }))),
       row('Voice', paths.voiceReady ? 'KittenTTS voices.' : 'Takes effect once the engine is installed.', [select(voices.map((x) => ({ v: x, l: x })), v.voice, (x) => set({ voice: { voice: x } }), 150), sample]),
       row('Speak in chat', 'Tap the mic to record, tap again to send. Whisper transcribes it here, on this computer.', toggle(v.stt, (x) => set({ voice: { stt: x } }))),
-      el('<div class="d" style="font-size:12px;color:var(--muted)">Your own TTS endpoint and the Whisper model size are under Settings › Voice.</div>'),
+      v.provider && v.provider !== 'on-device'
+        ? el(`<div class="d" style="font-size:12px;color:var(--muted)">I speak through ${esc((v.detected && v.detected.label) || 'your voice server')} now; the voice above is the fallback. Change it under Settings › Voice.</div>`)
+        : el('<div class="d" style="font-size:12px;color:var(--muted)">Have a voice server (OmniVoice, Kokoro, Fish Speech, ElevenLabs, OpenAI…)? Connect it under Settings › Voice: I recognise it from its address, and its voices, voice design and cloning show up there.</div>'),
     ];
   }
 

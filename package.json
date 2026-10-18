@@ -30,6 +30,7 @@
     "selftest": "node scripts/selftest.js",
     "smoke": "node scripts/smoke.js",
     "smoke:3d": "node scripts/smoke-3d.js",
+    "smoke:voice": "node scripts/smoke-voice.js",
     "qa": "sh scripts/qa.sh",
     "dist": "electron-builder --dir --publish never -c.extraMetadata.sourceDir=$(pwd)",
     "dist:mac": "electron-builder --mac --publish never",
