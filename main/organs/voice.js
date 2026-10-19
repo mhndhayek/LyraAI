@@ -296,7 +296,7 @@ class Voice {
   // A recording or a file, kept under <userData>/media/voices/.
   saveSample({ dataUrl, path: from }) {
     const dir = path.join(this.userData, 'media', 'voices'); fs.mkdirSync(dir, { recursive: true });
-    let ext = 'wav', buf;
+    let ext, buf;
     if (dataUrl) { const m = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl); if (!m) throw new Error('That recording could not be read.'); buf = Buffer.from(m[2], 'base64'); ext = /wav/.test(m[1]) ? 'wav' : /mpeg|mp3/.test(m[1]) ? 'mp3' : /webm/.test(m[1]) ? 'webm' : /mp4|m4a/.test(m[1]) ? 'm4a' : 'wav'; }
     else if (from) { buf = fs.readFileSync(from); ext = path.extname(from).slice(1).toLowerCase() || 'wav'; }
     else throw new Error('No recording given.');

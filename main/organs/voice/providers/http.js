@@ -23,7 +23,7 @@ function normalize(input) {
 // Where the server is, which decides what the UI says about data leaving the Mac:
 // this-mac (loopback), network (LAN, tailnet, .local) or internet.
 function placeOf(endpoint) {
-  let h = '';
+  let h;
   try { h = new URL(endpoint).hostname.toLowerCase().replace(/^\[|\]$/g, ''); } catch { return 'unknown'; }
   if (h === 'localhost' || h === '::1' || /^127\./.test(h)) return 'this-mac';
   if (/^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)
@@ -79,7 +79,7 @@ async function request(ctx, method, p, { json, form, query, timeoutMs, label = '
   const headers = ctx.headers(json !== undefined ? { 'content-type': 'application/json' } : {}, auth);
   let r;
   try { r = await fetch(ctx.base + p + qs, { method, headers, body: json !== undefined ? JSON.stringify(json) : form, signal: AbortSignal.timeout(timeoutMs || ctx.timeoutMs) }); }
-  catch (e) { throw new Error(`${label} is not reachable at ${ctx.endpoint} (${e.cause && e.cause.code ? e.cause.code : e.message})`); }
+  catch (e) { throw new Error(`${label} is not reachable at ${ctx.endpoint} (${e.cause && e.cause.code ? e.cause.code : e.message})`, { cause: e }); }
   if (denied(r)) throw Object.assign(new Error(`${label} refused the request: ${ctx.apiKey ? 'the API key was not accepted' : 'it needs an API key'} (${r.status})`), { status: r.status });
   if (!r.ok) { let t = ''; try { t = await r.text(); } catch {} throw Object.assign(new Error(`${label} answered ${r.status}${t ? `: ${t.replace(/\s+/g, ' ').slice(0, 200)}` : ''}`), { status: r.status }); }
   return r;
