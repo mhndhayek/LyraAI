@@ -7,7 +7,7 @@
     "tools.js": "Tool registry: coding tools, app tools, browser, memory, images. Add a tool by pushing an object with name/description/parameters/risk/summary/run.",
     "llm.js": "OpenAI-compatible client: model listing (LM Studio, Ollama, generic), streaming with reasoning-tag filtering.",
     "browser.js": "The agent's browser (WebContentsView / hidden window) and its primitives.",
-    "voice.js": "KittenTTS + Whisper sidecar bridge, custom TTS, say fallback.",
+    "voice.js": "Speaking and listening through a provider: the on-device KittenTTS + Whisper sidecar, or a server detected from its URL by voice/providers/ (OpenAI-compatible, Kokoro, OmniVoice, Fish Speech, KittenTTS server, ElevenLabs, Whisper servers, or any server with an OpenAPI description). Voice design and cloning where the server has them; falls back to on-device, then macOS say.",
     "speech-queue.js": "Speak while writing: cuts the streamed reply into sentences, synthesises at most two at a time through voice.tts(), hands the audio back in reading order, and joins the pieces into one WAV.",
     "goals.js": "Reflection after sessions and autonomous goal work.",
     "companion.js": "The phone companion: an HTTPS server bound to the tailnet that serves the mobile web app and its chat API, with paired device tokens.",

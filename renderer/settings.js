@@ -10,6 +10,9 @@
     ['App', [['extensions', 'Extensions', 'plus'], ['recovery', 'Recovery', 'git'], ['about', 'About', 'info']]],
   ];
   let current = 'model', open = false, previewChar = null, errorCount = 0;
+  // Voice page state that outlives a re-render: the draft address, the last Connect
+  // result, and half-made designed/cloned voices (story 04).
+  const voiceUi = { mode: {}, draft: {}, last: {}, design: {}, clone: {}, rec: null };
   const logFilter = { level: 'warn', source: '', search: '' };
   // Features that work but are not finished: the badge says so wherever they appear.
   const BETA = '<span class="beta">beta</span>';
@@ -338,34 +341,149 @@
       ];
     },
     async voice() {
-      const s = S(); const v = s.voice; const paths = await lyra.app.paths(); const vs = await lyra.voice.status(); let voices = ['Rosie', 'Bella', 'Jasmine', 'Luna', 'Jasper', 'Leo', 'Ben', 'Axel'];
-      if (paths.voiceReady) { try { voices = await lyra.voice.voices(); } catch {} }
-      const lastLine = vs.last ? `Last reply spoken with ${vs.last.engine === 'kitten' ? `KittenTTS · ${vs.last.voice}${vs.last.chunks ? ` · ${vs.last.chunks} chunk${vs.last.chunks > 1 ? 's' : ''}, ${vs.last.seconds}s of audio` : ''}` : vs.last.engine === 'custom' ? 'your TTS endpoint' : 'the macOS system voice' + (vs.last.error ? ' — KittenTTS failed: ' + vs.last.error.slice(0, 140) : '')}.` : 'Nothing spoken yet this session.';
+      const s = S(); const v = s.voice; const paths = await lyra.app.paths(); const vs = await lyra.voice.status();
+      const [tts, stt] = await Promise.all([lyra.voice.info({ role: 'tts' }), lyra.voice.info({ role: 'stt' })]);
+      const play = (r) => { if (r && r.ok && r.path) window.LyraApp.playFile(r.path); else if (r) toast(r.error || 'No audio came back.', 'error'); };
+      const busyBtn = async (e, label, fn) => { const b = e.currentTarget; const was = b.innerHTML; b.disabled = true; b.textContent = label; try { await fn(); } finally { b.disabled = false; b.innerHTML = was; } };
+      const lastLine = vs.last ? `Last reply spoken with ${esc(vs.last.label || vs.last.engine)}${vs.last.voice ? ` · ${esc(vs.last.voice)}` : ''}${vs.last.chunks ? ` · ${vs.last.chunks} chunk${vs.last.chunks > 1 ? 's' : ''}, ${vs.last.seconds}s of audio` : ''}${vs.last.fellBackFrom ? ` (${esc(vs.last.fellBackFrom)} failed: ${esc(String(vs.last.error || '').slice(0, 140))})` : vs.last.error ? ` (KittenTTS failed: ${esc(String(vs.last.error).slice(0, 140))})` : ''}.` : 'Nothing spoken yet this session.';
       const installCard = el(`<div class="card"><div class="status-line"><span class="dot off"></span>Voice engine not installed. Replies use the macOS system voice, which ignores the voice choice; speech to text is unavailable.</div><div class="d" style="font-size:12px;color:var(--muted)">Install it under Lyra’s own data folder (needs uv or python3, and espeak-ng from Homebrew). Takes a few minutes and downloads about 300 MB.</div><div style="display:flex;gap:8px"></div></div>`);
       installCard.lastElementChild.appendChild(btn(vs.installing ? 'Installing…' : 'Install voice engine', async (e) => { e.target.disabled = true; e.target.textContent = 'Installing…'; const r = await lyra.voice.setup(); toast(r.ok ? 'Voice engine installed' : 'Install failed: ' + r.log.slice(-200), r.ok ? '' : 'error'); refresh(); }, { primary: true, ic: 'download' }));
-      const engineRows = v.engine === 'custom' ? [
-        row('Endpoint', 'An OpenAI-compatible /v1 base URL with /audio/speech.', field(v.customEndpoint, (x) => set({ voice: { customEndpoint: x } }), { w: 260, mono: true })),
-        row('Model', '', field(v.customModel, (x) => set({ voice: { customModel: x } }), { w: 160 })),
-        row('Voice', '', field(v.customVoice, (x) => set({ voice: { customVoice: x } }), { w: 160 })),
-      ] : [
+
+      // One connection card per role (story 04): on this computer, or a server
+      // detected from its address, the same pattern as Settings › Provider.
+      const QUICK = {
+        tts: [{ kind: 'omnivoice', l: 'OmniVoice / Kokoro', ep: 'http://localhost:8880/v1' }, { kind: 'fish', l: 'Fish Speech', ep: 'http://localhost:8080/v1' }, { kind: 'elevenlabs', l: 'ElevenLabs', ep: 'https://api.elevenlabs.io/v1' }, { kind: 'openai', l: 'OpenAI', ep: 'https://api.openai.com/v1' }],
+        stt: [{ kind: 'whisper', l: 'speaches / faster-whisper', ep: 'http://localhost:8000/v1' }, { kind: 'whisper', l: 'whisper.cpp', ep: 'http://localhost:8080/v1' }, { kind: 'openai', l: 'OpenAI', ep: 'https://api.openai.com/v1' }],
+      };
+      const connCard = (role, info) => {
+        const isStt = role === 'stt';
+        const mode = voiceUi.mode[role] || (info.local ? 'device' : 'server');
+        const card = el(`<div class="card voice-conn" data-role="${role}" style="gap:10px"></div>`);
+        card.appendChild(seg([{ v: 'device', l: 'On this computer' }, { v: 'server', l: 'A voice server' }], mode, async (x) => { voiceUi.mode[role] = x; voiceUi.last[role] = null; if (x === 'device') await lyra.voice.onDevice({ role }); refresh(); }));
+        const st = el('<div class="status-line"></div>');
+        if (mode === 'device') {
+          st.innerHTML = paths.voiceReady ? `<span class="dot"></span><span>${isStt ? 'Whisper, on this computer. Nothing you say leaves it.' : 'KittenTTS, on this computer. Nothing leaves it.'}</span>` : '<span class="dot off"></span><span>The voice engine on this computer is not installed yet (see below).</span>';
+          card.appendChild(st); return card;
+        }
+        const draft = voiceUi.draft[role] || (voiceUi.draft[role] = { endpoint: (isStt ? v.sttEndpoint : v.endpoint) || '', apiKey: (isStt ? v.sttApiKey : v.apiKey) || '' });
+        const connect = async () => {
+          if (!draft.endpoint.trim()) { toast('Enter the server address first.', 'error'); return; }
+          st.innerHTML = '<span class="dot busy"></span><span>Connecting…</span>';
+          const r = await lyra.voice.connect({ role, endpoint: draft.endpoint, apiKey: draft.apiKey });
+          voiceUi.last[role] = r; if (r.ok) draft.endpoint = r.endpoint;
+          refresh();
+        };
+        const l1 = el('<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>');
+        const ep = field(draft.endpoint, (x) => { draft.endpoint = x; connect(); }, { w: 320, mono: true, ph: isStt ? 'http://localhost:8000/v1' : 'http://localhost:8880/v1' });
+        l1.appendChild(ep);
+        QUICK[role].forEach((q) => { const c = el(`<button class="chip ${draft.endpoint === q.ep ? 'on' : ''}" type="button" title="Fill in ${esc(q.ep)}">${window.brandLogo(q.kind, 14)}<span>${esc(q.l)}</span></button>`); c.addEventListener('click', () => { draft.endpoint = q.ep; ep.value = q.ep; connect(); }); l1.appendChild(c); });
+        const l2 = el('<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>');
+        l2.appendChild(field(draft.apiKey, (x) => { draft.apiKey = x; if (draft.endpoint.trim()) connect(); }, { w: 320, type: 'password', ph: 'API key (optional)' }));
+        l2.appendChild(btn('Connect', () => connect(), { ic: 'refresh' }));
+        card.appendChild(l1); card.appendChild(l2);
+        const last = voiceUi.last[role];
+        if (last && !last.ok) st.innerHTML = `<span class="dot off"></span><span>${esc(last.needsKey ? (draft.apiKey ? 'The server refused this API key.' : 'Needs an API key.') : last.error || 'Could not connect.')}</span>`;
+        else if (!info.local && info.error) st.innerHTML = `<span class="dot off"></span>${window.brandLogo(info.logo, 14)}<span>${esc(info.label)} · ${esc(info.error)}</span>`;
+        else if (!info.local) st.innerHTML = `<span class="dot"></span>${window.brandLogo(info.logo, 14)}<span>Connected · ${esc((info.detected && info.detected.summary) || info.label)}</span>`;
+        else st.innerHTML = '<span class="dot off"></span><span>Not connected. Enter the address and press Connect: what is behind it is detected.</span>';
+        card.appendChild(st);
+        const privacy = !info.local && info.detected && info.detected.privacy;
+        if (privacy) card.appendChild(el(`<div class="d voice-privacy" style="font-size:12px;color:${info.hosted ? 'var(--warn)' : 'var(--muted)'}">${esc(privacy)}</div>`));
+        return card;
+      };
+
+      // What the connected speaking server can do: voice, speed, emotion, then the
+      // design and clone panels, each only when the server says it has it.
+      const c = tts.caps || {};
+      const serverRows = [];
+      const panels = [];
+      if (!tts.local && tts.caps) {
+        const saved = tts.saved || [];
+        const vopts = [{ v: '', l: 'Server default' }];
+        if (saved.length) vopts.push({ group: 'Your voices', opts: saved.map((x) => ({ v: `lyra:${x.id}`, l: `${x.name} (${x.kind === 'clone' ? 'cloned' : 'designed'})`, title: x.prompt || '' })) });
+        if ((c.voices || []).length) vopts.push({ group: `${tts.label} voices`, opts: c.voices.map((x) => ({ v: x.id, l: x.label || x.id, title: [x.lang, x.gender, x.description].filter(Boolean).join(' · ') })) });
+        const vsel = select(vopts, v.remoteVoice, (x) => set({ voice: { remoteVoice: x } }), 260);
+        serverRows.push(row('Voice', `${(c.voices || []).length} from ${esc(tts.label)}${saved.length ? `, ${saved.length} of yours` : ''}.${c.mixes ? ' Kokoro mixes like af_bella+af_sky work too.' : ''}`, [vsel, btn('Preview', (e) => busyBtn(e, 'Speaking…', async () => play(await lyra.voice.preview({ voice: vsel.value }))), { ic: 'play' })]));
+        if ((c.models || []).length > 1) serverRows.push(row('Model', '', select([{ v: '', l: 'Server default' }, ...c.models.map((x) => ({ v: x, l: x }))], v.model, (x) => set({ voice: { model: x } }), 220)));
+        if (c.speed) serverRows.push(row('Speed', '', slider(0.5, 2, 0.05, v.speed || 1, (x) => `${Number(x).toFixed(2)}×`, (x) => set({ voice: { speed: x } }))));
+        if (c.emotion && (c.emotions || []).length) serverRows.push(row('Emotion', 'A style tag sent with every reply.', select([{ v: '', l: 'None' }, ...c.emotions.map((x) => ({ v: x, l: x }))], v.emotion, (x) => set({ voice: { emotion: x } }), 180)));
+
+        if (c.voiceDesign) {
+          const d = el(`<div class="card voice-panel" data-panel="design" style="gap:10px"><div class="t" style="font-size:14px;font-weight:500;color:var(--bright)">Design a voice</div><div class="d" style="font-size:12px;color:var(--muted)">Describe a voice; ${esc(tts.label)} makes it. Preview it, then save it under a name.</div></div>`);
+          const prompt = el(`<textarea class="field" rows="3" placeholder="${esc(c.designHint || 'warm, playful, slight British accent')}"></textarea>`); prompt.value = voiceUi.design.prompt || '';
+          prompt.addEventListener('input', () => { voiceUi.design.prompt = prompt.value; voiceUi.design.generatedId = null; });
+          const name = field(voiceUi.design.name || '', (x) => { voiceUi.design.name = x; }, { w: 220, ph: 'Name, e.g. Warm Lyra' });
+          const acts = el('<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>');
+          const dPrev = btn('Preview', (e) => busyBtn(e, 'Designing…', async () => { const r = await lyra.voice.designPreview({ prompt: prompt.value }); if (r.ok) voiceUi.design.generatedId = r.generatedId || null; play(r); }), { ic: 'play' });
+          const dSave = btn('Save voice', (e) => busyBtn(e, 'Saving…', async () => { const r = await lyra.voice.designSave({ name: name.value, prompt: prompt.value, generatedId: voiceUi.design.generatedId }); if (!r.ok) { toast(r.error, 'error'); return; } toast(`Saved “${r.voice.name}” and picked it.`); voiceUi.design = {}; refresh(); }), { primary: true, ic: 'check' });
+          // Buttons wake up once there is something to preview or save.
+          const dSync = () => { dPrev.disabled = !prompt.value.trim(); dSave.disabled = !prompt.value.trim() || !name.value.trim(); };
+          prompt.addEventListener('input', dSync); name.addEventListener('input', dSync); dSync();
+          [dPrev, name, dSave].forEach((x) => acts.appendChild(x));
+          d.appendChild(prompt); d.appendChild(acts); panels.push(d);
+        }
+        if (c.cloning) {
+          const k = voiceUi.clone;
+          const d = el(`<div class="card voice-panel" data-panel="clone" style="gap:10px"><div class="t" style="font-size:14px;font-weight:500;color:var(--bright)">Clone a voice</div><div class="d" style="font-size:12px;color:var(--muted)">Record or choose 10 to 30 seconds of one person speaking clearly. The sample is kept in Lyra’s data folder (media/voices) and deleted with the voice.${tts.hosted ? ` It is uploaded to ${esc(tts.label)}.` : ''}</div></div>`);
+          const sampleLine = el(`<div class="status-line"><span class="dot ${k.samplePath ? '' : 'off'}"></span><span>${k.samplePath ? `Sample ready${k.seconds ? ` · ${k.seconds} s` : ''}` : 'No sample yet'}</span></div>`);
+          const l1 = el('<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>');
+          const rec = btn(voiceUi.rec ? 'Stop recording' : 'Record', async () => {
+            if (voiceUi.rec) { voiceUi.rec.stop(); return; }
+            let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (err) { toast('Microphone not available: ' + err.message, 'error'); return; }
+            const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            const r = new MediaRecorder(stream, { mimeType: mime }); const chunks = []; const started = Date.now();
+            r.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+            r.onstop = () => { stream.getTracks().forEach((t) => t.stop()); voiceUi.rec = null; const fr = new FileReader(); fr.onload = async () => { const out = await lyra.voice.sample({ dataUrl: fr.result }); if (!out.ok) { toast(out.error, 'error'); refresh(); return; } k.samplePath = out.path; k.seconds = Math.round((Date.now() - started) / 1000); k.savedId = null; refresh(); }; fr.readAsDataURL(new Blob(chunks, { type: mime })); };
+            r.start(); voiceUi.rec = r; refresh();
+          }, { ic: voiceUi.rec ? 'stop' : 'mic' });
+          l1.appendChild(rec);
+          l1.appendChild(btn('Choose a file', async () => { const out = await lyra.voice.pickSample(); if (out.canceled) return; if (!out.ok) { toast(out.error, 'error'); return; } k.samplePath = out.path; k.seconds = null; k.savedId = null; refresh(); }, { ic: 'file' }));
+          l1.appendChild(sampleLine);
+          const refText = field(k.refText || '', (x) => { k.refText = x; }, { w: 420, ph: 'What the sample says (optional, helps the clone)' });
+          const consent = el(`<label class="voice-consent" style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text);cursor:pointer"><input type="checkbox" ${k.consent ? 'checked' : ''}> I have the right to use this voice</label>`);
+          const name = field(k.name || '', (x) => { k.name = x; }, { w: 220, ph: 'Name, e.g. My voice' });
+          const acts = el('<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>');
+          const cPrev = btn('Preview', (e) => busyBtn(e, 'Cloning…', async () => { const r = await lyra.voice.clonePreview({ samplePath: k.samplePath, refText: refText.value, consent: k.consent === true }); if (r.ok && r.savedId) k.savedId = r.savedId; play(r); }), { ic: 'play' });
+          const cSave = btn('Save voice', (e) => busyBtn(e, 'Saving…', async () => { const r = await lyra.voice.cloneSave({ name: name.value, samplePath: k.samplePath, refText: refText.value, consent: k.consent === true, savedId: k.savedId }); if (!r.ok) { toast(r.error, 'error'); return; } toast(`Saved “${r.voice.name}” and picked it.`); voiceUi.clone = {}; refresh(); }), { primary: true, ic: 'check' });
+          // Nothing is sent before there is a sample and the box is ticked (main checks again).
+          const cSync = () => { const ready = !!k.samplePath && k.consent === true; cPrev.disabled = !ready; cSave.disabled = !ready || !name.value.trim(); };
+          consent.querySelector('input').addEventListener('change', (e) => { k.consent = e.target.checked; cSync(); });
+          name.addEventListener('input', cSync); cSync();
+          [cPrev, name, cSave].forEach((x) => acts.appendChild(x));
+          [l1, refText, consent, acts].forEach((x) => d.appendChild(x)); panels.push(d);
+        }
+        if ((tts.saved || []).length) {
+          panels.push(group('Your voices', tts.saved.map((x) => row(esc(x.name), x.kind === 'clone' ? 'Cloned from your sample.' : `Designed: “${esc(String(x.prompt || '').slice(0, 90))}”`, [btn('Preview', (e) => busyBtn(e, 'Speaking…', async () => play(await lyra.voice.preview({ voice: `lyra:${x.id}` }))), { ic: 'play' }), btn('Delete', async () => { if (!confirm(`Delete “${x.name}”${x.kind === 'clone' ? ' and its voice sample' : ''}?`)) return; const r = await lyra.voice.deleteSaved({ id: x.id }); if (!r.ok) toast(r.error, 'error'); refresh(); }, { danger: true, ic: 'trash' })]))));
+        }
+      }
+      const deviceRows = tts.local ? [
         row('KittenTTS model', '', select([{ v: 'KittenML/kitten-tts-nano-0.1', l: 'kitten-tts-nano-0.1' }], v.kittenModel, (x) => set({ voice: { kittenModel: x } }), 220)),
-        row('Voice', 'Names map to KittenTTS voices in voice/server.py.', [select(voices.map((x) => ({ v: x, l: x })), v.voice, (x) => set({ voice: { voice: x } }), 160), btn('Play sample', async (e) => { e.target.disabled = true; try { const a = await lyra.voice.speak({ text: `Hi, I’m ${s.persona.name}. This is how I sound.` }); if (a) window.LyraApp.playFile(a.path); } catch (err) { toast(err.message, 'error'); } finally { e.target.disabled = false; } }, { ic: 'play' })]),
-      ];
+        row('Voice', 'KittenTTS voices.', [select((tts.caps && tts.caps.voices ? tts.caps.voices.map((x) => x.id) : ['Rosie']).map((x) => ({ v: x, l: x })), v.voice, (x) => set({ voice: { voice: x } }), 160), btn('Play sample', (e) => busyBtn(e, 'Speaking…', async () => { try { const a = await lyra.voice.speak({ text: `Hi, I’m ${s.persona.name}. This is how I sound.` }); if (a) window.LyraApp.playFile(a.path); } catch (err) { toast(err.message, 'error'); } }), { ic: 'play' })]),
+      ] : [];
+      const sttRows = stt.local
+        ? [row('Model', 'Whisper, local. Larger is slower and more accurate.', select(['tiny', 'base', 'small', 'medium', 'large-v3'].map((x) => ({ v: x, l: `Whisper ${x}` })), v.sttModel, (x) => set({ voice: { sttModel: x } }), 180))]
+        : (stt.caps && (stt.caps.sttModels || []).length ? [row('Model', `On ${esc(stt.label)}. If it fails, Whisper on this computer takes over when it is installed.`, select([{ v: '', l: 'Server default' }, ...stt.caps.sttModels.map((x) => ({ v: x, l: x }))], v.sttRemoteModel, (x) => set({ voice: { sttRemoteModel: x } }), 220))] : []);
+      const needsEngine = tts.local || stt.local;
       return [
-        title('Voice', `${esc(s.persona.name)} speaks with KittenTTS running locally. Bring your own engine if you prefer.`),
-        paths.voiceReady ? el(`<div class="card"><div class="status-line"><span class="dot"></span>Voice engine installed (KittenTTS + Whisper) · ${esc(vs.python)}</div><div class="d" style="font-size:12px;color:var(--muted)">${esc(lastLine)}</div></div>`) : installCard,
-        row('Python for the sidecar', 'Leave empty to auto-detect (the source folder’s voice/.venv, or voice/.venv under the app data folder).', [field(v.sidecarPython, (x) => set({ voice: { sidecarPython: x } }).then(refresh), { w: 260, mono: true, ph: 'auto' }), btn('Choose', async () => { const f = await lyra.files.pickFile({}); if (f) set({ voice: { sidecarPython: f } }).then(refresh); })]),
+        title('Voice', `${esc(s.persona.name)} speaks with KittenTTS on this computer, or with any voice server you point her at: OmniVoice, Kokoro, Fish Speech, ElevenLabs, OpenAI and anything OpenAI-compatible are recognised from the address. If a server fails, she falls back to the voice on this computer.`),
         group('Text to speech', [
-          row('Engine', 'KittenTTS is built in. “Your own” points at any OpenAI-compatible TTS endpoint.', seg([{ v: 'kitten', l: 'KittenTTS' }, { v: 'custom', l: 'Your own' }], v.engine, (x) => set({ voice: { engine: x } }).then(refresh))),
-          ...engineRows,
+          connCard('tts', tts),
+          ...deviceRows, ...serverRows,
           row('Read responses aloud', `${esc(s.persona.name)} speaks every reply.`, toggle(v.readAloud, (x) => set({ voice: { readAloud: x } }).then(refresh))),
           v.readAloud ? row('Start speaking before the reply is finished', `${esc(s.persona.name)} reads each sentence as soon as she has written it. Off: she waits for the whole reply, then reads it in one go.`, toggle(v.streamSpeech !== false, (x) => set({ voice: { streamSpeech: x } }))) : null,
-          row('Voice engine status', paths.voiceReady ? 'Loads its model in the background after start.' : 'Not installed yet.', [el(`<span class="d" style="font-size:12px;color:var(--muted);max-width:260px">${esc(lastLine)}</span>`), btn('Warm up now', async (e) => { e.target.disabled = true; const ok = await lyra.voice.warm(); toast(ok ? 'Voice engine loaded and ready.' : 'Could not load the voice engine; see Settings › Recovery › Logs.', ok ? '' : 'error'); refresh(); })]),
+          row('Last reply', '', el(`<span class="d" style="font-size:12px;color:var(--muted);max-width:320px">${lastLine}</span>`)),
         ]),
+        ...panels,
         group('Speech to text', [
+          connCard('stt', stt),
+          ...sttRows,
           row('Speak in chat', 'Tap the mic to record; tap again to send. Audio is sent as a voice message.', toggle(v.stt, (x) => set({ voice: { stt: x } }))),
           row('Show transcript of your audio', 'Under each voice message.', toggle(v.showTranscript, (x) => set({ voice: { showTranscript: x } }))),
-          row('Model', 'Whisper, local. Larger is slower and more accurate.', select(['tiny', 'base', 'small', 'medium', 'large-v3'].map((x) => ({ v: x, l: `Whisper ${x}` })), v.sttModel, (x) => set({ voice: { sttModel: x } }), 180)),
+        ]),
+        group('Voice engine on this computer', [
+          paths.voiceReady ? el(`<div class="card"><div class="status-line"><span class="dot"></span>Installed (KittenTTS + Whisper) · ${esc(String(vs.python || '').replace(/^\/Users\/[^/]+|^\/home\/[^/]+/, '~'))}</div><div class="d" style="font-size:12px;color:var(--muted)">${needsEngine ? 'In use.' : 'Not in use right now; it is the fallback if a server fails.'}</div></div>`) : installCard,
+          paths.voiceReady ? row('Warm up', 'Loads the model in the background after start.', btn('Warm up now', async (e) => { e.target.disabled = true; const ok = await lyra.voice.warm(); toast(ok ? 'Voice engine loaded and ready.' : 'Could not load the voice engine; see Settings › Recovery › Logs.', ok ? '' : 'error'); refresh(); })) : null,
+          row('Python for the sidecar', 'Leave empty to auto-detect (the source folder’s voice/.venv, or voice/.venv under the app data folder).', [field(v.sidecarPython, (x) => set({ voice: { sidecarPython: x } }).then(refresh), { w: 260, mono: true, ph: 'auto' }), btn('Choose', async () => { const f = await lyra.files.pickFile({}); if (f) set({ voice: { sidecarPython: f } }).then(refresh); })]),
         ]),
       ];
     },
