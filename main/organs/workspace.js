@@ -18,7 +18,7 @@ function inside(root, abs) { const rel = path.relative(root, abs); return rel ==
 
 function tree(root) {
   const out = [];
-  let entries = [];
+  let entries;
   try { entries = fs.readdirSync(root, { withFileTypes: true }); } catch { return out; }
   for (const e of entries) {
     if (e.name.startsWith('.')) continue;
@@ -37,7 +37,7 @@ function discoverRepos(root, maxDepth = 3) {
   const repos = [];
   const walk = (dir, depth) => {
     if (depth > maxDepth || repos.length > 50) return;
-    let entries = []; try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    let entries; try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
     if (entries.some((e) => e.name === '.git')) {
       repos.push({ name: path.basename(dir), path: dir, branch: git(['rev-parse', '--abbrev-ref', 'HEAD'], dir), last: git(['log', '-1', '--format=%s (%cr)'], dir), dirty: git(['status', '--porcelain'], dir) !== '' });
       return;

@@ -76,7 +76,7 @@ async function main() {
     const until = Date.now() + ms;
     while (Date.now() < until) {
       let img;
-      try { img = await call('Page.captureScreenshot', { format: 'png', clip: { ...rect, scale: 1 } }); } catch (e) { if (n === 0) throw new Error(`capture failed: ${e.message}; detail=${e.detail}; clip ${JSON.stringify(rect)}`); continue; }
+      try { img = await call('Page.captureScreenshot', { format: 'png', clip: { ...rect, scale: 1 } }); } catch (e) { if (n === 0) throw new Error(`capture failed: ${e.message}; detail=${e.detail}; clip ${JSON.stringify(rect)}`, { cause: e }); continue; }
       fs.writeFileSync(path.join(framesDir, String(n).padStart(4, '0') + '.png'), Buffer.from(img.data, 'base64'));
       n++;
       await sleep(42); // ~24 fps

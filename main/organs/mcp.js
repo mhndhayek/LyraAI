@@ -71,7 +71,7 @@ class McpSession {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), timeoutMs);
     let res;
     try { res = await this.fetch(this.server.url, { method: 'POST', headers: this.headers(), body: JSON.stringify(msg), signal: ctl.signal }); }
-    catch (e) { clearTimeout(t); throw new Error(e.name === 'AbortError' ? `no answer from ${this.server.name} within ${Math.round(timeoutMs / 1000)} s` : `cannot reach ${this.server.url}: ${e.cause ? e.cause.message || e.cause.code : e.message}`); }
+    catch (e) { clearTimeout(t); throw new Error(e.name === 'AbortError' ? `no answer from ${this.server.name} within ${Math.round(timeoutMs / 1000)} s` : `cannot reach ${this.server.url}: ${e.cause ? e.cause.message || e.cause.code : e.message}`, { cause: e }); }
     try {
       const sid = res.headers.get('mcp-session-id'); if (sid) this.sessionId = sid;
       const body = await res.text();

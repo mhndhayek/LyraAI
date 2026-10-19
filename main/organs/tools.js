@@ -184,7 +184,7 @@ const TOOLS = [
     risk: () => 'low', summary: (a, c) => `Found files ${a.pattern} in ${rel(c.root, c.abs(a.path))}`,
     run: async (a, c) => {
       const dir = c.abs(a.path); const re = new RegExp('^' + a.pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i'); const out = [];
-      const walk = (d, depth) => { if (depth > 7 || out.length >= 300) return; let es = []; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { return; } for (const e of es) { if (['node_modules', '.git', '.venv', 'vendor'].includes(e.name)) continue; const p = path.join(d, e.name); if (e.isDirectory()) walk(p, depth + 1); else if (re.test(e.name)) out.push(path.relative(dir, p)); } };
+      const walk = (d, depth) => { if (depth > 7 || out.length >= 300) return; let es; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { return; } for (const e of es) { if (['node_modules', '.git', '.venv', 'vendor'].includes(e.name)) continue; const p = path.join(d, e.name); if (e.isDirectory()) walk(p, depth + 1); else if (re.test(e.name)) out.push(path.relative(dir, p)); } };
       walk(dir, 0); return out.length ? out.join('\n') : 'No files matched.';
     },
   },

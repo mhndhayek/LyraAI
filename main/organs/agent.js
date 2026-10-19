@@ -261,7 +261,7 @@ class Agent {
     let resolveDone; run.promise = new Promise((r) => { resolveDone = r; });
     this.runs.set(chatId, run);
     const chat = store.getChat(chatId); if (!chat) { this.runs.delete(chatId); throw new Error('Chat not found'); }
-    let userMsg = null, asst = null, speech = null;
+    let userMsg, asst = null, speech = null;
     try {
       // 1. The user's message (transcribe audio first).
       let transcript = null;
