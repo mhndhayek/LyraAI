@@ -97,7 +97,7 @@ class AgentBrowser {
     const wc = this.contents();
     if (this.mode() === 'visible' && this.cfg().autoOpen && !this.shown) { this.show(true); this.emit(null, 'browser:show', {}); }
     this.push({ step: `Opening ${hostOf(url)}`, busy: true });
-    try { await wc.loadURL(url); } catch (e) { if (!/ERR_ABORTED/.test(String(e))) throw new Error(`Could not open ${url}: ${e.message}`); }
+    try { await wc.loadURL(url); } catch (e) { if (!/ERR_ABORTED/.test(String(e))) throw new Error(`Could not open ${url}: ${e.message}`, { cause: e }); }
     await this.settle(wc);
     return this.read(3000);
   }
