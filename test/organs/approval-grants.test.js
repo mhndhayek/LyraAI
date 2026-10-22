@@ -127,7 +127,8 @@ test('a chained or redirected command is never offered as a rule', () => {
 
 // QA 4: folder prefix.
 test('a folder grant holds the folder and nothing outside it, symlinks included', async (t) => {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-pfx-')));
+  // .native, like grants.js: on Windows it expands 8.3 short names (RUNNER~1).
+  const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-pfx-')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const A = path.join(root, 'a'), B = path.join(A, 'b'), BC = path.join(A, 'bc'), OUT = path.join(root, 'outside');
   for (const d of [B, BC, OUT]) fs.mkdirSync(d, { recursive: true });
@@ -157,7 +158,8 @@ test('a folder grant holds the folder and nothing outside it, symlinks included'
 });
 
 test('a folder rule made through a symlink is pinned to the real folder', async (t) => {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-pfx-')));
+  // .native, like grants.js: on Windows it expands 8.3 short names (RUNNER~1).
+  const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-pfx-')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const real = path.join(root, 'real'); fs.mkdirSync(real); fs.writeFileSync(path.join(real, 'f'), 'x');
   fs.symlinkSync(real, path.join(root, 'alias'));
@@ -229,9 +231,11 @@ test('the card shows the home folder as ~, never the user name', async () => {
   const home = os.homedir();
   const p = a.request({ chatId: 'c1', tool: 'read_file', summary: 'r', risk: 'low', path: path.join(home, 'x', 'a.md'), detail: JSON.stringify({ path: path.join(home, 'x', 'a.md') }) });
   const card = lastCard(emitted);
-  assert.ok(!card.detail.includes(home + path.sep), card.detail);
-  assert.match(card.detail, /~\/x\/a\.md/);
-  assert.equal(card.remember.find((o) => o.kind === 'folder').value, '~/x');
+  // detail is JSON text: on Windows its backslashes are escaped, so check that form too.
+  const esc = (s) => JSON.stringify(s).slice(1, -1);
+  assert.ok(!card.detail.includes(home + path.sep) && !card.detail.includes(esc(home + path.sep)), card.detail);
+  assert.ok(card.detail.includes(esc(path.join('~', 'x', 'a.md'))), card.detail);
+  assert.equal(card.remember.find((o) => o.kind === 'folder').value, path.join('~', 'x'));
   a.cancelAll(); await p;
 });
 

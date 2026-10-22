@@ -13,7 +13,16 @@ const HIGH_RISK_NOTE = "This is a high-risk action. You're allowing it without a
 
 const tilde = (p) => { const h = os.homedir(); return p === h ? '~' : p.startsWith(h + path.sep) ? '~' + p.slice(h.length) : p; };
 // The card shows the home folder as ~, so a screenshot of it doesn't carry the user's name.
-const tildeAll = (text) => { const h = os.homedir(); return h && h.length > 1 ? text.split(h + path.sep).join('~' + path.sep) : text; };
+// The detail is often JSON text, where a Windows path's \\ is written \\\\, so swap the
+// JSON-escaped form of the home folder too.
+const tildeAll = (text) => {
+  const h = os.homedir();
+  if (!h || h.length <= 1) return text;
+  const esc = (s) => JSON.stringify(s).slice(1, -1);
+  let out = text.split(h + path.sep).join('~' + path.sep);
+  if (esc(h + path.sep) !== h + path.sep) out = out.split(esc(h + path.sep)).join(esc('~' + path.sep));
+  return out;
+};
 
 class Approvals {
   constructor({ settings, emit, notify, grants = null }) {
