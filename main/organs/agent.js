@@ -9,6 +9,8 @@ const { enabledTools, schemaFor, byName } = require('./tools');
 const { maybeCompress, messagesTokens } = require('./compression');
 const { estimateTokens, clampText, id } = require('./util');
 const { SpeechQueue, joinWavs } = require('./speech-queue');
+const { FILE_TOOLS, COMMAND_TOOLS } = require('./approvals');
+const { finishTurn } = require('./turn-end');
 
 // How far a single turn may go before it stops on its own. Both are settings
 // (Model › How far Lyra goes), these are only the floor and ceiling.
@@ -303,7 +305,7 @@ class Agent {
       const maxSteps = clamp(s.model.maxSteps, STEP_RANGE, 30);
       const runMinutes = clamp(s.model.runMinutes, MINUTE_RANGE, 30);
       run.cap = setTimeout(() => { if (this.runs.get(chatId) === run) { emit(chatId, 'notice', { text: `This turn hit the ${runMinutes} minute limit and was stopped. Raise it under Settings › Model.` }); this.stop(chatId); } }, runMinutes * 60000);
-      let steps = 0, firstToken = true;
+      let steps = 0, firstToken = true, lastRes = null;
       const drainQueue = () => { let n = 0; while (run.queue.length) { const q = run.queue.shift(); const imgs = (q.images || []).filter((im) => fs.existsSync(im.path)); messages.push({ role: 'user', content: imgs.length ? [{ type: 'text', text: `[Follow-up from the user while you work] ${q.text}` }, ...imgs.map((im) => this.imagePart(im.path))] : `[Follow-up from the user while you work] ${q.text}` }); n++; } return n; };
       while (steps++ < maxSteps) {
         if (run.stopped) break;
@@ -319,6 +321,7 @@ class Agent {
           },
           onReasoning: (d) => { content.reasoning = (content.reasoning || '') + d; this.turnState('thinking', { step: 'Thinking' }); emit(chatId, 'reasoning', { id: asst.id, text: d }); },
         });
+        lastRes = res;
         if (!res.toolCalls.length) {
           // A steering message arrived while the model was answering: keep going in the same turn.
           if (run.queue.length && !run.stopped) { messages.push({ role: 'assistant', content: res.text || '' }); content.text += '\n\n'; emit(chatId, 'delta', { id: asst.id, text: '\n\n' }); if (speech) speech.push('\n\n'); continue; }
@@ -339,10 +342,13 @@ class Agent {
             const risk = safe(() => tool.risk(args, toolCtx), 'high');
             if (tool.name === 'browser_open') { const h = new URL(/^https?:/.test(args.url || '') ? args.url : 'https://' + args.url).host; if (!visited.has(h)) { visited.add(h); } }
             this.turnState('thinking', { step: step.summary });
-            const ap = await approvals.request({ chatId, tool: tool.name, summary: step.summary, detail: step.args, risk, reason: args.reason, origin: run.origin });
+            // The exact command and the resolved path let a grant the user made match this call (story 06).
+            const target = FILE_TOOLS.has(tool.name) ? toolCtx.abs(args.path) : null;
+            const ap = await approvals.request({ chatId, tool: tool.name, summary: step.summary, detail: step.args, risk, reason: args.reason, origin: run.origin, command: COMMAND_TOOLS.has(tool.name) ? args.command : null, path: target });
             if (ap.decision !== 'approved') { result = `The user ${ap.timedOut ? 'did not answer in time; the action was' : ''} denied: ${step.summary}. Do not retry it; ask or choose another way.`; step.status = 'denied'; }
             else {
-              step.approval = ap.auto ? ap.why : 'approved by user';
+              step.approval = ap.why || (ap.auto ? 'approved' : 'approved by user');
+              if (ap.grant) step.grant = true;
               try { toolCtx.step = step; result = await tool.run(args, toolCtx); step.status = 'done'; }
               catch (e) { result = `Error: ${e.message}`; step.status = 'error'; this.ctx.kernel.logs.error('tools', `Tool ${tool.name} failed: ${e.message}`, `arguments: ${step.args}\n${e.stack || ''}`); }
             }
@@ -356,8 +362,12 @@ class Agent {
       }
       const ranOut = steps > maxSteps && !run.stopped;
       if (ranOut) { content.stoppedAt = maxSteps; emit(chatId, 'notice', { text: `Stopped after ${maxSteps} tool steps. Say “carry on” to continue, or raise the limit under Settings › Model.` }); this.ctx.kernel.logs.info('agent', `Turn reached the ${maxSteps}-step limit`); }
-      if (!content.text.trim()) content.text = run.stopped ? '(stopped)' : `I used all ${maxSteps} tool steps for this turn without finishing. Say “carry on” and I will pick up where I left off, or raise the limit under Settings › Model.`;
-      content.text = content.text.trim();
+      // An empty reply only blames the step limit when the limit was really hit.
+      const end = finishTurn({ text: content.text, ranOut, stopped: run.stopped, maxSteps, steps: content.steps.length, lastReasoning: lastRes && !lastRes.toolCalls.length ? lastRes.reasoning : '', finish: lastRes && lastRes.finish, model: model.id });
+      if (end.log) this.ctx.kernel.logs[end.log.level]('agent', end.log.message);
+      if (end.notice) emit(chatId, 'notice', { text: end.notice });
+      if (end.fromReasoning) emit(chatId, 'delta', { id: asst.id, text: end.text });
+      content.text = end.text;
       store.updateMessage(asst.id, content);
       emit(chatId, 'assistant:done', { id: asst.id, message: { ...asst, content } });
 

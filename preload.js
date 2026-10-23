@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('lyra', {
   chats: { list: call('chats:list'), create: call('chats:create'), get: call('chats:get'), delete: call('chats:delete'), rename: call('chats:rename') },
   chat: { send: call('chat:send'), stop: call('chat:stop'), context: call('chat:context') },
   approvals: { respond: call('approval:respond') },
+  grants: { list: call('grants:list'), revoke: call('grants:revoke'), revokeAll: call('grants:revokeAll') },
   browser: { bounds: call('browser:bounds'), show: call('browser:show'), takeOver: call('browser:takeover'), stop: call('browser:stop'), navigate: call('browser:navigate'), back: call('browser:back'), reload: call('browser:reload'), status: call('browser:status'), clear: call('browser:clear') },
   voice: { transcribe: call('voice:transcribe'), speak: call('voice:speak'), voices: call('voice:voices'), available: call('voice:available'), status: call('voice:status'), setup: call('voice:setup'), warm: call('voice:warm'), playing: call('voice:playing'), connect: call('voice:connect'), onDevice: call('voice:onDevice'), info: call('voice:info'), preview: call('voice:preview'), designPreview: call('voice:designPreview'), designSave: call('voice:designSave'), sample: call('voice:sample'), pickSample: call('voice:pickSample'), clonePreview: call('voice:clonePreview'), cloneSave: call('voice:cloneSave'), deleteSaved: call('voice:deleteSaved') },
   state: { set: call('state:set') },

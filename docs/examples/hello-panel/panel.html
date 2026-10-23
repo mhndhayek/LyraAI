@@ -2,7 +2,7 @@
 <body><div>Shared counter</div><div class="n" id="n">…</div><button id="b">Count</button>
 <script>
 function call(tool, args) { return new Promise((res) => { const id = Math.random().toString(36).slice(2); const h = (e) => { if (e.data && e.data.lyra === 'result' && e.data.id === id) { window.removeEventListener('message', h); res(e.data); } }; window.addEventListener('message', h); parent.postMessage({ lyra: 'call', id, tool, args }, '*'); }); }
-async function refresh() { const r = await call('hello_read', {}); document.getElementById('n').textContent = r.ok ? JSON.parse(r.result).count : r.error; }
+async function refresh() { const r = await call('hello_read', {}); document.getElementById('n').textContent = r.ok ? r.result.count : r.error; }
 document.getElementById('b').onclick = async () => { await call('hello_count', { who: 'panel' }); refresh(); };
 refresh();
 </script></body></html>

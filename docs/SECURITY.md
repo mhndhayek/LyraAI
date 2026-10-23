@@ -279,6 +279,50 @@ exactly what malware does, so these rules are fixed, and the tests in
   only on `127.0.0.1` ports 8080, 1234 and 11434, and reads hardware facts
   locally. None of it is sent anywhere.
 
+## Approval grants (story 06)
+
+In Ask mode the approval card's ▾ menu lets the user approve a call **and**
+remember a rule, so Lyra stops asking for the same thing. A grant is a hole in
+the approval gate, so these rules are fixed, and
+`test/organs/approval-grants.test.js` holds each one:
+
+- **Nothing survives a restart.** Grants live in `main/kernel/grants.js`, in
+  memory. Nothing is written to `state/`, the settings file or the database. An
+  organ hot swap keeps them (they belong to the kernel, not the organ), quitting
+  Lyra drops them, switching profile drops them, and deleting a chat drops that
+  chat's grants.
+- **Only the user makes them.** The only caller of `Grants.add()` is the
+  approval gate answering the window's own approve click (`approval:respond`
+  with `remember: { kind }`). The window only names which option it picked;
+  main builds the rule from what it offered on that card, so a forged pick of an
+  option that wasn't offered remembers nothing. Deny, timeout and cancel never
+  remember. The agent has no tool for it, and `filterPatch` refuses any
+  `approvalGrants` key (also checked in the kernel self-test). The phone's
+  `/api/approval` never passes `remember`.
+- **Three shapes, nothing broader:**
+  - *Allow `<tool>` for this chat*: every call of that tool in that one chat.
+  - *Always allow this exact command (until Lyra restarts)*: `shell` only. The
+    command is trimmed and runs of whitespace outside quotes are collapsed.
+    Anything containing `;`, `&`, `|`, `` ` ``, `$(`, `>`, `<`, a newline or
+    an unclosed quote is never offered as a rule and never matches one, so
+    `git status` never covers `git status; rm -rf ~`.
+  - *Always allow `<tool>` in this folder (until Lyra restarts)*: file tools
+    only. Both sides go through `path.resolve` + `realpath` (a path that doesn't
+    exist yet resolves through its nearest existing folder) and match only on a
+    separator boundary: `/a/b` holds `/a/b/c.txt`, not `/a/bc/x`, not
+    `/a/b/../../etc/passwd`, and not a symlink inside `/a/b` that points out.
+  - There is no "allow this tool everywhere until restart".
+- **High risk can be granted, and says so.** A high-risk card shows the same
+  options with *"This is a high-risk action. You're allowing it without asking
+  until Lyra restarts."*
+- **The phone rule wins.** `decide()` runs: phone high-risk deny → mode →
+  matching grant → smart approvals → ask. A grant made on the desktop never
+  approves a high-risk call from a phone turn, even when phone high-risk tools
+  are switched on (the phone is asked), and the phone's card offers no rules.
+- **Visible and revocable.** Each call a grant approves shows *"approved by
+  your rule: … (this chat / this session)"* on its step line. Settings › Safety
+  › Allowed this session lists every grant with **Revoke** and **Revoke all**.
+
 ## Reporting a vulnerability
 
 Use GitHub's private vulnerability reporting: the repository's **Security** tab, then

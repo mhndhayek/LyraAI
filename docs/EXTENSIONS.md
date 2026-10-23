@@ -41,7 +41,11 @@ A plain HTML page in a sandboxed iframe (no Node, no parent DOM). It talks to it
 function call(tool, args) { return new Promise((res) => { const id = Math.random().toString(36).slice(2); const h = (e) => { if (e.data && e.data.lyra === 'result' && e.data.id === id) { window.removeEventListener('message', h); res(e.data); } }; window.addEventListener('message', h); parent.postMessage({ lyra: 'call', id, tool, args }, '*'); }); }
 ```
 
-The reply is `{lyra:'result', id, ok, result|error}`. Panel calls run without an approval prompt (the user clicked), but only tools of the same extension are reachable.
+The reply is `{lyra:'result', id, ok, result|error}`. `result` is exactly what the tool's `run()` returned (an object stays an object, a string stays a string), so a panel reads `r.result.count` directly; don't `JSON.parse` it. Only the agent sees tool results as text. Panel calls run without an approval prompt (the user clicked), but only tools of the same extension are reachable.
+
+The panel column is narrow (about 260 px). Lay the panel out for that width (`max-width: 100%`, buttons that wrap) so nothing is clipped.
+
+**Debugging a panel.** The agent's own tool calls go through the same code as the panel's, so "the tool works from the chat" does not prove the panel is fine. When a panel button seems to do nothing, check what the panel does with `r.result` before suspecting the bridge, and `read_logs` for `ui` errors from the panel.
 
 ## Lifecycle
 

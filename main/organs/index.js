@@ -34,7 +34,7 @@ function create(k) {
   let shellInst = new PersistentShell(root());
   const runShell = (cmd, timeout) => (settings.get().workspace.persistentShell ? shellInst.run(cmd, timeout) : runOnce(cmd, root(), timeout));
   const notifier = makeNotifier(settings, () => k.win());
-  const approvals = new Approvals({ settings, emit, notify: notifier.notify });
+  const approvals = new Approvals({ settings, emit, notify: notifier.notify, grants: k.grants });
   const browser = new AgentBrowser({ getWindow: () => k.win(), settings, emit, approvals, downloadsDir: path.join(root(), 'downloads') });
   const voice = new Voice({ settings, appPath: k.paths.appPath, userData: k.paths.userData, emit, logs: k.logs });
   // Warm the voice model shortly after start so the first spoken reply is not slow.
@@ -73,7 +73,7 @@ function create(k) {
   h('chats:list', () => k.store.listChats());
   h('chats:create', async () => { const c = k.store.createChat(); emit(null, 'chats', {}); goals.reflectPending().catch(() => {}); return c; });
   h('chats:get', (p) => ({ chat: k.store.getChat(p.id), messages: k.store.listMessages(p.id) }));
-  h('chats:delete', (p) => { agent.stop(p.id); k.store.deleteChat(p.id); emit(null, 'chats', {}); return true; });
+  h('chats:delete', (p) => { agent.stop(p.id); k.store.deleteChat(p.id); if (k.grants) k.grants.dropChat(p.id); emit(null, 'chats', {}); return true; });
   h('chats:rename', (p) => { k.store.updateChat(p.id, { title: p.title }); emit(null, 'chats', {}); return true; });
   const sendMessage = async (p) => {
     const dir = path.join(k.paths.media, p.chatId);
@@ -85,7 +85,12 @@ function create(k) {
   h('chat:send', sendMessage);
   h('chat:stop', (p) => { agent.stop(p.chatId); return true; });
   h('chat:context', (p) => agent.contextInfo(p.chatId));
-  h('approval:respond', (p) => approvals.respond(p.id, p.decision));
+  // Only the window's own approve click can remember a rule (story 06). The
+  // phone's /api/approval never passes `remember`, and the agent has no way in.
+  h('approval:respond', (p) => approvals.respond(p.id, p.decision, p.remember || null));
+  h('grants:list', () => (k.grants ? k.grants.list() : []));
+  h('grants:revoke', (p) => (k.grants ? k.grants.revoke(p.id) : false));
+  h('grants:revokeAll', () => (k.grants ? k.grants.revokeAll() : 0));
   h('browser:bounds', (p) => { browser.setBounds(p); return true; });
   h('browser:show', (p) => { browser.show(p.on); return browser.status; });
   h('browser:takeover', (p) => { browser.takeOver(p.on); return browser.status; });
