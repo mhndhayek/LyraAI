@@ -151,7 +151,7 @@
   }
   function stepEl(s) {
     const tag = s.status === 'denied' ? '<span class="tag denied">denied</span>' : s.status === 'error' ? '<span class="tag denied">error</span>' : s.name === 'browser_open' && state.settings.browser.mode === 'visible' ? '<span class="tag link" data-show="1">Show</span>' : '';
-    const w = el(`<div class="step-wrap" data-step="${s.id}"><div class="step ${s.status}">${icon(s.icon || 'tool', 14)}<span class="txt">${esc(s.summary)}</span>${tag}</div><div class="detail"></div></div>`);
+    const w = el(`<div class="step-wrap" data-step="${s.id}"><div class="step ${s.status}">${icon(s.icon || 'tool', 14)}<span class="txt">${esc(s.summary)}${s.grant && s.approval ? `<span class="by-rule"> · ${esc(s.approval)}</span>` : ''}</span>${tag}</div><div class="detail"></div></div>`);
     w.querySelector('.detail').textContent = `${s.args || ''}${s.result ? '\n→ ' + s.result : ''}${s.approval ? '\n(' + s.approval + ')' : ''}`;
     if (s.image) w.appendChild(el(`<div class="step-image"><img src="${fileUrl(s.image)}" alt=""></div>`));
     if (s.todo) w.appendChild(el(`<div class="todo">${s.todo.map((t) => `<div class="${t.done ? 'done' : ''}"><span class="box">${t.done ? icon('check', 9, 3) : ''}</span><span>${esc(t.text)}</span></div>`).join('')}</div>`));
@@ -171,16 +171,28 @@
   function scheduleRender(id) { const s = streams.get(id); if (!s || s.raf) return; s.raf = requestAnimationFrame(() => { s.raf = null; if (!streams.has(id)) return; const m = msgEl(id); if (!m) return; const mdEl = m.querySelector('.md'); mdEl.innerHTML = md(s.text) || ''; mdEl.classList.add('cursor'); if (s.reasoning) { const r = m.querySelector('.reasoning'); r.hidden = false; r.querySelector('.body').textContent = s.reasoning; r.querySelector('.rl').textContent = 'Thinking…'; } scrollBottom(); }); }
 
   function approvalCard(a) {
-    const card = el(`<div class="approval" data-approval="${a.id}"><div class="head">${icon('shield', 16)}<b>Approval needed</b><span class="meta">${a.risk} risk${a.tool ? ' · ' + esc(a.tool) : ''}</span></div><div class="cmd"><span>${esc(a.summary)}</span></div>${a.detail ? `<div class="result">${esc(a.detail.slice(0, 300))}</div>` : ''}${a.reason ? `<div class="result">${esc(a.reason)}</div>` : ''}<div class="foot"><button class="btn small primary" data-d="approved">Approve</button><button class="btn small" data-d="denied">Deny</button><span class="timer">${icon('clock', 13)}<span class="t"></span></span></div></div>`);
+    const opts = Array.isArray(a.remember) ? a.remember : [];
+    // Paths break only at a slash, never mid-word.
+    const pathHtml = (v) => { const segs = v.split('/'); return segs.map((seg, i) => `<span class="seg">${esc(seg)}${i < segs.length - 1 ? '/' : ''}</span>`).join('<wbr>'); };
+    const menu = opts.length ? `<div class="remember" hidden><div class="remember-head">Approve and remember:</div>${opts.map((o) => `<button class="opt" data-k="${esc(o.kind)}"><span>${esc(o.label)}</span>${o.value ? `<code class="${o.kind === 'folder' ? 'path' : ''}">${o.kind === 'folder' ? pathHtml(o.value) : esc(o.value)}</code>` : ''}</button>`).join('')}${a.highRiskNote ? `<div class="hr-note">${icon('shield', 13)}<span>${esc(a.highRiskNote)}</span></div>` : ''}</div>` : '';
+    const card = el(`<div class="approval" data-approval="${a.id}"><div class="head">${icon('shield', 16)}<b>Approval needed</b><span class="meta">${a.risk} risk${a.tool ? ' · ' + esc(a.tool) : ''}</span></div><div class="cmd"><span>${esc(a.summary)}</span></div>${a.detail ? `<div class="result">${esc(a.detail.slice(0, 300))}</div>` : ''}${a.reason ? `<div class="result">${esc(a.reason)}</div>` : ''}<div class="foot"><span class="split"><button class="btn small primary" data-d="approved">Approve</button>${opts.length ? `<button class="btn small primary more" title="Approve and remember" aria-label="More ways to approve" aria-expanded="false">${icon('chevron', 13)}</button>` : ''}</span><button class="btn small" data-d="denied">Deny</button><span class="timer">${icon('clock', 13)}<span class="t"></span></span></div>${menu}</div>`);
     const tEl = card.querySelector('.t');
     const tick = () => { const left = Math.max(0, Math.round((a.expiresAt - Date.now()) / 1000)); tEl.textContent = `Auto-${a.onTimeout === 'approve' ? 'approves' : 'denies'} in ${fmtDur(left)}`; if (left <= 0) clearInterval(approvalTimers.get(a.id)); };
     tick(); approvalTimers.set(a.id, setInterval(tick, 1000));
-    card.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => lyra.approvals.respond({ id: a.id, decision: b.dataset.d })));
+    card.querySelectorAll('button[data-d]').forEach((b) => b.addEventListener('click', () => lyra.approvals.respond({ id: a.id, decision: b.dataset.d })));
+    const more = card.querySelector('.more'), list = card.querySelector('.remember');
+    if (more) more.addEventListener('click', () => { list.hidden = !list.hidden; more.setAttribute('aria-expanded', String(!list.hidden)); if (!list.hidden) scrollBottom(); });
+    // Picking a rule approves this call and remembers the rule. The window only
+    // names the option; main builds the rule from what it offered on this card.
+    card.querySelectorAll('.remember .opt').forEach((b) => b.addEventListener('click', () => lyra.approvals.respond({ id: a.id, decision: 'approved', remember: { kind: b.dataset.k } })));
     return card;
   }
   function resolveApproval(a) {
     const card = $(`[data-approval="${a.id}"]`); if (!card) return; clearInterval(approvalTimers.get(a.id));
-    card.classList.add('resolved'); card.querySelector('.foot').innerHTML = `<span class="result">${a.decision === 'approved' ? 'Approved' : 'Denied'}${a.timedOut ? ' (timed out)' : a.cancelled ? ' (stopped)' : ''}</span>`;
+    const list = card.querySelector('.remember'); if (list) list.remove();
+    const kept = a.remembered ? ` · remembered: ${esc(a.remembered.label)} (${a.remembered.scope === 'chat' ? 'this chat' : 'until Lyra restarts'})` : '';
+    card.classList.add('resolved'); const hb = card.querySelector('.head b'); if (hb) hb.textContent = a.decision === 'approved' ? 'Approved' : 'Denied';
+    card.querySelector('.foot').innerHTML = `<span class="result">${a.decision === 'approved' ? 'Approved' : 'Denied'}${a.timedOut ? ' (timed out)' : a.cancelled ? ' (stopped)' : ''}${kept}</span>`;
   }
   function currentAssistantEl() { const all = $$('.msg-ai'); return all[all.length - 1]; }
 
@@ -305,6 +317,7 @@
       case 'kernel': toast(e.text, e.level === 'warn' ? 'error' : ''); if (e.chatId && e.chatId === state.chatId) { const m = currentAssistantEl(); if (m) m.querySelector('.steps').appendChild(el(`<div class="step ${e.level === 'warn' ? 'error' : 'done'}">${icon('cpu', 14)}<span class="txt">${esc(e.text)}</span></div>`)); } if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
       case 'log': if (e.entry && e.entry.level === 'error') { state.lastLogError = e.entry; if (window.Settings) Settings.noteError(); } break;
       case 'mobile': if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
+      case 'grants': if (window.Settings && Settings.isOpen() && Settings.current && Settings.current() === 'safety') Settings.refresh(); break;
       case 'mcp': if (window.Settings && Settings.isOpen() && Settings.current && Settings.current() === 'mcp') Settings.refresh(); break;
       case 'extensions': renderPanels(); if (window.Settings && Settings.isOpen()) Settings.refresh(); break;
       case 'debug': if (e.open && e.open.startsWith('settings')) Settings.open(e.open.split(':')[1] || 'model'); if (e.open && e.open.startsWith('setup')) Setup.open(Number(e.open.split(':')[1]) || 0); if (e.scroll) setTimeout(() => { const c = $('#settings-content'); if (c) c.scrollTop = e.scroll === 'bottom' ? c.scrollHeight : Number(e.scroll) || 0; }, 900); if (e.send) { input.value = e.send; send(); } if (e.browser) showBrowserPanel(true); break;

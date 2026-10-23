@@ -63,6 +63,13 @@ async function run(k, markHealthy) {
   ok('model change is queued, theme allowed', f.queuedPaths.length === 1 && f.allowed.appearance && f.allowed.appearance.theme === 'pixel', f.queuedPaths);
   ok('shell guard blocks killing the app', !!k.guard.shellBlocked('killall Electron') && !!k.guard.shellBlocked('rm -rf ~/x/state/.git'), k.guard.shellBlocked('killall Electron'));
   ok('bundle and repo paths are forbidden', !!k.guard.forbiddenPath(path.join(p.appPath, 'main', 'main.js')) && !!k.guard.forbiddenPath(path.join(p.state, '.git', 'HEAD')) && !k.guard.forbiddenPath(path.join(p.organsMain, 'tools.js')));
+  // Story 06: the agent can't hand itself approval grants. configure_app runs
+  // its patch through filterPatch, and grants live only in the kernel's memory.
+  { const g = filterPatch({ approvalGrants: [{ scope: 'session', tool: 'shell', match: { command: 'rm -rf ~' } }] });
+    const before = k.grants ? k.grants.list().length : -1;
+    const settingsHasNone = !('approvalGrants' in k.settings.get());
+    ok('agent cannot create approval grants', !g.allowed.approvalGrants && g.rejected.some((x) => x.path.startsWith('approvalGrants')) && settingsHasNone && before >= 0, { rejected: g.rejected, grants: before });
+    ok('approval grants are kept in memory only', !!k.grants && !fs.readdirSync(p.state).some((f) => /grant/i.test(f)), fs.readdirSync(p.state)); }
 
   // 7. budget
   const limit = k.settings.get().kernel.dailyWrites; k.store.kvSet('kernel:writes', { date: new Date().toISOString().slice(0, 10), used: limit - 1 });

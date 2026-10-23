@@ -9,6 +9,7 @@
     "browser.js": "The agent's browser (WebContentsView / hidden window) and its primitives.",
     "voice.js": "Speaking and listening through a provider: the on-device KittenTTS + Whisper sidecar, or a server detected from its URL by voice/providers/ (OpenAI-compatible, Kokoro, OmniVoice, Fish Speech, KittenTTS server, ElevenLabs, Whisper servers, or any server with an OpenAPI description). Voice design and cloning where the server has them; falls back to on-device, then macOS say.",
     "speech-queue.js": "Speak while writing: cuts the streamed reply into sentences, synthesises at most two at a time through voice.tts(), hands the audio back in reading order, and joins the pieces into one WAV.",
+    "turn-end.js": "How a turn ends when the model wrote no reply: shows an answer left in its thinking, says so honestly otherwise, and only blames the step limit when it was really reached. Logs a warning either way.",
     "goals.js": "Reflection after sessions and autonomous goal work.",
     "companion.js": "The phone companion: an HTTPS server bound to the tailnet that serves the mobile web app and its chat API, with paired device tokens.",
     "compression.js": "Context estimation and summarisation.",

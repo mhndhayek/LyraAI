@@ -80,6 +80,34 @@ test('an approved extension exposes its tools and its panel', async () => {
   assert.deepEqual(ext.panels().map((p) => p.id), ['demo']);
 });
 
+// A panel reads r.result.minutes; it used to get JSON text, so every field was
+// undefined and the Focus Timer panel showed NaN:NaN while the timer ran.
+test('a panel gets the value the tool returned; the agent still gets text', async () => {
+  const MAIN = `module.exports = { tools: [
+    { name: 'st', description: 'state', run: async () => ({ running: true, minutes: 15, when: new Date(0) }) },
+    { name: 'n', description: 'number', run: async () => 7 },
+    { name: 's', description: 'string', run: async () => 'plain' },
+    { name: 'none', description: 'nothing', run: async () => undefined },
+  ] };`;
+  const { ext } = withExt('demo', { 'manifest.json': manifest(), 'main.js': MAIN, 'panel.html': '<p>hi</p>' });
+  ext.approve('demo');
+  assert.deepEqual(await ext.call('demo', 'st', {}), { running: true, minutes: 15, when: '1970-01-01T00:00:00.000Z' }, 'objects arrive as plain, cloneable data');
+  assert.equal(await ext.call('demo', 'n', {}), 7);
+  assert.equal(await ext.call('demo', 's', {}), 'plain');
+  assert.equal(await ext.call('demo', 'none', {}), null);
+  const byName = Object.fromEntries(ext.tools().map((t) => [t.name, t]));
+  assert.equal(await byName.st.run({}), '{"running":true,"minutes":15,"when":"1970-01-01T00:00:00.000Z"}', 'the agent reads text');
+  assert.equal(await byName.n.run({}), '7');
+  assert.equal(await byName.s.run({}), 'plain');
+  assert.equal(await byName.none.run({}), '');
+});
+
+test('the bundled hello-panel example reads the result without JSON.parse', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'docs', 'examples', 'hello-panel', 'panel.html'), 'utf8');
+  assert.doesNotMatch(html, /JSON\.parse\(r\.result\)/);
+  assert.match(html, /r\.result\.count/);
+});
+
 test('tools from an extension with shell or file access are high risk', () => {
   const { ext } = withExt('demo', { 'manifest.json': manifest({ capabilities: ['shell'] }), 'main.js': TOOL_MAIN });
   ext.approve('demo');
