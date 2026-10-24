@@ -283,6 +283,11 @@
           row('Where', 'Floating puts the character over the chat; drag it anywhere.', seg([{ v: 'panel', l: 'Right panel' }, { v: 'floating', l: 'Floating' }, { v: 'header', l: 'Header only' }], a.placement, (v) => set({ appearance: { placement: v } }))),
           row('Transitions', 'Speed of UI and state transitions.', slider(0, 800, 50, a.transitionMs, (v) => `${v} ms`, (v) => set({ appearance: { transitionMs: v } }))),
         ]),
+        // Story 07: Lyra on the desktop when this window is hidden or minimised.
+        group('On the desktop', [
+          row('Desktop companion', `When you hide or minimise this window, ${esc(s.persona.name)} stays on your desktop, always on top, with a small chat. Click her to talk, drag her to move her, right-click for her menu. Closing the window keeps her running in the menu bar; Quit closes her too.`, toggle(a.desktopCompanion !== false, (v) => set({ appearance: { desktopCompanion: v } }).then(refresh))),
+          a.desktopCompanion !== false ? row(`Let ${esc(s.persona.name)} walk around`, 'She strolls along the bottom of the screen now and then, and stops when you hover, click or talk to her.', toggle(!!a.walk, (v) => set({ appearance: { walk: v } }))) : null,
+        ]),
         preview,
       ];
     },

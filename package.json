@@ -31,6 +31,7 @@
     "smoke": "node scripts/smoke.js",
     "smoke:3d": "node scripts/smoke-3d.js",
     "smoke:voice": "node scripts/smoke-voice.js",
+    "smoke:companion": "node scripts/smoke-companion.js",
     "qa": "sh scripts/qa.sh",
     "dist": "electron-builder --dir --publish never -c.extraMetadata.sourceDir=$(pwd)",
     "dist:mac": "electron-builder --mac --publish never",
@@ -89,7 +90,7 @@
       "voice/*.sh",
       "package.json",
       "scripts/**",
-      "!scripts/{qa.sh,smoke.js,selftest.js,check-syntax.js,setup-branch-protection.sh}",
+      "!scripts/{qa.sh,smoke.js,smoke-companion.js,selftest.js,check-syntax.js,setup-branch-protection.sh}",
       "!**/*.test.js"
     ],
     "asarUnpack": [

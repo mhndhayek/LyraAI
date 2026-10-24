@@ -146,6 +146,8 @@ jobs:
           SMOKE_OUT: ${{ github.workspace }}/smoke-output
       - name: Check the Voice page shows only what the voice server can do
         run: npm run smoke:voice
+      - name: Check Lyra stays on the desktop when the window is hidden (story 07)
+        run: npm run smoke:companion
       - name: Keep the screenshot
         if: always()
         uses: actions/upload-artifact@v7

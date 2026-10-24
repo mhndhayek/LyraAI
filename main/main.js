@@ -1,7 +1,8 @@
 // Lyra kernel. Boots the app, owns settings, data, checkpoints, the organ loader,
 // extensions and the watchdog. Everything the user experiences lives in organs
 // under the state folder, which the agent may edit and the kernel can put back.
-const { app, BrowserWindow, ipcMain, shell: eshell, nativeTheme } = require('electron');
+const electron = require('electron');
+const { app, BrowserWindow, ipcMain, shell: eshell, nativeTheme } = electron;
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -17,6 +18,7 @@ const { Grants } = require('./kernel/grants');
 const { Docs } = require('./kernel/docs');
 const { Logs } = require('./kernel/logs');
 const watchdog = require('./kernel/watchdog');
+const { Companion } = require('./companion-window');
 
 app.setName('Lyra');
 process.on('unhandledRejection', (e) => console.error('unhandled', e));
@@ -34,7 +36,10 @@ k.eventHooks = new Set();
 k.onEvent = (fn) => { k.eventHooks.add(fn); return () => k.eventHooks.delete(fn); };
 k.emit = (chatId, type, payload) => {
   const e = { chatId, type, ...payload };
-  const w = k.win(); if (w) w.webContents.send('lyra:event', e);
+  // The desktop companion (story 07) decides which window plays a reply's audio,
+  // so a spoken reply is heard once, from the window that asked.
+  const w = k.win(); const forMain = k.companion ? k.companion.forMain(e) : e;
+  if (w && forMain) w.webContents.send('lyra:event', forMain);
   for (const fn of k.eventHooks) { try { fn(e); } catch (err) { console.error('event hook failed', err); } }
 };
 
@@ -61,6 +66,7 @@ function createWindow() {
   });
   win.on('closed', () => { win = null; });
   watchdog.attach(k, win);
+  if (k.companion) k.companion.attachMain(win);
   // Debug flags: --open=settings:<section>, --send="text", --send2=..., --screenshot=<file> --delay=ms
   win.webContents.on('did-finish-load', () => {
     const open = argOf('open'); if (open) setTimeout(() => k.emit(null, 'debug', { open, scroll: argOf('scroll') || null }), 1500);
@@ -70,6 +76,9 @@ function createWindow() {
     // 2D was retired in story 01 (lyr-01): the live panel is 3D-only now, so this
     // flag is kept as a harmless no-op for the smoke-3d script and old QA notes.
     if (flag('3d')) setTimeout(() => k.emit(null, 'debug', { dim: '3d' }), 1200);
+    // Story 07 smoke: --companion-test hides the main window, checks the desktop
+    // companion, shows the window again and quits (scripts/smoke-companion.js).
+    if (flag('companion-test') && !k.companionTestStarted) { k.companionTestStarted = true; setTimeout(() => require('./kernel/companion-check').run(k, { theme: argOf('companion-theme') || null }).then((r) => { console.log(`[companion-check] ${JSON.stringify(r)}`); app.exit(r.pass ? 0 : 1); }).catch((err) => { console.error('[companion-check] crashed', err); app.exit(2); }), 2500); }
   });
 }
 
@@ -118,6 +127,8 @@ app.whenReady().then(async () => {
 
   const attempts = bootCounter(); const safe = flag('safe') || attempts >= 3;
   nativeTheme.themeSource = 'dark';
+  k.verbose = !!(argOf('screenshot') || flag('companion-test'));
+  if (!safe) k.companion = new Companion(k, electron);
   createWindow();
 
   // Kernel IPC (always available, also in safe mode)
@@ -211,8 +222,9 @@ app.whenReady().then(async () => {
   }
   k.extensions.loadAll();
   win.loadFile(path.join(k.paths.organsRenderer, 'index.html'));
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) { createWindow(); win.loadFile(path.join(k.paths.organsRenderer, 'index.html')); } });
+  // Clicking the Dock icon brings the main window back (she goes off the desktop).
+  app.on('activate', () => { if (!k.win()) { createWindow(); win.loadFile(path.join(k.paths.organsRenderer, 'index.html')); } else if (k.companion) k.companion.showMain(); else k.win().show(); });
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
-app.on('before-quit', () => { try { if (k.paths && !k.safeMode) fs.writeFileSync(k.paths.bootFile, JSON.stringify({ attempts: 0, last: Date.now() })); } catch {} try { k.loader && k.loader.dispose(); k.extensions && k.extensions.unloadAll(); k.store && k.store.close(); } catch {} });
+app.on('before-quit', () => { k.quitting = true; try { if (k.companion) { k.companion.savePos(); k.companion.destroy(); } } catch {} try { if (k.paths && !k.safeMode) fs.writeFileSync(k.paths.bootFile, JSON.stringify({ attempts: 0, last: Date.now() })); } catch {} try { k.loader && k.loader.dispose(); k.extensions && k.extensions.unloadAll(); k.store && k.store.close(); } catch {} });

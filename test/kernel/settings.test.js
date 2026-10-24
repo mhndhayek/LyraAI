@@ -326,3 +326,21 @@ test('an install from before the setup guide is not walked through it', () => {
   assert.equal(s.get().ui.livePanel, false, 'the rest of the section is kept');
   assert.equal(JSON.parse(fs.readFileSync(f, 'utf8')).ui.setupDone, true, 'and that decision is written back');
 });
+
+// Story 07: the desktop companion is on by default and walking is opt-in.
+test('a fresh install keeps Lyra on the desktop, standing still', () => {
+  const a = new Settings(file()).get().appearance;
+  assert.equal(a.desktopCompanion, true, 'the desktop companion is on by default');
+  assert.equal(a.walk, false, 'walking around is opt-in');
+  assert.equal(a.companionPos, null, 'no saved position until she is moved');
+});
+
+test('an old profile gains the companion settings without any other change', () => {
+  const f = file(); fs.mkdirSync(path.dirname(f), { recursive: true });
+  const old = { theme: 'pixel', liveCharacter: false, source: 'vrm', vrmModel: 'builtin:lyra', placement: 'floating', floatPos: { x: 10, y: 20 }, transitionMs: 150 };
+  fs.writeFileSync(f, JSON.stringify({ ui: { setupDone: true }, profiles: { active: 'default', list: [{ id: 'default', name: 'Lyra', dataDir: '', appearance: old }] } }));
+  const a = new Settings(f).get().appearance;
+  assert.equal(a.desktopCompanion, true);
+  assert.equal(a.walk, false);
+  for (const [k, v] of Object.entries(old)) assert.deepEqual(a[k], v, `appearance.${k} is kept as it was`);
+});

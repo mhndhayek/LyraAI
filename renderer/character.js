@@ -3,11 +3,23 @@
   const STATES = ['idle', 'thinking', 'writing', 'speaking'];
 
   class Character {
-    constructor(el) { this.el = el; this.state = 'idle'; this.cfg = { source: 'vrm', vrmModel: 'builtin:lyra' }; this.timers = []; this.audio = null; this.vrm = null; this.mount(); }
+    // opts.framing: 'bust' (default, head and shoulders) or 'full' (head to toe, for
+    // the desktop companion of story 07, which also needs a readable canvas for its
+    // click-through hit test). opts.fps caps the frame rate (0 = every frame).
+    constructor(el, opts = {}) { this.el = el; this.state = 'idle'; this.framing = opts.framing === 'full' ? 'full' : 'bust'; this.fps = opts.fps || 0; this.gaze = null; this.cfg = { source: 'vrm', vrmModel: 'builtin:lyra' }; this.timers = []; this.audio = null; this.vrm = null; this.mount(); }
     dispose() { this.mountSeq = (this.mountSeq || 0) + 1; this.clearTimers(); this.destroyVrm(); this.detachAudio(); this.el.innerHTML = ''; }
     clearTimers() { this.timers.forEach(clearInterval); this.timers = []; if (this.raf) cancelAnimationFrame(this.raf); }
-    configure(cfg) { const changed = JSON.stringify(cfg) !== JSON.stringify(this.cfg); this.cfg = { ...this.cfg, ...cfg }; if (changed) this.mount(); }
-    setState(state) { if (!STATES.includes(state)) state = 'idle'; if (state !== 'idle') this.idleVariant = null; this.state = state; this.el.dataset.state = state; this.render(); if (this.anim) this.anim.setState(state); }
+    // Compares the merged config, not the partial one passed in: the old check saw
+    // { vrmModel } !== { source, vrmModel } and rebuilt the model on every settings change.
+    configure(cfg) { const next = { ...this.cfg, ...cfg }; const changed = JSON.stringify(next) !== JSON.stringify(this.cfg); this.cfg = next; if (changed) this.mount(); }
+    setState(state) { if (!STATES.includes(state)) state = 'idle'; if (state !== 'idle') this.idleVariant = null; this.state = state; this.el.dataset.state = state; this.render(); if (this.anim && !this.motion) this.anim.setState(state); }
+    // Story 07 (desktop companion): a looping clip that overrides the state's own
+    // while it lasts (the walk), a one-shot gesture (wave, nod, happy_bounce), the
+    // way she faces (-1 left, 0 the viewer, 1 right) and a moment of joy on a click.
+    setMotion(name) { this.motion = name || null; if (!this.anim) return; if (this.motion) this.anim.playClip(this.motion); else this.anim.setState(this.state); }
+    gesture(name) { if (this.anim && !this.motion && this.anim.actions.has(name)) this.anim.playOnce(name, window.LyraAnimation.clipForState(this.anim.manifest, this.state)); }
+    face(dir) { this.facing = dir || 0; }
+    cheer(ms = 1600) { this.joyUntil = performance.now() + ms; }
 
     mount() {
       this.mountSeq = (this.mountSeq || 0) + 1; this.clearTimers(); this.destroyVrm(); this.el.innerHTML = ''; delete this.el.dataset.vrmError;
@@ -47,10 +59,12 @@
       const vrm = gltf.userData.vrm; if (!vrm) throw new Error('not a VRM file');
       VRMUtils.removeUnnecessaryVertices(gltf.scene); VRMUtils.combineSkeletons(gltf.scene);
       if (vrm.meta && vrm.meta.metaVersion === '0') VRMUtils.rotateVRM0(vrm);
+      const baseYaw = vrm.scene.rotation.y; let yaw = 0;
       vrm.scene.traverse((o) => { o.frustumCulled = false; });
 
       const W = () => this.el.clientWidth || 236, H = () => this.el.clientHeight || 236;
-      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
+      const full = this.framing === 'full';
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power', preserveDrawingBuffer: full });
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.setSize(W(), H()); renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.domElement.className = 'char vrm'; this.el.innerHTML = ''; this.el.appendChild(renderer.domElement);
       const scene = new THREE.Scene(); scene.add(vrm.scene);
@@ -104,7 +118,10 @@
       // Frame from the real top of the model (hair crown, ears) down to the chest, with headroom.
       // The head bone sits at the base of the skull, so it cannot be used for the top.
       const crown = new THREE.Box3().setFromObject(vrm.scene).max.y;
-      const top = crown + (crown - chest.y) * 0.08, bottom = chest.y - (crown - chest.y) * 0.18;
+      let top = crown + (crown - chest.y) * 0.08, bottom = chest.y - (crown - chest.y) * 0.18;
+      // Full body: from the soles to a little above the crown, leaving the top of
+      // the stage free for the line bubble over her head.
+      if (full) { const sole = new THREE.Box3().setFromObject(vrm.scene).min.y; const tall = crown - sole; top = crown + tall * 0.2; bottom = sole - tall * 0.02; }
       const target = new THREE.Vector3(0, (top + bottom) / 2, 0);
       const fov = 22; const camera = new THREE.PerspectiveCamera(fov, W() / H(), 0.1, 20);
       const dist = ((top - bottom) / 2) / Math.tan((fov / 2) * Math.PI / 180); camera.position.set(0, target.y, dist); camera.lookAt(target);
@@ -126,6 +143,9 @@
       const anim = (window.LyraAnimation && window.LyraAnimation.AnimationState) ? new window.LyraAnimation.AnimationState({ THREE, loader, vrm, baseClipFactory: createVRMAnimationClip }, null, this.animUrl('')) : null;
       if (anim) this.anim = anim;
       if (anim) anim.manifest = await (await fetch(this.animUrl('anims.json'))).json();
+      // Head to toe, LookAround (idle_shift) swings her head ~90° off her hips and
+      // reads as a broken neck; the full-body framing idles on the breathing clip.
+      if (anim && full && anim.manifest.states && anim.manifest.states.idle) anim.manifest.states.idle = { ...anim.manifest.states.idle, clips: anim.manifest.states.idle.clips.filter((c) => c !== 'idle_shift') };
       // Arms-down rest correction, applied as a local-frame rotation ON TOP of the
       // mixer pose each frame (multiply, not assign) so a clip's arm motion survives
       // the correction. Matches the pre-story-09 look: left +1.22 / right -1.22.
@@ -133,10 +153,38 @@
       // Where the mixer left the arm bones this frame, so the correction can be
       // undone after render (see the restore at the bottom of the loop).
       const AD_BASE = { lUA: new THREE.Quaternion(), rUA: new THREE.Quaternion(), lLA: new THREE.Quaternion(), rLA: new THREE.Quaternion() };
-      if (anim) { await anim.loadAll(); anim.setState(this.state); if (anim.currentAction) console.log(`[char] 3D animation active: ${anim.current} (${anim.currentAction.isRunning() ? 'playing' : 'ready'})`); }
+      // Full body (story 07): the bust crop hides the arms, so the story-09 clips
+      // could leave them at shoulder height (lean_type, talk_idle) unseen. Head to
+      // toe that is a T-pose. In the full-body framing the arms are kept at least
+      // ARM_MIN below horizontal: measured in world space after the mixer and the
+      // rest correction, and only lowered (never raised), eased so it never snaps.
+      // The walk and think clips already hold the arms down and are left alone.
+      // The clamp is a world-space swing in the arm's own vertical plane, so it lowers
+      // the arm whatever the clip has done to the bone's local axes.
+      const ARM_MIN = 70 * Math.PI / 180;
+      const V = { a: new THREE.Vector3(), d: new THREE.Vector3(), t: new THREE.Vector3(), q: new THREE.Quaternion(), w: new THREE.Quaternion(), p: new THREE.Quaternion() };
+      const clampArm = (ua, la) => {
+        ua.getWorldPosition(V.a); la.getWorldPosition(V.d); V.d.sub(V.a).normalize();
+        const flat = Math.hypot(V.d.x, V.d.z); if (Math.atan2(-V.d.y, flat) >= ARM_MIN) return;
+        const k = flat > 1e-4 ? Math.cos(ARM_MIN) / flat : 0;
+        V.t.set(V.d.x * k, -Math.sin(ARM_MIN), V.d.z * k).normalize();
+        V.q.setFromUnitVectors(V.d, V.t);
+        ua.getWorldQuaternion(V.w); V.w.premultiply(V.q);
+        ua.parent.getWorldQuaternion(V.p); ua.quaternion.copy(V.p.invert().multiply(V.w));
+        ua.updateMatrixWorld(true);
+      };
+      // The idle clips throw her head back ~45° and roll it ~40° as they breathe:
+      // fine under the bust crop, a broken neck head to toe. The full-body framing
+      // keeps CALM of the clip's neck and head swing (slerp towards the rest pose),
+      // snapshotted and restored around the render like the arm correction.
+      const CALM = 0.4; const ID = new THREE.Quaternion(); const CALM_BASE = { neck: new THREE.Quaternion(), head: new THREE.Quaternion() };
+      if (anim) { await anim.loadAll(); if (this.motion) anim.playClip(this.motion); else anim.setState(this.state); if (anim.currentAction) console.log(`[char] 3D animation active: ${anim.current} (${anim.currentAction.isRunning() ? 'playing' : 'ready'})`); }
       const loop = () => {
         if (!this.vrm || this.vrm.vrm !== vrm) return;
-        const dt = Math.min(0.05, clock.getDelta()); t += dt;
+        // A frame-rate cap skips whole frames; the clock keeps counting, so motion
+        // keeps its real speed at 10 or 30 fps.
+        if (this.fps) { const now = performance.now(); if (now - (this.lastFrame || 0) < 1000 / this.fps - 4) { this.raf3d = requestAnimationFrame(loop); return; } this.lastFrame = now; }
+        const dt = Math.min(this.fps ? 2.5 / this.fps : 0.05, clock.getDelta()); t += dt;
         const s = this.state;
         // 1) Mixer drives the whole body from the active clip (crossfades handled inside).
         if (anim) anim.update(dt);
@@ -151,14 +199,23 @@
         if (pose.rUA) { AD_BASE.rUA.copy(pose.rUA.quaternion); pose.rUA.quaternion.multiply(AD.rUA); }
         if (pose.lLA) { AD_BASE.lLA.copy(pose.lLA.quaternion); pose.lLA.quaternion.multiply(AD.lLA); }
         if (pose.rLA) { AD_BASE.rLA.copy(pose.rLA.quaternion); pose.rLA.quaternion.multiply(AD.rLA); }
+        // The pose is restored after every render (step 5), so the clamp reads the
+        // clip's own arm each frame; it is continuous in the pose, so it never snaps.
+        if (full) for (const b of ['neck', 'head']) if (pose[b]) { CALM_BASE[b].copy(pose[b].quaternion); pose[b].quaternion.slerp(ID, 1 - CALM); }
+        // The walk clip swings its arms on its own (already down), so it is left alone.
+        if (full && !this.motion && pose.lUA && pose.rUA && pose.lLA && pose.rLA) { vrm.scene.updateMatrixWorld(true); clampArm(pose.lUA, pose.lLA); clampArm(pose.rUA, pose.rLA); }
         const breath = 1 + br * 0.006;
         if (pose.chest) pose.chest.scale.set(breath, 1, breath);
         // 3) Eyes wander a little; while thinking look up and aside.
         if (t > glance.until) glance = { x: (Math.random() - 0.5) * 0.25, y: (Math.random() - 0.5) * 0.12, until: t + 1.5 + Math.random() * 2.5 };
-        const gx = s === 'thinking' ? 0.35 : glance.x, gy = s === 'thinking' ? 0.3 : s === 'writing' ? -0.25 : glance.y;
+        // A gaze set from outside (the desktop companion looking at the cursor) wins over the wander.
+        const gz = this.gaze;
+        const gx = gz ? gz.x : s === 'thinking' ? 0.35 : glance.x, gy = gz ? gz.y : s === 'thinking' ? 0.3 : s === 'writing' ? -0.25 : glance.y;
         lookTarget.position.set(ease(lookTarget.position.x, gx, dt * 3), ease(lookTarget.position.y, gy, dt * 3), -1);
         // 4) Expressions: blink, happy→blush, lip-sync.
-        cur.happy = ease(cur.happy, s === 'speaking' ? 0.35 : s === 'idle' ? 0.15 : 0, Math.min(1, dt * 4));
+        cur.happy = ease(cur.happy, this.joyUntil > performance.now() ? 0.9 : s === 'speaking' ? 0.35 : s === 'idle' ? 0.15 : 0, Math.min(1, dt * 4));
+        // Turning to walk: about 70° towards the direction, eased so she turns rather than snaps.
+        yaw = ease(yaw, (this.facing || 0) * 1.2, Math.min(1, dt * 5)); vrm.scene.rotation.y = baseYaw + yaw;
         if (ex) {
           if (blinkT < 0 && t > nextBlink) blinkT = 0;
           let bl = 0; if (blinkT >= 0) { blinkT += dt; bl = blinkT < 0.07 ? blinkT / 0.07 : blinkT < 0.16 ? 1 - (blinkT - 0.07) / 0.09 : 0; if (blinkT >= 0.16) { blinkT = -1; nextBlink = t + 2.2 + Math.random() * 3.5; } }
@@ -178,6 +235,7 @@
         if (pose.rUA) pose.rUA.quaternion.copy(AD_BASE.rUA);
         if (pose.lLA) pose.lLA.quaternion.copy(AD_BASE.lLA);
         if (pose.rLA) pose.rLA.quaternion.copy(AD_BASE.rLA);
+        if (full) for (const b of ['neck', 'head']) if (pose[b]) pose[b].quaternion.copy(CALM_BASE[b]);
         this.raf3d = requestAnimationFrame(loop);
       };
       const ro = new ResizeObserver(() => { renderer.setSize(W(), H()); camera.aspect = W() / H(); camera.updateProjectionMatrix(); }); ro.observe(this.el);

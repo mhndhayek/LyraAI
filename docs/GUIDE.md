@@ -94,6 +94,16 @@ Text to speech uses KittenTTS through the Python sidecar in `voice/`. In the pac
 
 The live panel shows Lyra as a 3D VRM model; she breathes, blinks, glances around, tilts her head while thinking, and her mouth follows her voice. Any other `.vrm` file works too (*Appearance › Live character*).
 
+## Lyra on the desktop
+
+When you hide or minimise the main window (or close it), Lyra stays on your desktop: her whole body in a small see-through window that floats above the others, on every Space. Clicks on the empty space around her go to whatever is behind her.
+
+- **Click her** to open a small chat beside her in the app's theme. It shows her last reply and has a one-line box, a mic and *Open full chat*. Messages go into the chat that the main window has open, and her replies stream, speak and lip-sync here too. A reply that arrives while the small chat is closed shows for a few seconds in a bubble over her head.
+- **Drag her** to move her (she remembers the spot). **Right-click** for her menu: open the chat, walk on or off, hide her for now, quit.
+- **Walking** is off by default. Turn on *Appearance › On the desktop › Let Lyra walk around* (or use her right-click menu) and she strolls along the bottom of the screen now and then. She never covers the Dock or taskbar and turns round at the screen edge. She stops while you hover over her, talk to her or drag her, and while she is thinking or speaking.
+- The **menu-bar icon** (the system tray on Windows and Linux) has *Show Lyra*, *Open chat*, *Walk*, *Desktop companion* and *Quit*. With the companion on, closing the main window keeps Lyra running there. Clicking the Dock icon brings the window back.
+- Turn it off under *Appearance › On the desktop › Desktop companion*.
+
 ## AI goals
 
 About ten minutes after a chat with at least four messages goes quiet, Lyra reflects on it and may add up to two goals (improve / explore / surprise). You cannot add goals, only archive them or press *Work on it now*. With autonomy on, Lyra picks an open goal and works on it in its own goal chat (visible in the sidebar, marked ◆) for up to the daily budget, under the same safety rules.

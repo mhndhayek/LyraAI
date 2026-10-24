@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file: data: blob:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: blob:; media-src 'self' file: blob:; font-src 'self' file: data:; connect-src 'self' file: blob: data:">
+  <title>Lyra on the desktop</title>
+  <!-- Story 07. The same base styles and theme as the main window, so the mini chat
+       follows dark / light / pixel; companion.css comes last to keep the page see-through. -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" id="theme-css" href="themes/lyra-dark/theme.css">
+  <link rel="stylesheet" href="companion.css">
+</head>
+<body class="companion" data-side="right">
+  <div class="c-wrap" id="c-wrap">
+    <div class="c-stage" id="c-stage"></div>
+    <div class="c-line" id="c-line" hidden></div>
+    <section class="c-card" id="c-card" hidden aria-label="Mini chat">
+      <header class="c-head">
+        <span class="c-name" id="c-name">Lyra</span>
+        <span class="c-state" id="c-state"></span>
+        <span class="spacer"></span>
+        <button class="icon-btn c-close" id="c-close" title="Close" data-icon="x" data-size="15"></button>
+      </header>
+      <div class="c-reply md" id="c-reply"></div>
+      <div class="c-note" id="c-note" hidden></div>
+      <div class="c-composer" id="c-composer">
+        <input id="c-input" type="text" placeholder="Message Lyra" spellcheck="true" autocomplete="off">
+        <span class="c-rec" id="c-rec" hidden><span class="rec-dot"></span><span id="c-rec-time">0:00</span></span>
+        <button class="icon-btn" id="c-mic" title="Record a voice message" data-icon="mic" data-size="16"></button>
+        <button class="icon-btn send" id="c-send" title="Send" data-icon="send" data-size="15"></button>
+      </div>
+      <footer class="c-foot"><button class="btn small" id="c-full" data-icon="character" data-size="14">Open full chat</button></footer>
+    </section>
+  </div>
+<script src="vendor/marked.umd.js"></script>
+<script src="icons.js"></script>
+<script src="character/anim.js"></script>
+<script src="character.js"></script>
+<script src="companion.js"></script>
+</body>
+</html>

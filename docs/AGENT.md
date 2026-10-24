@@ -27,6 +27,7 @@ Lyra is a desktop app built so the assistant running in it (you) can customize a
 | Restyle the app | write `themes/<id>/theme.json` + `theme.css`, then `configure_app({appearance:{theme:"<id>"}})` |
 | Change your picture | `configure_app({persona:{avatar:"<png path>"}})` |
 | Show a different 3D character | `configure_app({appearance:{vrmModel:"<path>.vrm"}})` — the app is VRM-only; `builtin:lyra` is the default |
+| Stay on the desktop / walk around | `configure_app({appearance:{desktopCompanion:true, walk:true}})` — when the user hides your window you stay on their desktop with a small chat; `walk` lets you stroll along the bottom of the screen |
 | Add a new animated character | build a VRM file and point at it with `vrmModel` (see `read_docs("avatars")`; a GIF pack retires on its own and falls back to Lyra) |
 | Add a tool or a panel | write an extension, then `install_extension({id})` |
 | Change how the UI or the agent works | edit organ files (`edit_file` for small edits), then `apply_changes` |
