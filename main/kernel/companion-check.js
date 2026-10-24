@@ -73,8 +73,9 @@ async function run(k) {
   // 2b. Show the main window: she goes off the desktop.
   main.show();
   const shownAt = Date.now();
+  const diag = () => ({ ms: Date.now() - shownAt, mainVisible: main.isVisible(), mainMinimized: main.isMinimized(), companionVisible: c.visible() });
   const gone = await until(() => !c.visible(), 5000, 100);
-  ok('showing the main window hides the companion (within 1.5 s)', gone && Date.now() - shownAt < 1500, { ms: Date.now() - shownAt });
+  ok('showing the main window hides the companion (within 1.5 s)', gone && Date.now() - shownAt < 1500, diag());
 
   return { pass: checks.every((x) => x.pass), checks, skipped };
 }

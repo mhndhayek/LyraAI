@@ -65,10 +65,13 @@ class Companion {
 
   /* ---------- the main window's lifecycle ---------- */
   attachMain(win) {
-    // Windows can report isVisible() a moment after 'show' fires, so look again a
-    // little later too; sync() is idempotent.
-    const sync = () => { for (const ms of [0, 250, 1000]) setTimeout(() => this.sync(), ms); };
-    for (const ev of ['hide', 'show', 'minimize', 'restore', 'focus']) win.on(ev, sync);
+    // The main window coming back is known from the event itself: on Windows
+    // isVisible() can still say false when 'show' fires (CI saw her stay up), so
+    // these hide her directly instead of asking sync() to work it out.
+    const back = () => { this.dismissed = false; this.hide(); };
+    for (const ev of ['show', 'restore', 'focus']) win.on(ev, back);
+    const away = () => setTimeout(() => this.sync(), 0);
+    for (const ev of ['hide', 'minimize']) win.on(ev, away);
     // Closing the window with the companion on keeps Lyra running on the desktop
     // and in the tray; Quit (or turning the companion off) really closes it.
     win.on('close', (ev) => {
@@ -135,17 +138,21 @@ class Companion {
     if (this.win.isVisible()) return;
     this.chatOpen = false; this.applyBounds();
     const w = this.win;
-    const go = () => { if (w.isDestroyed()) return; w.showInactive(); this.send({ type: 'companion', visible: true, chatOpen: false }); this.syncWalk(); this.k.log('desktop companion shown'); };
+    const go = () => { if (w.isDestroyed()) return; w.showInactive(); this.send({ type: 'companion', visible: true, chatOpen: false }); this.syncWalk(); this.watchMain(); this.k.log('desktop companion shown'); };
     if (w.webContents.isLoading()) w.webContents.once('did-finish-load', go); else go();
   }
+  // A backstop while she is up: once a second, if the main window is back, she
+  // goes. Window events are the main path; this covers a platform that misses one.
+  watchMain() { clearInterval(this.mainWatch); this.mainWatch = setInterval(() => { if (!this.visible()) { clearInterval(this.mainWatch); return; } if (this.mainVisible()) { this.dismissed = false; this.hide(); } }, 1000); }
   hide() {
+    clearInterval(this.mainWatch);
     this.stopWalk();
     if (!this.visible()) return;
     this.chatOpen = false; this.savePos();
     this.send({ type: 'companion', visible: false, chatOpen: false });
     this.win.hide(); this.k.log('desktop companion hidden');
   }
-  destroy() { clearTimeout(this.preload); this.stopWalk(); if (this.win && !this.win.isDestroyed()) this.win.destroy(); this.win = null; }
+  destroy() { clearTimeout(this.preload); clearInterval(this.mainWatch); this.stopWalk(); if (this.win && !this.win.isDestroyed()) this.win.destroy(); this.win = null; }
   send(e) { if (this.win && !this.win.isDestroyed()) this.win.webContents.send('lyra:event', e); }
   applyBounds() {
     if (!this.win || this.win.isDestroyed()) return;
