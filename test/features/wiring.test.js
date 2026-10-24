@@ -14,7 +14,9 @@ const read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
 const PRELOAD = read('preload.js');
 const MAIN = read('main', 'main.js');
 const ORGANS_INDEX = read('main', 'organs', 'index.js');
-const HANDLERS = MAIN + '\n' + ORGANS_INDEX;
+// Story 07: the desktop companion's window registers its own channels.
+const COMPANION = read('main', 'companion-window.js');
+const HANDLERS = MAIN + '\n' + ORGANS_INDEX + '\n' + COMPANION;
 
 // Channels the preload offers to the UI, e.g. call('chat:send').
 const exposed = [...new Set([...PRELOAD.matchAll(/call\('([^']+)'\)/g)].map((m) => m[1]))];
@@ -151,12 +153,23 @@ test('every built-in theme is complete', () => {
 });
 
 test('the UI loads every renderer script it ships', () => {
-  const html = read('renderer', 'index.html');
+  // Two pages ship: the main window and the desktop companion (story 07).
+  const html = read('renderer', 'index.html') + read('renderer', 'companion.html');
   for (const f of fs.readdirSync(path.join(ROOT, 'renderer'))) {
     if (!f.endsWith('.js')) continue;
-    assert.ok(html.includes(f), `renderer/${f} is shipped but index.html never loads it`);
+    assert.ok(html.includes(`src="${f}"`), `renderer/${f} is shipped but no page loads it`);
   }
-  assert.match(html, /styles\.css/);
+  assert.match(read('renderer', 'index.html'), /styles\.css/);
+});
+
+test('the desktop companion page is wired to the shipped theme, character and bridge', () => {
+  const page = read('renderer', 'companion.html'); const js = read('renderer', 'companion.js');
+  for (const f of ['styles.css', 'id="theme-css"', 'companion.css', 'character/anim.js', 'character.js', 'companion.js']) assert.ok(page.includes(f), `companion.html must load ${f}`);
+  assert.match(page, /Content-Security-Policy/, 'the companion page keeps the same CSP as the main window');
+  assert.match(js, /framing: 'full'/, 'on the desktop she is shown full-body');
+  assert.match(js, /lyra\.chat\.send\(\{ chatId: S\.chatId/, 'the mini chat sends into the shared chat');
+  assert.match(MAIN, /new Companion\(k, electron\)/, 'the kernel creates the companion');
+  assert.match(MAIN, /k\.companion\.attachMain\(win\)/, 'the companion follows the main window');
 });
 
 test('the agent guide never names a tool that no longer exists', () => {

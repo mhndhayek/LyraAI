@@ -1,0 +1,59 @@
+/* Story 07: Lyra on the desktop. The window is transparent: only her body, the
+   line bubble over her head and the mini chat card are painted. Colours come from
+   the theme variables, so the card matches the main window in every theme. */
+html, body.companion { background: transparent !important; overflow: hidden; height: 100%; margin: 0; user-select: none; -webkit-user-select: none; }
+/* Whole-window theme overlays (Pixel's scanlines) would paint the desktop around her. */
+body.companion::before, body.companion::after { display: none !important; content: none !important; }
+
+.c-wrap { position: relative; width: 100%; height: 100%; }
+.c-stage { position: absolute; top: 0; width: 260px; height: 420px; cursor: grab; }
+.c-stage canvas { display: block; width: 100% !important; height: 100% !important; }
+.c-stage .char-missing { position: absolute; bottom: 30px; left: 0; right: 0; }
+body[data-side="right"] .c-stage, body[data-side="none"] .c-stage { left: 0; }
+body[data-side="left"] .c-stage { right: 0; }
+body.dragging .c-stage { cursor: grabbing; }
+
+/* The short line over her head when a reply comes in with the chat closed. */
+.c-line {
+  position: absolute; top: 6px; left: 20px; width: 220px; padding: 7px 11px; font-size: 12px; line-height: 1.4; color: var(--text);
+  background: var(--panel); border: var(--border-w) solid var(--line2); border-radius: var(--radius-bubble); box-shadow: var(--shadow);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer;
+  animation: c-pop 180ms ease-out;
+}
+body[data-side="left"] .c-line { left: auto; right: 20px; }
+.c-line::after { content: ''; position: absolute; bottom: -6px; left: 50%; margin-left: -6px; width: 10px; height: 10px; background: var(--panel); border-right: var(--border-w) solid var(--line2); border-bottom: var(--border-w) solid var(--line2); transform: rotate(45deg); }
+@keyframes c-pop { from { opacity: 0; transform: translateY(4px) scale(0.97); } }
+
+/* The mini chat: a speech-bubble card beside her, about 320 px wide. */
+.c-card {
+  position: absolute; top: 46px; width: 316px; max-height: 330px; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 10px;
+  background: var(--panel); color: var(--text); border: var(--border-w) solid var(--line2); border-radius: var(--radius-lg); box-shadow: var(--shadow);
+  font-family: var(--font); font-size: 13px; user-select: text; -webkit-user-select: text; animation: c-pop 160ms ease-out;
+}
+body[data-side="right"] .c-card { left: 274px; }
+body[data-side="left"] .c-card { left: 0; }
+/* The bubble's tail points at her. */
+.c-card::before { content: ''; position: absolute; top: 70px; width: 12px; height: 12px; background: var(--panel); transform: rotate(45deg); }
+body[data-side="right"] .c-card::before { left: -7px; border-left: var(--border-w) solid var(--line2); border-bottom: var(--border-w) solid var(--line2); }
+body[data-side="left"] .c-card::before { right: -7px; border-right: var(--border-w) solid var(--line2); border-top: var(--border-w) solid var(--line2); }
+.c-head { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+.c-head .spacer { flex: 1; }
+.c-name { font-weight: 600; color: var(--bright); }
+.c-state { font-size: 11px; color: var(--accent); }
+.c-close { width: 26px; height: 26px; }
+.c-reply { font-size: 13px; line-height: 1.5; max-width: none; overflow-y: auto; min-height: 22px; max-height: 190px; padding-right: 4px; }
+.c-reply p { margin: 0 0 6px; } .c-reply p:last-child { margin-bottom: 0; }
+.c-reply.empty { color: var(--muted); }
+.c-reply.error { color: var(--danger); }
+.c-reply pre { white-space: pre-wrap; }
+.c-note { font-size: 12px; color: var(--warn); display: flex; gap: 6px; align-items: center; }
+.c-note button { margin-left: auto; }
+.c-composer { display: flex; align-items: center; gap: 4px; background: var(--bg); border: var(--border-w) solid var(--line2); border-radius: var(--radius-pill); padding: 3px 3px 3px 12px; }
+.c-composer:focus-within { border-color: var(--accent); }
+.c-composer input { flex: 1; min-width: 0; height: 28px; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: 13px; }
+.c-composer input::placeholder { color: var(--muted); }
+.c-composer .icon-btn { width: 28px; height: 28px; }
+.c-composer .icon-btn.send { border-radius: 50%; }
+.c-composer .icon-btn.rec { color: var(--danger); }
+.c-rec { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--danger); font-variant-numeric: tabular-nums; }
+.c-foot { display: flex; justify-content: flex-end; }

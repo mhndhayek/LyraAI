@@ -22,6 +22,7 @@ step "Lint"         npm run --silent lint
 step "Unit tests"   npm run --silent test:unit
 step "Kernel self-test" npm run --silent selftest
 step "Smoke test"   npm run --silent smoke
+step "Desktop companion smoke" npm run --silent smoke:companion
 
 printf '\n'
 if [ -n "$failed" ]; then

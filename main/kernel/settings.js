@@ -14,7 +14,10 @@ const DEFAULTS = {
   providers: { list: [{ id: 'lmstudio', name: 'LM Studio', runtime: 'lmstudio', detected: 'lmstudio', endpoint: 'http://localhost:1234/v1', apiKey: '' }] },
   model: { chat: { provider: 'lmstudio', model: '' }, vision: { provider: 'lmstudio', model: '' }, contextMode: 'auto', contextOverride: 32768, reasoning: 'medium', smartApprovals: true, compression: true, temperature: 0.7, maxSteps: 30, runMinutes: 30 },
   persona: { name: 'Lyra', avatar: 'builtin:lyra', soul: DEFAULT_SOUL, memoryEnabled: true, store: 'sqlite', shortTerm: true, longTerm: true },
-  appearance: { theme: 'lyra-dark', liveCharacter: true, source: 'vrm', vrmModel: 'builtin:lyra', gifFolder: null, floatPos: null, placement: 'panel', transitionMs: 300 },
+  // desktopCompanion (story 07): when the main window is hidden she stays on the
+  // desktop with a mini chat; walk lets her wander along the bottom of the screen;
+  // companionPos is where she was last left ({ x, y } in screen points).
+  appearance: { theme: 'lyra-dark', liveCharacter: true, source: 'vrm', vrmModel: 'builtin:lyra', gifFolder: null, floatPos: null, placement: 'panel', transitionMs: 300, desktopCompanion: true, walk: false, companionPos: null },
   workspace: { folder: path.join(os.homedir(), 'Lyra', 'workspace'), repoDiscovery: true, codeExecution: true, persistentShell: true, fileReadLimit: 100000 },
   safety: { approvalMode: 'ask', timeoutSec: 300, onTimeout: 'deny' },
   browser: { enabled: true, mode: 'visible', autoOpen: true, startPage: 'about:blank', askBeforeDownloads: true },

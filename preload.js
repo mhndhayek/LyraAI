@@ -26,5 +26,12 @@ contextBridge.exposeInMainWorld('lyra', {
   tools: { list: call('tools:list') },
   mcp: { status: call('mcp:status'), reconnect: call('mcp:reconnect'), test: call('mcp:test') },
   engine: { hardware: call('engine:hardware'), recommend: call('engine:recommend'), plan: call('engine:plan'), install: call('engine:install'), pause: call('engine:pause'), cancel: call('engine:cancel'), status: call('engine:status'), start: call('engine:start'), stop: call('engine:stop'), update: call('engine:update'), remove: call('engine:remove'), openLog: call('engine:openLog') },
+  // Story 07: the desktop companion's own window. Its main-side handlers only
+  // answer that window, so these do nothing from the main window.
+  companion: {
+    chat: call('companion:chat'), open: call('companion:open'), openMain: call('companion:openMain'), menu: call('companion:menu'), state: call('companion:state'),
+    ignoreMouse: (over) => ipcRenderer.send('companion:ignore', !!over),
+    drag: (p) => ipcRenderer.send('companion:drag', p),
+  },
   onEvent: (cb) => { const h = (_, e) => cb(e); ipcRenderer.on('lyra:event', h); return () => ipcRenderer.removeListener('lyra:event', h); },
 });

@@ -20,6 +20,7 @@ Individual steps, when you want a faster loop:
 | `npm run test:unit` | The kernel, the organs and the feature wiring behave |
 | `npm run selftest` | The app recovers from organs that were broken on purpose |
 | `npm run smoke` | The real app starts, renders its window and reports no errors |
+| `npm run smoke:companion` | Hiding the window puts Lyra on the desktop (transparent, always on top, her canvas drawn); the mini chat writes to the main window's chat; the light theme matches; showing the window takes her off the desktop |
 | `npm run test:coverage` | The same tests, with a coverage report |
 
 ## What CI runs
