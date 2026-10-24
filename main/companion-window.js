@@ -65,8 +65,10 @@ class Companion {
 
   /* ---------- the main window's lifecycle ---------- */
   attachMain(win) {
-    const sync = () => setTimeout(() => this.sync(), 0);
-    for (const ev of ['hide', 'show', 'minimize', 'restore']) win.on(ev, sync);
+    // Windows can report isVisible() a moment after 'show' fires, so look again a
+    // little later too; sync() is idempotent.
+    const sync = () => { for (const ms of [0, 250, 1000]) setTimeout(() => this.sync(), ms); };
+    for (const ev of ['hide', 'show', 'minimize', 'restore', 'focus']) win.on(ev, sync);
     // Closing the window with the companion on keeps Lyra running on the desktop
     // and in the tray; Quit (or turning the companion off) really closes it.
     win.on('close', (ev) => {

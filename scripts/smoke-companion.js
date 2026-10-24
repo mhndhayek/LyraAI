@@ -38,7 +38,12 @@ run(['--companion-test'], { timeoutMs: 180000, onLine, userDataDir: dataDir })
   .then(({ code }) => {
     const fail = (msg) => { console.error(`✗ ${msg}`); process.exitCode = 1; };
     if (!result) fail('the companion check never reported (did --companion-test run?)');
-    else for (const c of result.checks) { if (c.pass) console.log(`✓ ${c.name}`); else fail(`${c.name}${c.detail !== undefined ? ` — ${JSON.stringify(c.detail)}` : ''}`); }
+    else {
+      for (const c of result.checks) { if (c.pass) console.log(`✓ ${c.name}`); else fail(`${c.name}${c.detail !== undefined ? ` — ${JSON.stringify(c.detail)}` : ''}`); }
+      for (const s of result.skipped || []) console.log(`– skipped ${s}`);
+      // Skipping is only acceptable where there is no GPU path at all.
+      if ((result.skipped || []).length && process.platform !== 'linux') fail('the canvas checks were skipped on a machine that should have WebGL');
+    }
     if (code !== 0 && result && result.pass) fail(`the app exited with code ${code}`);
     if (problems.length) { fail(`${problems.length} error(s) were reported:`); for (const p of problems.slice(0, 20)) console.error(`    ${p}`); }
     else console.log('✓ no errors reported by the kernel, the main window or the companion');

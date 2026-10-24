@@ -27,15 +27,22 @@ async function run(k) {
   ok('the companion window is transparent', cornerAlpha === 0, { cornerAlpha });
   const b = w ? w.getBounds() : null;
   ok('the companion window is her size (260×420)', b && b.width === 260 && b.height === 420, b);
-  // Her canvas has drawn her: count pixels with alpha in a downscaled copy.
-  const px = await until(() => w.webContents.executeJavaScript(`(() => {
+  // Her canvas has drawn her: count pixels with alpha in a downscaled copy. A
+  // machine with no WebGL at all (Linux CI under xvfb) cannot draw her; that is
+  // reported as a skip, the way the main smoke tolerates it, not as a pass.
+  const noGl = await until(() => w.webContents.executeJavaScript("document.querySelector('#c-stage canvas') ? 'gl' : (document.querySelector('#c-stage').dataset.vrmError || '')"), 45000, 500);
+  const skipped = [];
+  if (noGl && noGl !== 'gl') skipped.push(`her canvas checks: no WebGL on this machine (${noGl})`);
+  const px = skipped.length ? null : await until(() => w.webContents.executeJavaScript(`(() => {
     const cv = document.querySelector('#c-stage canvas'); if (!cv) return 0;
     const t = document.createElement('canvas'); t.width = 65; t.height = 105; const x = t.getContext('2d');
     x.drawImage(cv, 0, 0, t.width, t.height); const d = x.getImageData(0, 0, t.width, t.height).data;
     let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 8) n++; return n; })()`), 45000, 500);
+  if (!skipped.length) {
   ok('her canvas renders a frame (non-empty pixels)', px > 150, { opaquePixels: px, of: 65 * 105 });
-  const corner = await w.webContents.executeJavaScript(`(() => { const cv = document.querySelector('#c-stage canvas'); const t = document.createElement('canvas'); t.width = t.height = 4; const x = t.getContext('2d'); x.drawImage(cv, 0, 0, 4, 4, 0, 0, 4, 4); return x.getImageData(0, 0, 1, 1).data[3]; })()`).catch(() => null);
+  const corner = await w.webContents.executeJavaScript(`(() => { const cv = document.querySelector('#c-stage canvas'); if (!cv) return null; const t = document.createElement('canvas'); t.width = t.height = 4; const x = t.getContext('2d'); x.drawImage(cv, 0, 0, 4, 4, 0, 0, 4, 4); return x.getImageData(0, 0, 1, 1).data[3]; })()`).catch(() => null);
   ok('her canvas is see-through around her', corner === 0, { cornerAlpha: corner });
+  }
 
   // 3. The mini chat talks in the main window's chat.
   const open = await w.webContents.executeJavaScript(`(async () => { document.querySelector('#c-stage'); await lyra.companion.open({ open: true }); return lyra.companion.state(); })()`);
@@ -65,10 +72,11 @@ async function run(k) {
 
   // 2b. Show the main window: she goes off the desktop.
   main.show();
-  const gone = await until(() => !c.visible(), 5000);
-  ok('showing the main window hides the companion', gone);
+  const shownAt = Date.now();
+  const gone = await until(() => !c.visible(), 5000, 100);
+  ok('showing the main window hides the companion (within 1.5 s)', gone && Date.now() - shownAt < 1500, { ms: Date.now() - shownAt });
 
-  return { pass: checks.every((x) => x.pass), checks };
+  return { pass: checks.every((x) => x.pass), checks, skipped };
 }
 
 module.exports = { run };
