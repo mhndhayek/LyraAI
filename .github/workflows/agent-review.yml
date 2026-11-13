@@ -24,7 +24,7 @@ jobs:
     # A fork's token cannot label; those are reviewed by a person.
     if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
